@@ -1,0 +1,12 @@
+2025-11-05 18:07:36 - database_connector - ERROR - Initialization failed: ConnectionPoolConfig.__init__() got an unexpected keyword argument 'command_timeout'
+2025-11-05 18:07:36 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:07:36 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:08:17 - database_connector - ERROR - Initialization failed: ConnectionPoolConfig.__init__() got an unexpected keyword argument 'command_timeout'
+2025-11-05 18:08:17 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:08:17 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:08:43 - database_connector - ERROR - Initialization failed: ConnectionPoolConfig.__init__() got an unexpected keyword argument 'command_timeout'
+2025-11-05 18:08:43 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:08:43 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:10:22 - database_connector - ERROR - Initialization failed: ConnectionPoolConfig.__init__() got an unexpected keyword argument 'command_timeout'
+2025-11-05 18:10:22 - database_connector - INFO - Database connector cleanup completed
+2025-11-05 18:10:22 - database_connector - INFO - Database connector cleanup completed
