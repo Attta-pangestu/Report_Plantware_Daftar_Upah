@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Upah - MEI 2025</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .period {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .header-row {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .sub-header {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+
+        .number-cell {
+            text-align: right;
+        }
+
+        .text-cell {
+            text-align: left;
+        }
+
+        .section-header {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background-color: #d0d0d0;
+            font-weight: bold;
+        }
+
+        .notes {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .col-no { width: 30px; }
+        .col-gender { width: 30px; }
+        .col-nik { width: 80px; }
+        .col-name { width: 150px; }
+        .col-days { width: 40px; }
+        .col-rp { width: 80px; }
+        .col-hours { width: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>DAFTAR UPAH</h2>
+            <div class="period">BULAN : MEI 2025</div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <!-- Main Header Row -->
+                <thead>
+                    <tr class="header-row">
+                        <th rowspan="3" class="col-no">NO.</th>
+                        <th rowspan="3" class="col-gender">L/P</th>
+                        <th rowspan="3" class="col-nik">NIK</th>
+                        <th rowspan="3" class="col-name text-cell">NAMA KARYAWAN</th>
+                        <th colspan="14" class="section-header">CUTI / LIBUR</th>
+                        <th rowspan="2" class="col-days">JUMLAH HK</th>
+                        <th colspan="8" class="section-header">TUNJANGAN / PREMI</th>
+                        <th colspan="7" class="section-header">POTONGAN</th>
+                        <th rowspan="3" class="col-rp">JUMLAH UPAH BERSIH</th>
+                        <th colspan="2" class="section-header">TIDAK HADIR</th>
+                    </tr>
+
+                    <tr class="sub-header">
+                        <!-- Cuti/Libur sub headers -->
+                        <th class="col-days">SAKIT</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">HAID</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">MINGGU</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">NASIONAL</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">HA. / MELAH.</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">IZIN</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-rp">BERAS (Rp)/HK</th>
+                        <th class="col-rp">Jumlah</th>
+                        <th class="col-rp">JABATAN (Rp)/HK</th>
+                        <th class="col-rp">JUMLAH HK</th>
+                        <th class="col-rp">MASA KERJA (Rp)/THN</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">JUMLAH LEMBUR (Rp)</th>
+                        <th class="col-rp">JUMLAH PREMI (Rp)</th>
+                        <th class="col-rp">JUMLAH UPAH KOTOR (Rp)</th>
+                        <th class="col-rp">CARUMAN ASTEK PEKERJA (Rp)</th>
+                        <th class="col-rp">MAJIKAN (Rp)</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">POT. BPJS KESEHATAN (Rp)</th>
+                        <th class="col-rp">PEKERJA (Rp)</th>
+                        <th class="col-rp">PENSIUN MAJIKAN (Rp)</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">IURAN SPSI (Rp)</th>
+                        <th class="col-rp">PPH 21 (Rp)</th>
+                        <th class="col-rp">PREMI KONTANAN (Rp)</th>
+                        <th class="col-rp">LEBIH POTONG PAJAK THR (Rp)</th>
+                        <th class="col-rp">POTONGAN PINJAMAN UANG (Rp)</th>
+                        <th class="col-days">CTH</th>
+                        <th class="col-days">ALPA</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    
+        <tr>
+            <td>1</td>
+            <td>L</td>
+            <td>1234567890</td>
+            <td class="text-cell">AHMAD SUBEKTI</td>
+
+            <!-- Cuti/Libur Section -->
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>2</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Work Days -->
+            <td>22</td>
+
+            <!-- Tunjangan/Premi Section -->
+            <td class="number-cell">15.000</td>
+            <td class="number-cell">330.000</td>
+            <td class="number-cell">5.000</td>
+            <td>22</td>
+            <td class="number-cell">2.000</td>
+            <td class="number-cell">44.000</td>
+            <td class="number-cell">250.000</td>
+            <td class="number-cell">150.000</td>
+            <td class="number-cell">4.840.000</td>
+
+            <!-- Potongan Section -->
+            <td class="number-cell">200.000</td>
+            <td class="number-cell">300.000</td>
+            <td class="number-cell">500.000</td>
+            <td class="number-cell">100.000</td>
+            <td class="number-cell">50.000</td>
+            <td class="number-cell">75.000</td>
+            <td class="number-cell">75.000</td>
+            <td class="number-cell">225.000</td>
+            <td class="number-cell">15.000</td>
+            <td class="number-cell">150.000</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">200.000</td>
+
+            <!-- Net Salary -->
+            <td class="number-cell">3.750.000</td>
+
+            <!-- Absence -->
+            <td>0</td>
+            <td>0</td>
+        </tr>
+        
+        <tr>
+            <td>2</td>
+            <td>P</td>
+            <td>0987654321</td>
+            <td class="text-cell">SITI NURHALIZA</td>
+
+            <!-- Cuti/Libur Section -->
+            <td>1</td>
+            <td class="number-cell">0</td>
+            <td>2</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>2</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Work Days -->
+            <td>19</td>
+
+            <!-- Tunjangan/Premi Section -->
+            <td class="number-cell">15.000</td>
+            <td class="number-cell">285.000</td>
+            <td class="number-cell">3.000</td>
+            <td>19</td>
+            <td class="number-cell">1.500</td>
+            <td class="number-cell">28.500</td>
+            <td class="number-cell">180.000</td>
+            <td class="number-cell">100.000</td>
+            <td class="number-cell">3.725.000</td>
+
+            <!-- Potongan Section -->
+            <td class="number-cell">150.000</td>
+            <td class="number-cell">225.000</td>
+            <td class="number-cell">375.000</td>
+            <td class="number-cell">75.000</td>
+            <td class="number-cell">37.500</td>
+            <td class="number-cell">56.250</td>
+            <td class="number-cell">56.250</td>
+            <td class="number-cell">168.750</td>
+            <td class="number-cell">10.000</td>
+            <td class="number-cell">100.000</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">150.000</td>
+
+            <!-- Net Salary -->
+            <td class="number-cell">2.911.250</td>
+
+            <!-- Absence -->
+            <td>0</td>
+            <td>0</td>
+        </tr>
+        
+        <tr>
+            <td>3</td>
+            <td>L</td>
+            <td>1122334455</td>
+            <td class="text-cell">BUDI SANTOSO</td>
+
+            <!-- Cuti/Libur Section -->
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>2</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Work Days -->
+            <td>23</td>
+
+            <!-- Tunjangan/Premi Section -->
+            <td class="number-cell">15.000</td>
+            <td class="number-cell">345.000</td>
+            <td class="number-cell">4.000</td>
+            <td>23</td>
+            <td class="number-cell">1.800</td>
+            <td class="number-cell">41.400</td>
+            <td class="number-cell">300.000</td>
+            <td class="number-cell">200.000</td>
+            <td class="number-cell">4.530.000</td>
+
+            <!-- Potongan Section -->
+            <td class="number-cell">180.000</td>
+            <td class="number-cell">270.000</td>
+            <td class="number-cell">450.000</td>
+            <td class="number-cell">90.000</td>
+            <td class="number-cell">45.000</td>
+            <td class="number-cell">67.500</td>
+            <td class="number-cell">67.500</td>
+            <td class="number-cell">202.500</td>
+            <td class="number-cell">12.000</td>
+            <td class="number-cell">120.000</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">100.000</td>
+
+            <!-- Net Salary -->
+            <td class="number-cell">3.645.500</td>
+
+            <!-- Absence -->
+            <td>0</td>
+            <td>0</td>
+        </tr>
+        
+        <tr class="total-row">
+            <td colspan="4" class="text-left">TOTAL</td>
+            <td>1</td>
+            <td class="number-cell">0</td>
+            <td>2</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>6</td>
+            <td class="number-cell">0</td>
+            <td>0</td>
+            <td class="number-cell">0</td>
+            <td>1</td>
+            <td class="number-cell">0</td>
+            <td>64</td>
+            <td class="number-cell">45.000</td>
+            <td class="number-cell">960.000</td>
+            <td class="number-cell">12.000</td>
+            <td>64</td>
+            <td class="number-cell">5.300</td>
+            <td class="number-cell">113.900</td>
+            <td class="number-cell">730.000</td>
+            <td class="number-cell">450.000</td>
+            <td class="number-cell">13.095.000</td>
+            <td class="number-cell">530.000</td>
+            <td class="number-cell">795.000</td>
+            <td class="number-cell">1.325.000</td>
+            <td class="number-cell">265.000</td>
+            <td class="number-cell">132.500</td>
+            <td class="number-cell">198.750</td>
+            <td class="number-cell">198.750</td>
+            <td class="number-cell">596.250</td>
+            <td class="number-cell">37.000</td>
+            <td class="number-cell">370.000</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">450.000</td>
+            <td class="number-cell">10.306.750</td>
+            <td>0</td>
+            <td>0</td>
+        </tr>
+        
+                </tbody>
+            </table>
+        </div>
+
+        <div class="notes">
+            <p><strong>Note :</strong> Daftar upah karyawan periode Mei 2025</p>
+            <p><strong>Upah Dasar Yang Digunakan :</strong> Upah Minimum Kabupaten (UMK) 2025</p>
+        </div>
+    </div>
+</body>
+</html>

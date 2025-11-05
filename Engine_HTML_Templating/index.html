@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Engine Demo - Daftar Upah</title>
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .preview {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .preview iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Template Engine Demo - Daftar Upah</h1>
+
+    <div class="controls">
+        <h2>Kontrol</h2>
+        <button onclick="loadData()">Load Data</button>
+        <button onclick="generateReport()">Generate Report</button>
+        <button onclick="downloadReport()">Download Report</button>
+        <button onclick="openInNewTab()">Open in New Tab</button>
+
+        <div style="margin-top: 15px;">
+            <label for="dataInput">Paste JSON Data:</label><br>
+            <textarea id="dataInput" rows="5" cols="80" placeholder="Paste your JSON data here..."></textarea>
+        </div>
+    </div>
+
+    <div class="preview">
+        <iframe id="preview"></iframe>
+    </div>
+
+    <script id="template" type="text/x-handlebars-template">
+        <!DOCTYPE html>
+        <html lang="id">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Daftar Upah - {{bulan}} {{tahun}}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    background-color: #f5f5f5;
+                }
+
+                .container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    background-color: white;
+                    padding: 20px;
+                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                }
+
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+
+                .period {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                }
+
+                .table-container {
+                    overflow-x: auto;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 12px;
+                }
+
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 5px;
+                    text-align: center;
+                    vertical-align: middle;
+                }
+
+                .header-row {
+                    background-color: #f0f0f0;
+                    font-weight: bold;
+                }
+
+                .sub-header {
+                    background-color: #f8f8f8;
+                    font-weight: bold;
+                }
+
+                .number-cell {
+                    text-align: right;
+                }
+
+                .text-cell {
+                    text-align: left;
+                }
+
+                .section-header {
+                    background-color: #e0e0e0;
+                    font-weight: bold;
+                }
+
+                .total-row {
+                    background-color: #d0d0d0;
+                    font-weight: bold;
+                }
+
+                .notes {
+                    margin-top: 20px;
+                    padding: 10px;
+                    background-color: #f9f9f9;
+                    border: 1px solid #ddd;
+                }
+
+                .col-no { width: 30px; }
+                .col-gender { width: 30px; }
+                .col-nik { width: 80px; }
+                .col-name { width: 150px; }
+                .col-days { width: 40px; }
+                .col-rp { width: 80px; }
+                .col-hours { width: 40px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h2>DAFTAR UPAH</h2>
+                    <div class="period">BULAN : {{bulan}} {{tahun}}</div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr class="header-row">
+                                <th rowspan="3" class="col-no">NO.</th>
+                                <th rowspan="3" class="col-gender">L/P</th>
+                                <th rowspan="3" class="col-nik">NIK</th>
+                                <th rowspan="3" class="col-name text-cell">NAMA KARYAWAN</th>
+                                <th colspan="14" class="section-header">CUTI / LIBUR</th>
+                                <th rowspan="2" class="col-days">JUMLAH HK</th>
+                                <th colspan="18" class="section-header">TUNJANGAN / PREMI</th>
+                                <th colspan="7" class="section-header">POTONGAN</th>
+                                <th rowspan="3" class="col-rp">JUMLAH UPAH BERSIH</th>
+                                <th colspan="2" class="section-header">TIDAK HADIR</th>
+                            </tr>
+                            <tr class="sub-header">
+                                <!-- Simplified headers for demo -->
+                                <th>Sakit</th><th>Rp</th>
+                                <th>Haid</th><th>Rp</th>
+                                <th>Minggu</th><th>Rp</th>
+                                <th>Nasional</th><th>Rp</th>
+                                <th>Hamil</th><th>Rp</th>
+                                <th>Izin</th><th>Rp</th>
+                                <th>Beras</th><th>Jabatan</th><th>Masa Kerja</th>
+                                <th>Lembur</th><th>Premi</th><th>Tunjangan Lain</th>
+                                <th>Kotor</th>
+                                <th>Astek</th><th>BPJS</th><th>Potongan Lain</th>
+                                <th>Bersih</th>
+                                <th>CTH</th><th>Alpa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each karyawan}}
+                            <tr>
+                                <td class="text-cell">{{@index}}</td>
+                                <td>{{jenis_kelamin}}</td>
+                                <td>{{nik}}</td>
+                                <td class="text-cell">{{nama}}</td>
+                                <td>{{cuti.sakit.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.sakit.jumlah}}</td>
+                                <td>{{cuti.haid.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.haid.jumlah}}</td>
+                                <td>{{cuti.minggu.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.minggu.jumlah}}</td>
+                                <td>{{cuti.nasional.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.nasional.jumlah}}</td>
+                                <td>{{cuti.hamil_melahirkan.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.hamil_melahirkan.jumlah}}</td>
+                                <td>{{cuti.izin.hari}}</td>
+                                <td class="number-cell">{{formatRp cuti.izin.jumlah}}</td>
+                                <td>{{jumlah_hk}}</td>
+                                <td class="number-cell">{{formatRp tunjangan.beras.jumlah}}</td>
+                                <td class="number-cell">{{formatRp tunjangan.jabatan.jumlah}}</td>
+                                <td class="number-cell">{{formatRp tunjangan.masa_kerja.jumlah}}</td>
+                                <td class="number-cell">{{formatRp tunjangan.lembur.jumlah}}</td>
+                                <td class="number-cell">{{formatRp tunjangan.premi.jumlah}}</td>
+                                <td class="number-cell">{{formatRp upah_kotor}}</td>
+                                <td class="number-cell">{{formatRp potongan.astek.jumlah}}</td>
+                                <td class="number-cell">{{formatRp potongan.bpjs.jumlah}}</td>
+                                <td class="number-cell">{{formatRp potongan.spsi}}</td>
+                                <td class="number-cell">{{formatRp upah_bersih}}</td>
+                                <td>{{tidak_hadir.cth}}</td>
+                                <td>{{tidak_hadir.alpa}}</td>
+                            </tr>
+                            {{/each}}
+                            <tr class="total-row">
+                                <td colspan="4">TOTAL</td>
+                                <td>{{total.cuti.sakit.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.sakit.jumlah}}</td>
+                                <td>{{total.cuti.haid.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.haid.jumlah}}</td>
+                                <td>{{total.cuti.minggu.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.minggu.jumlah}}</td>
+                                <td>{{total.cuti.nasional.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.nasional.jumlah}}</td>
+                                <td>{{total.cuti.hamil_melahirkan.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.hamil_melahirkan.jumlah}}</td>
+                                <td>{{total.cuti.izin.hari}}</td>
+                                <td class="number-cell">{{formatRp total.cuti.izin.jumlah}}</td>
+                                <td>{{total.jumlah_hk}}</td>
+                                <td class="number-cell">{{formatRp total.tunjangan.beras.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.tunjangan.jabatan.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.tunjangan.masa_kerja.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.tunjangan.lembur.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.tunjangan.premi.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.upah_kotor}}</td>
+                                <td class="number-cell">{{formatRp total.potongan.astek.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.potongan.bpjs.jumlah}}</td>
+                                <td class="number-cell">{{formatRp total.potongan.spsi}}</td>
+                                <td class="number-cell">{{formatRp total.upah_bersih}}</td>
+                                <td>{{total.tidak_hadir.cth}}</td>
+                                <td>{{total.tidak_hadir.alpa}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="notes">
+                    <p><strong>Note :</strong> {{catatan}}</p>
+                    <p><strong>Upah Dasar Yang Digunakan :</strong> {{upah_dasar}}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    </script>
+
+    <script>
+        let currentData = null;
+
+        // Register Handlebars helper for formatting Rupiah
+        Handlebars.registerHelper('formatRp', function(amount) {
+            if (amount === 0) return '0';
+            return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        });
+
+        async function loadData() {
+            try {
+                const response = await fetch('dummy_data.json');
+                currentData = await response.json();
+                document.getElementById('dataInput').value = JSON.stringify(currentData, null, 2);
+                alert('Data loaded successfully!');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Error loading data. Make sure dummy_data.json exists.');
+            }
+        }
+
+        function generateReport() {
+            const dataInput = document.getElementById('dataInput').value;
+
+            if (!dataInput.trim()) {
+                alert('Please load or enter JSON data first!');
+                return;
+            }
+
+            try {
+                currentData = JSON.parse(dataInput);
+            } catch (error) {
+                alert('Invalid JSON format! Please check your data.');
+                return;
+            }
+
+            const template = Handlebars.compile(document.getElementById('template').innerHTML);
+            const html = template(currentData);
+
+            const preview = document.getElementById('preview');
+            const previewDoc = preview.contentDocument || preview.contentWindow.document;
+            previewDoc.open();
+            previewDoc.write(html);
+            previewDoc.close();
+
+            alert('Report generated successfully!');
+        }
+
+        function downloadReport() {
+            if (!currentData) {
+                alert('Please generate a report first!');
+                return;
+            }
+
+            const template = Handlebars.compile(document.getElementById('template').innerHTML);
+            const html = template(currentData);
+
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `daftar_upah_${currentData.bulan}_${currentData.tahun}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function openInNewTab() {
+            if (!currentData) {
+                alert('Please generate a report first!');
+                return;
+            }
+
+            const template = Handlebars.compile(document.getElementById('template').innerHTML);
+            const html = template(currentData);
+
+            const newWindow = window.open();
+            newWindow.document.write(html);
+            newWindow.document.close();
+        }
+
+        // Load data on page load
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

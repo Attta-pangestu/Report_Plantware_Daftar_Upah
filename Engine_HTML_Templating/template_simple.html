@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Upah - {bulan} {tahun}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .period {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .header-row {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .sub-header {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+
+        .number-cell {
+            text-align: right;
+        }
+
+        .text-cell {
+            text-align: left;
+        }
+
+        .section-header {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background-color: #d0d0d0;
+            font-weight: bold;
+        }
+
+        .notes {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+
+        .col-no { width: 30px; }
+        .col-gender { width: 30px; }
+        .col-nik { width: 80px; }
+        .col-name { width: 150px; }
+        .col-days { width: 40px; }
+        .col-rp { width: 80px; }
+        .col-hours { width: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>DAFTAR UPAH</h2>
+            <div class="period">BULAN : {bulan} {tahun}</div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <!-- Main Header Row -->
+                <thead>
+                    <tr class="header-row">
+                        <th rowspan="3" class="col-no">NO.</th>
+                        <th rowspan="3" class="col-gender">L/P</th>
+                        <th rowspan="3" class="col-nik">NIK</th>
+                        <th rowspan="3" class="col-name text-cell">NAMA KARYAWAN</th>
+                        <th colspan="14" class="section-header">CUTI / LIBUR</th>
+                        <th rowspan="2" class="col-days">JUMLAH HK</th>
+                        <th colspan="8" class="section-header">TUNJANGAN / PREMI</th>
+                        <th colspan="7" class="section-header">POTONGAN</th>
+                        <th rowspan="3" class="col-rp">JUMLAH UPAH BERSIH</th>
+                        <th colspan="2" class="section-header">TIDAK HADIR</th>
+                    </tr>
+
+                    <tr class="sub-header">
+                        <!-- Cuti/Libur sub headers -->
+                        <th class="col-days">SAKIT</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">HAID</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">MINGGU</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">NASIONAL</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">HA. / MELAH.</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-days">IZIN</th>
+                        <th class="col-rp">JUMLAH</th>
+                        <th class="col-rp">BERAS (Rp)/HK</th>
+                        <th class="col-rp">Jumlah</th>
+                        <th class="col-rp">JABATAN (Rp)/HK</th>
+                        <th class="col-rp">JUMLAH HK</th>
+                        <th class="col-rp">MASA KERJA (Rp)/THN</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">JUMLAH LEMBUR (Rp)</th>
+                        <th class="col-rp">JUMLAH PREMI (Rp)</th>
+                        <th class="col-rp">JUMLAH UPAH KOTOR (Rp)</th>
+                        <th class="col-rp">CARUMAN ASTEK PEKERJA (Rp)</th>
+                        <th class="col-rp">MAJIKAN (Rp)</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">POT. BPJS KESEHATAN (Rp)</th>
+                        <th class="col-rp">PEKERJA (Rp)</th>
+                        <th class="col-rp">PENSIUN MAJIKAN (Rp)</th>
+                        <th class="col-rp">JUMLAH (Rp)</th>
+                        <th class="col-rp">IURAN SPSI (Rp)</th>
+                        <th class="col-rp">PPH 21 (Rp)</th>
+                        <th class="col-rp">PREMI KONTANAN (Rp)</th>
+                        <th class="col-rp">LEBIH POTONG PAJAK THR (Rp)</th>
+                        <th class="col-rp">POTONGAN PINJAMAN UANG (Rp)</th>
+                        <th class="col-days">CTH</th>
+                        <th class="col-days">ALPA</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {employee_rows}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="notes">
+            <p><strong>Note :</strong> {catatan}</p>
+            <p><strong>Upah Dasar Yang Digunakan :</strong> {upah_dasar}</p>
+        </div>
+    </div>
+</body>
+</html>

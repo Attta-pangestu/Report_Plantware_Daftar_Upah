@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAFTAR UPAH - {bulan} {tahun}</title>
+    <style>
+        @page {
+            margin: 0.75in 0.7in;
+            size: A4 landscape;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 10px;
+        }
+
+        .header-info {
+            margin-bottom: 20px;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 150px;
+        }
+
+        .header-value {
+            flex: 1;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            font-size: 8pt;
+        }
+
+        th, td {
+            border: 0.5pt solid black;
+            padding: 2px;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .header-cell {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .main-header {
+            background-color: #d0d0d0;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+
+        .section-header {
+            background-color: #e8e8e8;
+            font-weight: bold;
+        }
+
+        .total-row {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+
+        .col-no { width: 30px; }
+        .col-gender { width: 25px; }
+        .col-nik { width: 80px; }
+        .col-name { width: 120px; }
+        .col-small { width: 35px; }
+        .col-medium { width: 50px; }
+        .col-large { width: 80px; }
+
+        /* Cuti/Libur Section */
+        .col-cuti-tahun { width: 35px; }
+        .col-cuti-tahun-upah { width: 40px; }
+        .col-cuti-sakit { width: 35px; }
+        .col-cuti-sakit-upah { width: 40px; }
+        .col-cuti-haid { width: 35px; }
+        .col-cuti-haid-upah { width: 40px; }
+        .col-cuti-minggu { width: 35px; }
+        .col-cuti-minggu-upah { width: 40px; }
+        .col-cuti-nasional { width: 35px; }
+        .col-cuti-nasional-upah { width: 40px; }
+        .col-cuti-hamil { width: 35px; }
+        .col-cuti-hamil-upah { width: 40px; }
+        .col-cuti-izin { width: 35px; }
+        .col-cuti-izin-upah { width: 40px; }
+
+        /* Tunjangan Section */
+        .col-tunjangan-beras { width: 40px; }
+        .col-tunjangan-beras-jumlah { width: 45px; }
+        .col-tunjangan-jabatan { width: 40px; }
+        .col-tunjangan-jabatan-hk { width: 35px; }
+        .col-tunjangan-masa-kerja { width: 40px; }
+        .col-tunjangan-masa-kerja-jumlah { width: 45px; }
+        .col-lembur { width: 50px; }
+        .col-premi { width: 45px; }
+        .col-koreksi { width: 40px; }
+        .col-upah-kotor { width: 60px; }
+
+        /* Potongan Section */
+        .col-astek-pekerja { width: 50px; }
+        .col-astek-majikan { width: 50px; }
+        .col-astek-jumlah { width: 50px; }
+        .col-bpjs-kesehatan { width: 50px; }
+        .col-bpjs-pekerja { width: 50px; }
+        .col-bpjs-pensiun { width: 50px; }
+        .col-bpjs-majikan { width: 50px; }
+        .col-bpjs-jumlah { width: 50px; }
+        .col-pph21 { width: 50px; }
+        .col-premi-kontan { width: 50px; }
+        .col-lebih-potong { width: 50px; }
+        .col-pinjaman { width: 50px; }
+        .col-upah-bersih { width: 60px; }
+        .col-tidak-hadir { width: 30px; }
+
+        .signature-section {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 200px;
+        }
+
+        .signature-line {
+            border-top: 1px solid black;
+            margin: 40px 0 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-info">
+        <div class="header-row">
+            <div class="header-label">PERUSAHAAN:</div>
+            <div class="header-value">PT. REBINMAS</div>
+        </div>
+        <div class="header-row">
+            <div class="header-label">PERIODE:</div>
+            <div class="header-value">{bulan} {tahun}</div>
+        </div>
+        <div class="header-row">
+            <div class="header-label">CATATAN:</div>
+            <div class="header-value">{catatan}</div>
+        </div>
+        <div class="header-row">
+            <div class="header-label">UPAH DASAR:</div>
+            <div class="header-value">{upah_dasar}</div>
+        </div>
+    </div>
+
+    <table>
+        <!-- Main Header Row -->
+        <tr>
+            <td rowspan="4" class="header-cell col-no">NO.</td>
+            <td rowspan="4" class="header-cell col-gender">L/P</td>
+            <td rowspan="4" class="header-cell col-nik">NIK</td>
+            <td rowspan="4" class="header-cell col-name text-left">NAMA</td>
+            <td colspan="4" class="header-cell section-header">TAHUN</td>
+            <td colspan="4" class="header-cell section-header">SAKIT</td>
+            <td colspan="4" class="header-cell section-header">HAID</td>
+            <td colspan="4" class="header-cell section-header">MINGGU</td>
+            <td colspan="4" class="header-cell section-header">NASIONAL</td>
+            <td colspan="4" class="header-cell section-header">HAMIL/MELAHIRKAN</td>
+            <td colspan="4" class="header-cell section-header">IZIN</td>
+            <td rowspan="4" class="header-cell col-medium">JUMLAH HK</td>
+            <td colspan="8" class="header-cell section-header">TUNJANGAN / PREMI</td>
+            <td rowspan="3" class="header-cell col-medium">JUMLAH LEMBUR</td>
+            <td colspan="8" rowspan="2" class="header-cell section-header">JUMLAH PREMI</td>
+            <td rowspan="3" class="header-cell col-small">KOREKSI</td>
+            <td rowspan="3" class="header-cell col-large">JUMLAH</td>
+            <td colspan="3" rowspan="2" class="header-cell section-header">CARUMAN ASTEK</td>
+            <td colspan="5" rowspan="2" class="header-cell section-header">POT. BPJS</td>
+            <td rowspan="4" class="header-cell col-medium">PPH 21</td>
+            <td rowspan="4" class="header-cell col-medium">PREMI KONTANAN</td>
+            <td rowspan="4" class="header-cell col-medium">LEBIH POTONG PAJAK THR</td>
+            <td rowspan="4" class="header-cell col-medium">POTONGAN PINJAMAN UANG</td>
+            <td rowspan="3" class="header-cell col-large">JUMLAH</td>
+            <td colspan="2" rowspan="2" class="header-cell section-header">TIDAK HADIR</td>
+        </tr>
+
+        <!-- Sub-header Row 1 -->
+        <tr>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="2" class="header-cell section-header">HARI</td>
+            <td colspan="2" class="header-cell section-header">UPAH</td>
+            <td colspan="4" class="header-cell section-header">BERAS</td>
+            <td colspan="4" class="header-cell section-header">JABATAN</td>
+            <td colspan="4" class="header-cell section-header">MASA KERJA</td>
+        </tr>
+
+        <!-- Sub-header Row 2 -->
+        <tr>
+            <td class="header-cell col-cuti-tahun">Hari</td>
+            <td class="header-cell col-cuti-tahun-upah">Upah</td>
+            <td class="header-cell col-cuti-sakit">Hari</td>
+            <td class="header-cell col-cuti-sakit-upah">Upah</td>
+            <td class="header-cell col-cuti-haid">Hari</td>
+            <td class="header-cell col-cuti-haid-upah">Upah</td>
+            <td class="header-cell col-cuti-minggu">Hari</td>
+            <td class="header-cell col-cuti-minggu-upah">Upah</td>
+            <td class="header-cell col-cuti-nasional">Hari</td>
+            <td class="header-cell col-cuti-nasional-upah">Upah</td>
+            <td class="header-cell col-cuti-hamil">Hari</td>
+            <td class="header-cell col-cuti-hamil-upah">Upah</td>
+            <td class="header-cell col-cuti-izin">Hari</td>
+            <td class="header-cell col-cuti-izin-upah">Upah</td>
+            <td class="header-cell col-tunjangan-beras">Tarif</td>
+            <td class="header-cell col-tunjangan-beras-jumlah">Jumlah</td>
+            <td class="header-cell col-tunjangan-jabatan">Tarif</td>
+            <td class="header-cell col-tunjangan-jabatan-hk">HK</td>
+            <td class="header-cell col-tunjangan-masa-kerja">Tarif</td>
+            <td class="header-cell col-tunjangan-masa-kerja-jumlah">Jumlah</td>
+            <td class="header-cell section-header">Pekerja</td>
+            <td class="header-cell section-header">Majikan</td>
+            <td class="header-cell section-header">Jumlah</td>
+            <td class="header-cell section-header">Kesehatan</td>
+            <td class="header-cell section-header">Pekerja</td>
+            <td class="header-cell section-header">Pensiun</td>
+            <td class="header-cell section-header">Majikan</td>
+            <td class="header-cell section-header">Jumlah</td>
+            <td class="header-cell col-tidak-hadir">CTH</td>
+            <td class="header-cell col-tidak-hadir">Alpa</td>
+        </tr>
+
+        <!-- Premium Detail Headers -->
+        <tr>
+            <td class="header-cell col-tunjangan-beras"></td>
+            <td class="header-cell col-tunjangan-beras-jumlah"></td>
+            <td class="header-cell col-tunjangan-jabatan"></td>
+            <td class="header-cell col-tunjangan-jabatan-hk"></td>
+            <td class="header-cell col-tunjangan-masa-kerja"></td>
+            <td class="header-cell col-tunjangan-masa-kerja-jumlah"></td>
+            <td class="header-cell col-medium">Jumlah</td>
+            <td class="header-cell col-premi">Angkut TBS</td>
+            <td class="header-cell col-premi">Angkut PC/TBK</td>
+            <td class="header-cell col-premi">Premi Retase</td>
+            <td class="header-cell col-premi">Antar Jemput</td>
+            <td class="header-cell col-premi">Angkut Puru</td>
+            <td class="header-cell col-premi">Angkut Bibit</td>
+            <td class="header-cell col-premi">Jaga Genset</td>
+            <td class="header-cell col-premi">Premi Kontan</td>
+            <td class="header-cell col-premi">Koreksi</td>
+            <td class="header-cell col-upah-kotor"></td>
+            <td class="header-cell col-astek-pekerja"></td>
+            <td class="header-cell col-astek-majikan"></td>
+            <td class="header-cell col-astek-jumlah"></td>
+            <td class="header-cell col-bpjs-kesehatan"></td>
+            <td class="header-cell col-bpjs-pekerja"></td>
+            <td class="header-cell col-bpjs-pensiun"></td>
+            <td class="header-cell col-bpjs-majikan"></td>
+            <td class="header-cell col-bpjs-jumlah"></td>
+            <td class="header-cell col-pph21"></td>
+            <td class="header-cell col-premi-kontan"></td>
+            <td class="header-cell col-lebih-potong"></td>
+            <td class="header-cell col-pinjaman"></td>
+            <td class="header-cell col-upah-bersih"></td>
+            <td class="header-cell col-tidak-hadir"></td>
+            <td class="header-cell col-tidak-hadir"></td>
+        </tr>
+
+        <!-- Data Rows -->
+        {employee_rows}
+
+        <!-- Total Row -->
+        <tr class="total-row">
+            <td colspan="4" class="header-cell text-left">TOTAL</td>
+            <td class="number-cell">{total.cuti_tahun_hari}</td>
+            <td class="number-cell">{total.cuti_tahun_jumlah}</td>
+            <td class="number-cell">{total.cuti_sakit_hari}</td>
+            <td class="number-cell">{total.cuti_sakit_jumlah}</td>
+            <td class="number-cell">{total.cuti_haid_hari}</td>
+            <td class="number-cell">{total.cuti_haid_jumlah}</td>
+            <td class="number-cell">{total.cuti_minggu_hari}</td>
+            <td class="number-cell">{total.cuti_minggu_jumlah}</td>
+            <td class="number-cell">{total.cuti_nasional_hari}</td>
+            <td class="number-cell">{total.cuti_nasional_jumlah}</td>
+            <td class="number-cell">{total.cuti_hamil_hari}</td>
+            <td class="number-cell">{total.cuti_hamil_jumlah}</td>
+            <td class="number-cell">{total.cuti_izin_hari}</td>
+            <td class="number-cell">{total.cuti_izin_jumlah}</td>
+            <td class="number-cell">{total.jumlah_hk}</td>
+            <td class="number-cell">{total.tunjangan_beras}</td>
+            <td class="number-cell">{total.tunjangan_beras_jumlah}</td>
+            <td class="number-cell">{total.tunjangan_jabatan}</td>
+            <td class="number-cell">{total.tunjangan_jabatan_hk}</td>
+            <td class="number-cell">{total.tunjangan_masa_kerja}</td>
+            <td class="number-cell">{total.tunjangan_masa_kerja_jumlah}</td>
+            <td class="number-cell">{total.tunjangan_lembur}</td>
+            <td class="number-cell">{total.tunjangan_premi}</td>
+            <td class="number-cell">{total.tunjangan_angkut_tbs}</td>
+            <td class="number-cell">{total.tunjangan_angkut_pc_tbk}</td>
+            <td class="number-cell">{total.tunjangan_premi_retase}</td>
+            <td class="number-cell">{total.tunjangan_antar_jemput}</td>
+            <td class="number-cell">{total.tunjangan_angkut_puru}</td>
+            <td class="number-cell">{total.tunjangan_angkut_bibit}</td>
+            <td class="number-cell">{total.tunjangan_jaga_genset}</td>
+            <td class="number-cell">{total.tunjangan_premi_kontan}</td>
+            <td class="number-cell">{total.tunjangan_koreksi}</td>
+            <td class="number-cell">{total.upah_kotor}</td>
+            <td class="number-cell">{total.potongan_astek_pekerja}</td>
+            <td class="number-cell">{total.potongan_astek_majikan}</td>
+            <td class="number-cell">{total.potongan_astek_jumlah}</td>
+            <td class="number-cell">{total.potongan_bpjs_kesehatan}</td>
+            <td class="number-cell">{total.potongan_bpjs_pekerja}</td>
+            <td class="number-cell">{total.potongan_bpjs_pensiun}</td>
+            <td class="number-cell">{total.potongan_bpjs_majikan}</td>
+            <td class="number-cell">{total.potongan_bpjs_jumlah}</td>
+            <td class="number-cell">{total.potongan_pph21}</td>
+            <td class="number-cell">{total.potongan_premi_kontan}</td>
+            <td class="number-cell">{total.potongan_lebih_potong_pajak_thr}</td>
+            <td class="number-cell">{total.potongan_pinjaman_uang}</td>
+            <td class="number-cell">{total.upah_bersih}</td>
+            <td class="number-cell">{total.tidak_hadir_cth}</td>
+            <td class="number-cell">{total.tidak_hadir_alpa}</td>
+        </tr>
+    </table>
+
+    <div class="signature-section">
+        <div class="signature-box">
+            <div>Menyetujui,</div>
+            <div class="signature-line"></div>
+            <div>(.........................)</div>
+        </div>
+
+        <div class="signature-box">
+            <div>Diperiksa oleh,</div>
+            <div class="signature-line"></div>
+            <div>(.........................)</div>
+        </div>
+
+        <div class="signature-box">
+            <div>Dibuat oleh,</div>
+            <div class="signature-line"></div>
+            <div>(.........................)</div>
+        </div>
+    </div>
+</body>
+</html>

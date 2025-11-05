@@ -1,0 +1,257 @@
+{
+  "bulan": "MEI",
+  "tahun": "2025",
+  "catatan": "Daftar upah karyawan periode Mei 2025",
+  "upah_dasar": "Upah Minimum Kabupaten (UMK) 2025",
+  "karyawan": [
+    {
+      "jenis_kelamin": "L",
+      "nik": "1234567890",
+      "nama": "AHMAD SUBEKTI",
+      "cuti": {
+        "sakit": {"hari": 0, "jumlah": 0},
+        "haid": {"hari": 0, "jumlah": 0},
+        "minggu": {"hari": 0, "jumlah": 0},
+        "nasional": {"hari": 2, "jumlah": 0},
+        "hamil_melahirkan": {"hari": 0, "jumlah": 0},
+        "izin": {"hari": 1, "jumlah": 0}
+      },
+      "jumlah_hk": 22,
+      "tunjangan": {
+        "beras": {"tarif": 15000, "jumlah": 330000},
+        "jabatan": {"tarif": 5000, "jumlah": 110000},
+        "masa_kerja": {"tarif": 2000, "jumlah": 44000},
+        "lembur": {"jumlah": 250000},
+        "premi": {"jumlah": 150000},
+        "angkut_tbs": 0,
+        "angkut_pc_tbk": 0,
+        "premi_retase": 0,
+        "antar_jemput": 0,
+        "angkut_puru": 0,
+        "angkut_bibit": 0,
+        "jaga_genset": 0,
+        "premi_kontan": 50000,
+        "koreksi": 0
+      },
+      "upah_kotor": 4840000,
+      "potongan": {
+        "astek": {"pekerja": 200000, "majikan": 300000, "jumlah": 500000},
+        "bpjs": {"kesehatan": 100000, "pekerja": 50000, "pensiun_majikan": 75000, "jumlah": 225000},
+        "spsi": 15000,
+        "pph21": 150000,
+        "premi_kontan": 0,
+        "lebih_potong_pajak_thr": 0,
+        "pinjaman_uang": 200000
+      },
+      "upah_bersih": 3750000,
+      "tidak_hadir": {"cth": 0, "alpa": 0}
+    },
+    {
+      "jenis_kelamin": "P",
+      "nik": "0987654321",
+      "nama": "SITI NURHALIZA",
+      "cuti": {
+        "sakit": {"hari": 1, "jumlah": 0},
+        "haid": {"hari": 2, "jumlah": 0},
+        "minggu": {"hari": 0, "jumlah": 0},
+        "nasional": {"hari": 2, "jumlah": 0},
+        "hamil_melahirkan": {"hari": 0, "jumlah": 0},
+        "izin": {"hari": 0, "jumlah": 0}
+      },
+      "jumlah_hk": 19,
+      "tunjangan": {
+        "beras": {"tarif": 15000, "jumlah": 285000},
+        "jabatan": {"tarif": 3000, "jumlah": 57000},
+        "masa_kerja": {"tarif": 1500, "jumlah": 28500},
+        "lembur": {"jumlah": 180000},
+        "premi": {"jumlah": 100000},
+        "angkut_tbs": 75000,
+        "angkut_pc_tbk": 0,
+        "premi_retase": 0,
+        "antar_jemput": 0,
+        "angkut_puru": 0,
+        "angkut_bibit": 0,
+        "jaga_genset": 0,
+        "premi_kontan": 0,
+        "koreksi": 0
+      },
+      "upah_kotor": 3725000,
+      "potongan": {
+        "astek": {"pekerja": 150000, "majikan": 225000, "jumlah": 375000},
+        "bpjs": {"kesehatan": 75000, "pekerja": 37500, "pensiun_majikan": 56250, "jumlah": 168750},
+        "spsi": 10000,
+        "pph21": 100000,
+        "premi_kontan": 0,
+        "lebih_potong_pajak_thr": 0,
+        "pinjaman_uang": 150000
+      },
+      "upah_bersih": 2911250,
+      "tidak_hadir": {"cth": 0, "alpa": 0}
+    },
+    {
+      "jenis_kelamin": "L",
+      "nik": "1122334455",
+      "nama": "BUDI SANTOSO",
+      "cuti": {
+        "sakit": {"hari": 0, "jumlah": 0},
+        "haid": {"hari": 0, "jumlah": 0},
+        "minggu": {"hari": 0, "jumlah": 0},
+        "nasional": {"hari": 2, "jumlah": 0},
+        "hamil_melahirkan": {"hari": 0, "jumlah": 0},
+        "izin": {"hari": 0, "jumlah": 0}
+      },
+      "jumlah_hk": 23,
+      "tunjangan": {
+        "beras": {"tarif": 15000, "jumlah": 345000},
+        "jabatan": {"tarif": 4000, "jumlah": 92000},
+        "masa_kerja": {"tarif": 1800, "jumlah": 41400},
+        "lembur": {"jumlah": 300000},
+        "premi": {"jumlah": 200000},
+        "angkut_tbs": 0,
+        "angkut_pc_tbk": 50000,
+        "premi_retase": 25000,
+        "antar_jemput": 30000,
+        "angkut_puru": 0,
+        "angkut_bibit": 0,
+        "jaga_genset": 20000,
+        "premi_kontan": 75000,
+        "koreksi": 0
+      },
+      "upah_kotor": 4530000,
+      "potongan": {
+        "astek": {"pekerja": 180000, "majikan": 270000, "jumlah": 450000},
+        "bpjs": {"kesehatan": 90000, "pekerja": 45000, "pensiun_majikan": 67500, "jumlah": 202500},
+        "spsi": 12000,
+        "pph21": 120000,
+        "premi_kontan": 0,
+        "lebih_potong_pajak_thr": 0,
+        "pinjaman_uang": 100000
+      },
+      "upah_bersih": 3645500,
+      "tidak_hadir": {"cth": 0, "alpa": 0}
+    },
+    {
+      "jenis_kelamin": "L",
+      "nik": "5544332211",
+      "nama": "EKO PRASETYO",
+      "cuti": {
+        "sakit": {"hari": 2, "jumlah": 0},
+        "haid": {"hari": 0, "jumlah": 0},
+        "minggu": {"hari": 0, "jumlah": 0},
+        "nasional": {"hari": 2, "jumlah": 0},
+        "hamil_melahirkan": {"hari": 0, "jumlah": 0},
+        "izin": {"hari": 1, "jumlah": 0}
+      },
+      "jumlah_hk": 20,
+      "tunjangan": {
+        "beras": {"tarif": 15000, "jumlah": 300000},
+        "jabatan": {"tarif": 3500, "jumlah": 70000},
+        "masa_kerja": {"tarif": 1200, "jumlah": 24000},
+        "lembur": {"jumlah": 200000},
+        "premi": {"jumlah": 120000},
+        "angkut_tbs": 100000,
+        "angkut_pc_tbk": 0,
+        "premi_retase": 0,
+        "antar_jemput": 0,
+        "angkut_puru": 25000,
+        "angkut_bibit": 0,
+        "jaga_genset": 0,
+        "premi_kontan": 0,
+        "koreksi": 0
+      },
+      "upah_kotor": 3890000,
+      "potongan": {
+        "astek": {"pekerja": 155000, "majikan": 232500, "jumlah": 387500},
+        "bpjs": {"kesehatan": 77500, "pekerja": 38750, "pensiun_majikan": 58125, "jumlah": 174375},
+        "spsi": 11000,
+        "pph21": 110000,
+        "premi_kontan": 0,
+        "lebih_potong_pajak_thr": 0,
+        "pinjaman_uang": 50000
+      },
+      "upah_bersih": 3158125,
+      "tidak_hadir": {"cth": 1, "alpa": 0}
+    },
+    {
+      "jenis_kelamin": "P",
+      "nik": "9988776655",
+      "nama": "DEWI LESTARI",
+      "cuti": {
+        "sakit": {"hari": 0, "jumlah": 0},
+        "haid": {"hari": 1, "jumlah": 0},
+        "minggu": {"hari": 0, "jumlah": 0},
+        "nasional": {"hari": 2, "jumlah": 0},
+        "hamil_melahirkan": {"hari": 90, "jumlah": 0},
+        "izin": {"hari": 0, "jumlah": 0}
+      },
+      "jumlah_hk": 4,
+      "tunjangan": {
+        "beras": {"tarif": 15000, "jumlah": 60000},
+        "jabatan": {"tarif": 2500, "jumlah": 10000},
+        "masa_kerja": {"tarif": 1000, "jumlah": 4000},
+        "lembur": {"jumlah": 0},
+        "premi": {"jumlah": 0},
+        "angkut_tbs": 0,
+        "angkut_pc_tbk": 0,
+        "premi_retase": 0,
+        "antar_jemput": 0,
+        "angkut_puru": 0,
+        "angkut_bibit": 0,
+        "jaga_genset": 0,
+        "premi_kontan": 0,
+        "koreksi": 0
+      },
+      "upah_kotor": 2740000,
+      "potongan": {
+        "astek": {"pekerja": 120000, "majikan": 180000, "jumlah": 300000},
+        "bpjs": {"kesehatan": 60000, "pekerja": 30000, "pensiun_majikan": 45000, "jumlah": 135000},
+        "spsi": 8000,
+        "pph21": 80000,
+        "premi_kontan": 0,
+        "lebih_potong_pajak_thr": 0,
+        "pinjaman_uang": 0
+      },
+      "upah_bersih": 2217000,
+      "tidak_hadir": {"cth": 0, "alpa": 0}
+    }
+  ],
+  "total": {
+    "cuti": {
+      "sakit": {"hari": 3, "jumlah": 0},
+      "haid": {"hari": 3, "jumlah": 0},
+      "minggu": {"hari": 0, "jumlah": 0},
+      "nasional": {"hari": 10, "jumlah": 0},
+      "hamil_melahirkan": {"hari": 90, "jumlah": 0},
+      "izin": {"hari": 2, "jumlah": 0}
+    },
+    "jumlah_hk": 88,
+    "tunjangan": {
+      "beras": {"tarif": 75000, "jumlah": 1320000},
+      "jabatan": {"tarif": 18000, "jumlah": 339000},
+      "masa_kerja": {"tarif": 7500, "jumlah": 137900},
+      "lembur": {"jumlah": 930000},
+      "premi": {"jumlah": 570000},
+      "angkut_tbs": 175000,
+      "angkut_pc_tbk": 50000,
+      "premi_retase": 25000,
+      "antar_jemput": 30000,
+      "angkut_puru": 25000,
+      "angkut_bibit": 0,
+      "jaga_genset": 20000,
+      "premi_kontan": 125000,
+      "koreksi": 0
+    },
+    "upah_kotor": 19725000,
+    "potongan": {
+      "astek": {"pekerja": 805000, "majikan": 1207500, "jumlah": 2012500},
+      "bpjs": {"kesehatan": 402500, "pekerja": 201250, "pensiun_majikan": 301875, "jumlah": 905625},
+      "spsi": 56000,
+      "pph21": 560000,
+      "premi_kontan": 0,
+      "lebih_potong_pajak_thr": 0,
+      "pinjaman_uang": 500000
+    },
+    "upah_bersih": 15675875,
+    "tidak_hadir": {"cth": 1, "alpa": 0}
+  }
+}

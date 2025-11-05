@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Upah - MEI 2025</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: white;
+            font-size: 11.0pt;
+            color: black;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background-color: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 16.0pt;
+            font-weight: bold;
+        }
+
+        .period {
+            font-size: 12.0pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .division {
+            font-size: 10.0pt;
+            margin-bottom: 10px;
+        }
+
+        .table-container {
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        table {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            font-size: 10.0pt;
+            table-layout: fixed;
+        }
+
+        th, td {
+            border: 0.5pt solid black;
+            padding: 2px;
+            text-align: center;
+            vertical-align: middle;
+            height: 20px;
+            font-size: 10.0pt;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* Excel-style header classes */
+        .xl274 {
+            background: #D9D9D9;
+            font-weight: bold;
+            border-bottom: 1.0pt solid black;
+            border: 0.5pt solid black;
+        }
+
+        .xl264 {
+            background: #D9D9D9;
+            font-weight: bold;
+            border-bottom: 1.0pt solid black;
+            border: 0.5pt solid black;
+        }
+
+        .xl278 {
+            background: #D9D9D9;
+            font-weight: bold;
+            border-bottom: 1.0pt solid black;
+            border: 0.5pt solid black;
+        }
+
+        .xl281 {
+            background: #F2F2F2;
+            font-weight: bold;
+            border: 0.5pt solid black;
+            text-align: center;
+        }
+
+        .xl256 {
+            background: #D9D9D9;
+            font-weight: bold;
+            border-bottom: 0.5pt solid black;
+            border: 0.5pt solid black;
+        }
+
+        .xl248 {
+            background: #F2F2F2;
+            font-weight: bold;
+            border: 0.5pt solid black;
+            text-align: center;
+        }
+
+        .xl267 {
+            background: #F2F2F2;
+            font-weight: bold;
+            border-bottom: 0.5pt solid black;
+            border: 0.5pt solid black;
+        }
+
+        .xl92 {
+            background: #F2F2F2;
+            font-weight: bold;
+            border: 0.5pt solid black;
+        }
+
+        .xl93 {
+            background: #F2F2F2;
+            font-weight: bold;
+            border: 0.5pt solid black;
+        }
+
+        .data-row {
+            background: white;
+            border: 0.5pt solid black;
+        }
+
+        .data-row:hover {
+            background: #F2F2F2;
+        }
+
+        .total-row {
+            background: #E0E0E0;
+            font-weight: bold;
+            border: 0.5pt solid black;
+        }
+
+        .notes {
+            margin-top: 15px;
+            padding: 10px;
+            font-size: 10.0pt;
+        }
+
+        .note-item {
+            margin-bottom: 5px;
+        }
+
+        /* Fixed column widths - Excel style */
+        .col-1 { width: 48pt; }  /* NO */
+        .col-2 { width: 48pt; }  /* L/P */
+        .col-3 { width: 48pt; }  /* NIK */
+        .col-4 { width: 112pt; } /* NAMA */
+        .col-5 { width: 48pt; }  /* HARI */
+        .col-6 { width: 78pt; }  /* UPAH */
+        .col-7 { width: 78pt; }  /* UPAH */
+        .col-8 { width: 76pt; }  /* TAHUN */
+        .col-9 { width: 35pt; }  /* HARI */
+        .col-10 { width: 35pt; } /* JUMLAH */
+        .col-11 { width: 35pt; } /* HARI */
+        .col-12 { width: 35pt; } /* JUMLAH */
+        .col-13 { width: 35pt; } /* HARI */
+        .col-14 { width: 35pt; } /* JUMLAH */
+        .col-15 { width: 35pt; } /* HARI */
+        .col-16 { width: 35pt; } /* JUMLAH */
+        .col-17 { width: 48pt; } /* HARI */
+        .col-18 { width: 60pt; } /* JUMLAH */
+        .col-19 { width: 48pt; } /* JUMLAH HK */
+        .col-20 { width: 40pt; } /* HARI */
+        .col-21 { width: 40pt; } /* JUMLAH */
+        .col-22 { width: 40pt; } /* HARI */
+        .col-23 { width: 40pt; } /* JUMLAH */
+        .col-24 { width: 40pt; } /* HARI */
+        .col-25 { width: 40pt; } /* JUMLAH */
+        .col-26 { width: 48pt; } /* HK */
+        .col-27 { width: 40pt; } /* JUMLAH */
+        .col-28 { width: 48pt; } /* THN */
+        .col-29 { width: 40pt; } /* JUMLAH */
+        .col-30 { width: 48pt; } /* JUMLAH LEMBUR */
+        .col-31 { width: 48pt; } /* JUMLAH PREMI */
+        .col-32 { width: 48pt; } /* KOREKSI */
+        .col-33 { width: 48pt; } /* JUMLAH */
+        .col-34 { width: 40pt; } /* PEKERJA */
+        .col-35 { width: 40pt; } /* MAJIKAN */
+        .col-36 { width: 40pt; } /* JUMLAH */
+        .col-37 { width: 40pt; } /* KESEHATAN */
+        .col-38 { width: 40pt; } /* PEKERJA */
+        .col-39 { width: 40pt; } /* PENSIUN */
+        .col-40 { width: 40pt; } /* MAJIKAN */
+        .col-41 { width: 40pt; } /* JUMLAH */
+        .col-42 { width: 48pt; } /* PPH 21 */
+        .col-43 { width: 48pt; } /* PREMI KONTANAN */
+        .col-44 { width: 48pt; } /* LEBIH POTONG PAJAK THR */
+        .col-45 { width: 48pt; } /* POTONGAN PINJAMAN UANG */
+        .col-46 { width: 48pt; } /* JUMLAH */
+        .col-47 { width: 32pt; } /* CTH */
+        .col-48 { width: 32pt; } /* ALPA */
+
+        /* Compact layout for smaller screens */
+        @media (max-width: 1400px) {
+            table { font-size: 9pt; }
+            th, td { padding: 1px; height: 18px; }
+        }
+
+        @media (max-width: 1200px) {
+            table { font-size: 8pt; }
+            th, td { padding: 1px; height: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">DAFTAR UPAH</div>
+        <div class="period">BULAN : MEI 2025</div>
+        <div class="division">DIVISI : AIR RUAK B.2 AIR BANGEK (TRANSPORT)</div>
+
+        <div class="table-container">
+            <table>
+                <!-- Main Header Row - Excel Style -->
+                <thead>
+                    <tr style="height: 25px;">
+                        <th rowspan="4" class="col-1 xl274">NO.</th>
+                        <th rowspan="4" class="col-2 xl264">L/P</th>
+                        <th rowspan="4" class="col-3 xl278">NIK</th>
+                        <th colspan="4" class="col-5 xl92">NAMA KARYAWAN</th>
+                        <th colspan="14" class="xl281">CUTI / LIBUR</th>
+                        <th rowspan="4" class="col-19 xl264">JUMLAH HK</th>
+                        <th colspan="8" class="xl281">TUNJANGAN / PREMI</th>
+                        <th rowspan="3" class="col-30 xl256">JUMLAH LEMBUR</th>
+                        <th colspan="8" rowspan="2" class="xl248">JUMLAH PREMI</th>
+                        <th rowspan="3" class="col-32 xl264">KOREKSI</th>
+                        <th rowspan="2" class="col-33">JUMLAH</th>
+                        <th colspan="3" rowspan="2" class="xl267">CARUMAN ASTEK</th>
+                        <th colspan="5" rowspan="2" class="xl267">POT. BPJS</th>
+                        <th rowspan="4" class="col-42 xl256">PPH 21</th>
+                        <th rowspan="4" class="col-43 xl242">PREMI KONTANAN</th>
+                        <th rowspan="4" class="col-44 xl242">LEBIH POTONG PAJAK THR</th>
+                        <th rowspan="4" class="col-45 xl245">POTONGAN PINJAMAN UANG</th>
+                        <th rowspan="2" class="col-46">JUMLAH</th>
+                        <th colspan="2" rowspan="2" class="xl248">TIDAK HADIR</th>
+                    </tr>
+
+                    <tr style="height: 25px;">
+                        <!-- Empty for complex header structure -->
+                    </tr>
+
+                    <tr style="height: 25px;">
+                        <th colspan="2" class="xl93">TAHUN</th>
+                        <th colspan="2" class="xl93">SAKIT</th>
+                        <th colspan="2" class="xl93">HAID</th>
+                        <th colspan="2" class="xl93">MINGGU</th>
+                        <th colspan="2" class="xl93">NASIONAL</th>
+                        <th colspan="2" class="xl93">HA. / MELAH.</th>
+                        <th colspan="2" class="xl93">IZIN</th>
+                        <th colspan="2" class="xl93">BERAS</th>
+                        <th colspan="3" class="xl93">JABATAN</th>
+                        <th colspan="3" class="xl93">MASA KERJA</th>
+                        <th class="xl93">UPAH</th>
+                        <th class="xl93">IURAN</th>
+                        <th class="xl93">UPAH</th>
+                        <th class="xl93">KOTOR</th>
+                        <th class="xl93">PEKERJA</th>
+                        <th class="xl93">MAJIKAN</th>
+                        <th class="xl93">JUMLAH</th>
+                        <th class="xl93">KESEHATAN</th>
+                        <th class="xl93">PEKERJA</th>
+                        <th class="xl93">PENSIUN</th>
+                        <th class="xl93">MAJIKAN</th>
+                        <th class="xl93">JUMLAH</th>
+                        <th class="xl93">BERSIH</th>
+                        <th class="col-47">CTH</th>
+                        <th class="col-48">ALPA</th>
+                    </tr>
+
+                    <tr style="height: 25px;">
+                        <!-- Detail headers -->
+                        <th class="col-5">NAMA</th>
+                        <th class="col-6">HARI</th>
+                        <th class="col-7">UPAH</th>
+                        <th class="col-8">UPAH</th>
+                        <th class="col-9">HARI</th>
+                        <th class="col-10">JUMLAH</th>
+                        <th class="col-11">HARI</th>
+                        <th class="col-12">JUMLAH</th>
+                        <th class="col-13">HARI</th>
+                        <th class="col-14">JUMLAH</th>
+                        <th class="col-15">HARI</th>
+                        <th class="col-16">JUMLAH</th>
+                        <th class="col-17">HARI</th>
+                        <th class="col-18">JUMLAH</th>
+                        <th class="col-20">(Rp)/HK</th>
+                        <th class="col-21">Jumlah</th>
+                        <th class="col-22">(Rp)/HK</th>
+                        <th class="col-23">JUMLAH HK</th>
+                        <th class="col-24">(Rp)/THN</th>
+                        <th class="col-25">JUMLAH</th>
+                        <th class="col-26">HK</th>
+                        <th class="col-27">(Rp)</th>
+                        <th class="col-28">THN</th>
+                        <th class="col-29">(Rp)</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    
+        <tr class="data-row" style="height: 20px;">
+            <td class="col-1">1</td>
+            <td class="col-2">L</td>
+            <td class="col-3">1234567890</td>
+            <td class="col-4 text-left" colspan="4">AHMAD SUBEKTI</td>
+
+            <!-- Cuti/Libur Section -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">0</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">0</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">2</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">15.000</td>
+            <td class="col-21 text-right">330.000</td>
+            <td class="col-22 text-right">5.000</td>
+            <td class="col-23">22</td>
+            <td class="col-24 text-right">2.000</td>
+            <td class="col-25 text-right">44.000</td>
+
+            <!-- Work and Salary -->
+            <td class="col-26">22</td>
+            <td class="col-27 text-right">150.000</td>
+            <td class="col-28">5</td>
+            <td class="col-29 text-right">44.000</td>
+            <td class="col-30 text-right">250.000</td>
+            <td class="col-31 text-right">150.000</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">4.840.000</td>
+
+            <!-- Potongan Section -->
+            <td class="col-34 text-right">200.000</td>
+            <td class="col-35 text-right">300.000</td>
+            <td class="col-36 text-right">500.000</td>
+            <td class="col-37 text-right">100.000</td>
+            <td class="col-38 text-right">50.000</td>
+            <td class="col-39 text-right">75.000</td>
+            <td class="col-40 text-right">75.000</td>
+            <td class="col-41 text-right">225.000</td>
+            <td class="col-42 text-right">150.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">200.000</td>
+            <td class="col-46 text-right">3.750.000</td>
+
+            <!-- Absence -->
+            <td class="col-47">0</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+        <tr class="data-row" style="height: 20px;">
+            <td class="col-1">2</td>
+            <td class="col-2">P</td>
+            <td class="col-3">0987654321</td>
+            <td class="col-4 text-left" colspan="4">SITI NURHALIZA</td>
+
+            <!-- Cuti/Libur Section -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">1</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">2</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">2</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">15.000</td>
+            <td class="col-21 text-right">285.000</td>
+            <td class="col-22 text-right">3.000</td>
+            <td class="col-23">19</td>
+            <td class="col-24 text-right">1.500</td>
+            <td class="col-25 text-right">28.500</td>
+
+            <!-- Work and Salary -->
+            <td class="col-26">19</td>
+            <td class="col-27 text-right">120.000</td>
+            <td class="col-28">3</td>
+            <td class="col-29 text-right">28.500</td>
+            <td class="col-30 text-right">180.000</td>
+            <td class="col-31 text-right">100.000</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">3.725.000</td>
+
+            <!-- Potongan Section -->
+            <td class="col-34 text-right">150.000</td>
+            <td class="col-35 text-right">225.000</td>
+            <td class="col-36 text-right">375.000</td>
+            <td class="col-37 text-right">75.000</td>
+            <td class="col-38 text-right">37.500</td>
+            <td class="col-39 text-right">56.250</td>
+            <td class="col-40 text-right">56.250</td>
+            <td class="col-41 text-right">168.750</td>
+            <td class="col-42 text-right">100.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">150.000</td>
+            <td class="col-46 text-right">2.911.250</td>
+
+            <!-- Absence -->
+            <td class="col-47">0</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+        <tr class="data-row" style="height: 20px;">
+            <td class="col-1">3</td>
+            <td class="col-2">L</td>
+            <td class="col-3">1122334455</td>
+            <td class="col-4 text-left" colspan="4">BUDI SANTOSO</td>
+
+            <!-- Cuti/Libur Section -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">0</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">0</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">2</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">15.000</td>
+            <td class="col-21 text-right">345.000</td>
+            <td class="col-22 text-right">4.000</td>
+            <td class="col-23">23</td>
+            <td class="col-24 text-right">1.800</td>
+            <td class="col-25 text-right">41.400</td>
+
+            <!-- Work and Salary -->
+            <td class="col-26">23</td>
+            <td class="col-27 text-right">180.000</td>
+            <td class="col-28">7</td>
+            <td class="col-29 text-right">41.400</td>
+            <td class="col-30 text-right">300.000</td>
+            <td class="col-31 text-right">200.000</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">4.530.000</td>
+
+            <!-- Potongan Section -->
+            <td class="col-34 text-right">180.000</td>
+            <td class="col-35 text-right">270.000</td>
+            <td class="col-36 text-right">450.000</td>
+            <td class="col-37 text-right">90.000</td>
+            <td class="col-38 text-right">45.000</td>
+            <td class="col-39 text-right">67.500</td>
+            <td class="col-40 text-right">67.500</td>
+            <td class="col-41 text-right">202.500</td>
+            <td class="col-42 text-right">120.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">100.000</td>
+            <td class="col-46 text-right">3.645.500</td>
+
+            <!-- Absence -->
+            <td class="col-47">0</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+        <tr class="data-row" style="height: 20px;">
+            <td class="col-1">4</td>
+            <td class="col-2">L</td>
+            <td class="col-3">5544332211</td>
+            <td class="col-4 text-left" colspan="4">EKO PRASETYO</td>
+
+            <!-- Cuti/Libur Section -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">2</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">0</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">2</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">15.000</td>
+            <td class="col-21 text-right">300.000</td>
+            <td class="col-22 text-right">3.500</td>
+            <td class="col-23">20</td>
+            <td class="col-24 text-right">1.200</td>
+            <td class="col-25 text-right">24.000</td>
+
+            <!-- Work and Salary -->
+            <td class="col-26">20</td>
+            <td class="col-27 text-right">140.000</td>
+            <td class="col-28">4</td>
+            <td class="col-29 text-right">24.000</td>
+            <td class="col-30 text-right">200.000</td>
+            <td class="col-31 text-right">120.000</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">3.890.000</td>
+
+            <!-- Potongan Section -->
+            <td class="col-34 text-right">155.000</td>
+            <td class="col-35 text-right">232.500</td>
+            <td class="col-36 text-right">387.500</td>
+            <td class="col-37 text-right">77.500</td>
+            <td class="col-38 text-right">38.750</td>
+            <td class="col-39 text-right">58.125</td>
+            <td class="col-40 text-right">58.125</td>
+            <td class="col-41 text-right">174.375</td>
+            <td class="col-42 text-right">110.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">50.000</td>
+            <td class="col-46 text-right">3.158.125</td>
+
+            <!-- Absence -->
+            <td class="col-47">1</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+        <tr class="data-row" style="height: 20px;">
+            <td class="col-1">5</td>
+            <td class="col-2">P</td>
+            <td class="col-3">9988776655</td>
+            <td class="col-4 text-left" colspan="4">DEWI LESTARI</td>
+
+            <!-- Cuti/Libur Section -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">0</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">1</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">2</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">15.000</td>
+            <td class="col-21 text-right">60.000</td>
+            <td class="col-22 text-right">2.500</td>
+            <td class="col-23">4</td>
+            <td class="col-24 text-right">1.000</td>
+            <td class="col-25 text-right">4.000</td>
+
+            <!-- Work and Salary -->
+            <td class="col-26">4</td>
+            <td class="col-27 text-right">100.000</td>
+            <td class="col-28">2</td>
+            <td class="col-29 text-right">4.000</td>
+            <td class="col-30 text-right">0</td>
+            <td class="col-31 text-right">0</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">2.740.000</td>
+
+            <!-- Potongan Section -->
+            <td class="col-34 text-right">120.000</td>
+            <td class="col-35 text-right">180.000</td>
+            <td class="col-36 text-right">300.000</td>
+            <td class="col-37 text-right">60.000</td>
+            <td class="col-38 text-right">30.000</td>
+            <td class="col-39 text-right">45.000</td>
+            <td class="col-40 text-right">45.000</td>
+            <td class="col-41 text-right">135.000</td>
+            <td class="col-42 text-right">80.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">0</td>
+            <td class="col-46 text-right">2.217.000</td>
+
+            <!-- Absence -->
+            <td class="col-47">0</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+        <tr class="total-row" style="height: 20px;">
+            <td class="col-1" colspan="7" style="text-align: left; font-weight: bold;">TOTAL</td>
+
+            <!-- Cuti/Libur Totals -->
+            <td class="col-9">0</td>
+            <td class="col-10 text-right">0</td>
+            <td class="col-11">3</td>
+            <td class="col-12 text-right">0</td>
+            <td class="col-13">3</td>
+            <td class="col-14 text-right">0</td>
+            <td class="col-15">0</td>
+            <td class="col-16 text-right">0</td>
+            <td class="col-17">10</td>
+            <td class="col-18 text-right">0</td>
+            <td class="col-20 text-right">75.000</td>
+            <td class="col-21 text-right">1.320.000</td>
+            <td class="col-22 text-right">18.000</td>
+            <td class="col-23">88</td>
+            <td class="col-24 text-right">7.500</td>
+            <td class="col-25 text-right">141.900</td>
+
+            <!-- Work and Salary Totals -->
+            <td class="col-26">88</td>
+            <td class="col-27 text-right">690.000</td>
+            <td class="col-28">21</td>
+            <td class="col-29 text-right">141.900</td>
+            <td class="col-30 text-right">930.000</td>
+            <td class="col-31 text-right">570.000</td>
+            <td class="col-32 text-right">0</td>
+            <td class="col-33 text-right">19.725.000</td>
+
+            <!-- Potongan Totals -->
+            <td class="col-34 text-right">805.000</td>
+            <td class="col-35 text-right">1.207.500</td>
+            <td class="col-36 text-right">2.012.500</td>
+            <td class="col-37 text-right">402.500</td>
+            <td class="col-38 text-right">201.250</td>
+            <td class="col-39 text-right">301.875</td>
+            <td class="col-40 text-right">301.875</td>
+            <td class="col-41 text-right">905.625</td>
+            <td class="col-42 text-right">560.000</td>
+            <td class="col-43 text-right">0</td>
+            <td class="col-44 text-right">0</td>
+            <td class="col-45 text-right">500.000</td>
+            <td class="col-46 text-right">15.681.875</td>
+
+            <!-- Absence Totals -->
+            <td class="col-47">1</td>
+            <td class="col-48">0</td>
+        </tr>
+        
+                </tbody>
+            </table>
+        </div>
+
+        <div class="notes">
+            <div class="note-item"><strong>Note :</strong> Daftar upah karyawan periode Mei 2025</div>
+            <div class="note-item"><strong>Upah Dasar Yang Digunakan :</strong> Upah Minimum Kabupaten (UMK) 2025</div>
+        </div>
+    </div>
+</body>
+</html>

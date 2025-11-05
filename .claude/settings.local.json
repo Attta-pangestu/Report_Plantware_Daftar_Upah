@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "mcp__obsidian-mcp-tools__create_vault_file",
+      "mcp__obsidian-mcp-tools__get_server_info",
+      "Bash(dir \"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\Engine_Templating\\engine\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

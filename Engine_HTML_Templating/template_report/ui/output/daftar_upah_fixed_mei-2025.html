@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAFTAR UPAH - MEI 2025</title>
+    <style>
+        @page {
+            margin: 0.5in 0.3in;
+            size: A4 landscape;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9pt;
+            margin: 0;
+            padding: 5px;
+        }
+
+        .header-info {
+            margin-bottom: 15px;
+            font-size: 11pt;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 3px;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .header-value {
+            flex: 1;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 2900px; /* Fixed width to accommodate all columns */
+            table-layout: fixed;
+            font-size: 7pt;
+            min-width: 2900px;
+        }
+
+        th, td {
+            border: 0.5pt solid black;
+            padding: 1px 2px;
+            text-align: center;
+            vertical-align: middle;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-size: 6.5pt;
+        }
+
+        .header-cell {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 6pt;
+            line-height: 1.1;
+            padding: 1px;
+        }
+
+        .main-header {
+            background-color: #d0d0d0;
+            font-weight: bold;
+            font-size: 7pt;
+        }
+
+        .section-header {
+            background-color: #e8e8e8;
+            font-weight: bold;
+            font-size: 6pt;
+        }
+
+        .total-row {
+            background-color: #f8f8f8;
+            font-weight: bold;
+        }
+
+        /* Precise column widths - Total: 2900px */
+        .col-no { width: 25px; }
+        .col-gender { width: 20px; }
+        .col-nik { width: 70px; }
+        .col-name { width: 100px; }
+
+        /* Cuti Section - 8 columns x 40px = 320px */
+        .col-cuti { width: 40px; }
+
+        /* Work Section */
+        .col-hk { width: 35px; }
+
+        /* Tunjangan Section - 18 columns x 45px = 810px */
+        .col-tunjangan { width: 45px; }
+
+        /* Potongan Section - 13 columns x 50px = 650px */
+        .col-potongan { width: 50px; }
+
+        /* Final columns */
+        .col-upah-bersih { width: 70px; }
+        .col-tidak-hadir { width: 30px; }
+
+        /* Header specific styles */
+        .multi-line-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            height: 60px;
+            font-size: 5pt;
+            padding: 2px;
+        }
+
+        .rotate-text {
+            transform: rotate(-90deg);
+            width: 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5pt;
+        }
+
+        /* Print optimization */
+        @media print {
+            body {
+                font-size: 8pt;
+                padding: 2px;
+            }
+
+            table {
+                font-size: 6pt;
+            }
+
+            .number-cell {
+                font-size: 5.5pt;
+            }
+
+            .header-cell {
+                font-size: 5pt;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-info">
+        <div class="header-row">
+            <div class="header-label">PERUSAHAAN:</div>
+            <div class="header-value">PT. REBINMAS</div>
+        </div>
+        <div class="header-row">
+            <div class="header-label">PERIODE:</div>
+            <div class="header-value">MEI 2025</div>
+        </div>
+        <div class="header-row">
+            <div class="header-label">CATATAN:</div>
+            <div class="header-value">Daftar upah karyawan periode Mei 2025 - Large dataset for print testing</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <!-- Main Header Row -->
+            <tr>
+                <td rowspan="4" class="header-cell col-no main-header">NO</td>
+                <td rowspan="4" class="header-cell col-gender main-header">L/P</td>
+                <td rowspan="4" class="header-cell col-nik main-header">NIK</td>
+                <td rowspan="4" class="header-cell col-name main-header text-left">NAMA</td>
+                <td colspan="16" class="header-cell section-header">CUTI / LIBUR</td>
+                <td rowspan="4" class="header-cell col-hk main-header">JML HK</td>
+                <td colspan="18" class="header-cell section-header">TUNJANGAN / PREMI</td>
+                <td colspan="13" class="header-cell section-header">POTONGAN</td>
+                <td rowspan="4" class="header-cell col-upah-bersih main-header">UPAH BERSIH</td>
+                <td colspan="2" rowspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
+            </tr>
+
+            <!-- Cuti Sub-headers -->
+            <tr>
+                <td colspan="2" class="header-cell section-header">TAHUN</td>
+                <td colspan="2" class="header-cell section-header">SAKIT</td>
+                <td colspan="2" class="header-cell section-header">HAID</td>
+                <td colspan="2" class="header-cell section-header">MINGGU</td>
+                <td colspan="2" class="header-cell section-header">NASIONAL</td>
+                <td colspan="2" class="header-cell section-header">HAMIL</td>
+                <td colspan="2" class="header-cell section-header">IZIN</td>
+                <td colspan="3" class="header-cell section-header">BERAS</td>
+                <td colspan="3" class="header-cell section-header">JABATAN</td>
+                <td colspan="3" class="header-cell section-header">MASA KERJA</td>
+                <td colspan="3" class="header-cell section-header">LEMBUR</td>
+                <td colspan="6" class="header-cell section-header">PREMI LAINNYA</td>
+                <td colspan="3" class="header-cell section-header">ASTEK</td>
+                <td colspan="5" class="header-cell section-header">BPJS</td>
+                <td colspan="5" class="header-cell section-header">POTONGAN LAIN</td>
+            </tr>
+
+            <!-- Detail Headers -->
+            <tr>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-cuti">H</td>
+                <td class="header-cell col-cuti">Rp</td>
+                <td class="header-cell col-tunjangan">Tarif</td>
+                <td class="header-cell col-tunjangan">HK</td>
+                <td class="header-cell col-tunjangan">Jumlah</td>
+                <td class="header-cell col-tunjangan">Tarif</td>
+                <td class="header-cell col-tunjangan">HK</td>
+                <td class="header-cell col-tunjangan">Jumlah</td>
+                <td class="header-cell col-tunjangan">Normal</td>
+                <td class="header-cell col-tunjangan">Lembur</td>
+                <td class="header-cell col-tunjangan">Jumlah</td>
+                <td class="header-cell col-tunjangan">TBS</td>
+                <td class="header-cell col-tunjangan">PC</td>
+                <td class="header-cell col-tunjangan">Retase</td>
+                <td class="header-cell col-tunjangan">Antar</td>
+                <td class="header-cell col-tunjangan">Puru</td>
+                <td class="header-cell col-tunjangan">Kontan</td>
+                <td class="header-cell col-potongan">Pekerja</td>
+                <td class="header-cell col-potongan">Majikan</td>
+                <td class="header-cell col-potongan">Total</td>
+                <td class="header-cell col-potongan">Kes</td>
+                <td class="header-cell col-potongan">Pek</td>
+                <td class="header-cell col-potongan">Pen</td>
+                <td class="header-cell col-potongan">Maj</td>
+                <td class="header-cell col-potongan">Total</td>
+                <td class="header-cell col-potongan">PPH21</td>
+                <td class="header-cell col-potongan">Kontan</td>
+                <td class="header-cell col-potongan">THR</td>
+                <td class="header-cell col-potongan">Pinjam</td>
+                <td class="header-cell col-potongan">Kotor</td>
+            </tr>
+
+            <!-- Upah Header Row -->
+            <tr>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-cuti"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-tunjangan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-potongan"></td>
+                <td class="header-cell col-tidak-hadir">CTH</td>
+                <td class="header-cell col-tidak-hadir">ALPA</td>
+            </tr>
+
+            <!-- Data Rows -->
+            
+        <tr>
+            <td class="text-center">1</td>
+            <td class="text-center">L</td>
+            <td class="text-center">1234567890</td>
+            <td class="text-left" style="font-size:6pt;">AHMAD SUBEKTI</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">22</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">22</td>
+            <td class="number-cell">330rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">5rb</td>
+            <td class="text-center">2000</td>
+            <td class="number-cell">44rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">2rb</td>
+            <td class="number-cell">250rb</td>
+            <td class="number-cell">150rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">4.840.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">300rb</td>
+            <td class="number-cell">500rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">50rb</td>
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">225rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">150rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">4.840.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">3.750.000</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">2</td>
+            <td class="text-center">P</td>
+            <td class="text-center">0987654321</td>
+            <td class="text-left" style="font-size:6pt;">SITI NURHALIZA</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">19</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">19</td>
+            <td class="number-cell">285rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">3rb</td>
+            <td class="text-center">1500</td>
+            <td class="number-cell">28rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">2rb</td>
+            <td class="number-cell">180rb</td>
+            <td class="number-cell">100rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">3.725.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">150rb</td>
+            <td class="number-cell">225rb</td>
+            <td class="number-cell">375rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">38rb</td>
+            <td class="number-cell">56rb</td>
+            <td class="number-cell">56rb</td>
+            <td class="number-cell">169rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">150rb</td>
+            <td class="number-cell">3.725.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">2.911.250</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">3</td>
+            <td class="text-center">L</td>
+            <td class="text-center">1122334455</td>
+            <td class="text-left" style="font-size:6pt;">BUDI SANTOSO</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">23</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">23</td>
+            <td class="number-cell">345rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">4rb</td>
+            <td class="text-center">1800</td>
+            <td class="number-cell">41rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">2rb</td>
+            <td class="number-cell">300rb</td>
+            <td class="number-cell">200rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">4.530.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">180rb</td>
+            <td class="number-cell">270rb</td>
+            <td class="number-cell">450rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">90rb</td>
+            <td class="number-cell">45rb</td>
+            <td class="number-cell">68rb</td>
+            <td class="number-cell">68rb</td>
+            <td class="number-cell">202rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">120rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">4.530.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">3.645.500</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">4</td>
+            <td class="text-center">L</td>
+            <td class="text-center">5544332211</td>
+            <td class="text-left" style="font-size:6pt;">EKO PRASETYO</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">20</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">20</td>
+            <td class="number-cell">300rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">4rb</td>
+            <td class="text-center">1200</td>
+            <td class="number-cell">24rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">1rb</td>
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">120rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">3.890.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">155rb</td>
+            <td class="number-cell">232rb</td>
+            <td class="number-cell">388rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">78rb</td>
+            <td class="number-cell">39rb</td>
+            <td class="number-cell">58rb</td>
+            <td class="number-cell">58rb</td>
+            <td class="number-cell">174rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">110rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">50rb</td>
+            <td class="number-cell">3.890.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">3.158.125</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">1</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">5</td>
+            <td class="text-center">P</td>
+            <td class="text-center">9988776655</td>
+            <td class="text-left" style="font-size:6pt;">DEWI LESTARI</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">90</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">4</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">4</td>
+            <td class="number-cell">60rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">2rb</td>
+            <td class="text-center">1000</td>
+            <td class="number-cell">4rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">1rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">2.740.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">120rb</td>
+            <td class="number-cell">180rb</td>
+            <td class="number-cell">300rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">60rb</td>
+            <td class="number-cell">30rb</td>
+            <td class="number-cell">45rb</td>
+            <td class="number-cell">45rb</td>
+            <td class="number-cell">135rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">80rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">2.740.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">2.217.000</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">6</td>
+            <td class="text-center">L</td>
+            <td class="text-center">2233445566</td>
+            <td class="text-left" style="font-size:6pt;">RUDI HERMANTO</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">22</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">22</td>
+            <td class="number-cell">330rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">4rb</td>
+            <td class="text-center">1700</td>
+            <td class="number-cell">37rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">2rb</td>
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">120rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">4.234.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">175rb</td>
+            <td class="number-cell">262rb</td>
+            <td class="number-cell">438rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">88rb</td>
+            <td class="number-cell">44rb</td>
+            <td class="number-cell">66rb</td>
+            <td class="number-cell">66rb</td>
+            <td class="number-cell">197rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">130rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">4.234.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">3.355.625</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">7</td>
+            <td class="text-center">L</td>
+            <td class="text-center">3344556677</td>
+            <td class="text-left" style="font-size:6pt;">SUPRAPTO</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">1</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">19</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">19</td>
+            <td class="number-cell">285rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">3rb</td>
+            <td class="text-center">1400</td>
+            <td class="number-cell">27rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">1rb</td>
+            <td class="number-cell">150rb</td>
+            <td class="number-cell">90rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">3.516.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">140rb</td>
+            <td class="number-cell">210rb</td>
+            <td class="number-cell">350rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">70rb</td>
+            <td class="number-cell">35rb</td>
+            <td class="number-cell">52rb</td>
+            <td class="number-cell">52rb</td>
+            <td class="number-cell">158rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">50rb</td>
+            <td class="number-cell">3.516.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">2.858.500</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">8</td>
+            <td class="text-center">P</td>
+            <td class="text-center">4455667788</td>
+            <td class="text-left" style="font-size:6pt;">INDAH SARI</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">20</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">20</td>
+            <td class="number-cell">300rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">3rb</td>
+            <td class="text-center">1200</td>
+            <td class="number-cell">24rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">1rb</td>
+            <td class="number-cell">180rb</td>
+            <td class="number-cell">100rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">3.640.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">145rb</td>
+            <td class="number-cell">218rb</td>
+            <td class="number-cell">362rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">72rb</td>
+            <td class="number-cell">36rb</td>
+            <td class="number-cell">54rb</td>
+            <td class="number-cell">54rb</td>
+            <td class="number-cell">163rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">110rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">3.640.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">2.925.625</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+        <tr>
+            <td class="text-center">9</td>
+            <td class="text-center">L</td>
+            <td class="text-center">5566778899</td>
+            <td class="text-left" style="font-size:6pt;">HENDRA KUSUMA</td>
+
+            <!-- Cuti Tahun -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Sakit -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Haid -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Minggu -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Nasional -->
+            <td class="text-center">2</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Hamil -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Cuti Izin -->
+            <td class="text-center">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Jumlah HK -->
+            <td class="text-center">22</td>
+
+            <!-- Tunjangan Beras -->
+            <td class="number-cell">15rb</td>
+            <td class="text-center">22</td>
+            <td class="number-cell">330rb</td>
+
+            <!-- Tunjangan Jabatan -->
+            <td class="number-cell">5rb</td>
+            <td class="text-center">2000</td>
+            <td class="number-cell">44rb</td>
+
+            <!-- Tunjangan Masa Kerja -->
+            <td class="number-cell">2rb</td>
+            <td class="number-cell">250rb</td>
+            <td class="number-cell">150rb</td>
+
+            <!-- Premium Lainnya -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+
+            <!-- Koreksi dan Upah Kotor -->
+            <td class="number-cell">0</td>
+            <td class="number-cell">4.940.000</td>
+
+            <!-- Potongan ASTEK -->
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">300rb</td>
+            <td class="number-cell">500rb</td>
+
+            <!-- Potongan BPJS -->
+            <td class="number-cell">100rb</td>
+            <td class="number-cell">50rb</td>
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">75rb</td>
+            <td class="number-cell">225rb</td>
+
+            <!-- Potongan Lainnya -->
+            <td class="number-cell">155rb</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">0</td>
+            <td class="number-cell">200rb</td>
+            <td class="number-cell">4.940.000</td>
+
+            <!-- Upah Bersih -->
+            <td class="number-cell">3.800.000</td>
+
+            <!-- Tidak Hadir -->
+            <td class="text-center">0</td>
+            <td class="text-center">0</td>
+        </tr>
+        
+
+            <!-- Total Row -->
+            <tr class="total-row">
+                <td colspan="4" class="header-cell text-left">TOTAL</td>
+
+                <!-- Cuti Totals -->
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">4</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">5</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">18</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">90</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">4</td>
+                <td class="number-cell">0</td>
+
+                <!-- HK Total -->
+                <td class="number-cell">171</td>
+
+                <!-- Tunjangan Totals -->
+                <td class="number-cell">135.000</td>
+                <td class="number-cell">2.565.000</td>
+                <td class="number-cell">33.500</td>
+                <td class="number-cell">171</td>
+                <td class="number-cell">13.800</td>
+                <td class="number-cell">273.900</td>
+                <td class="number-cell">1.710.000</td>
+                <td class="number-cell">1.030.000</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">36.055.000</td>
+
+                <!-- Potongan Totals -->
+                <td class="number-cell">1.465.000</td>
+                <td class="number-cell">2.197.500</td>
+                <td class="number-cell">3.662.500</td>
+                <td class="number-cell">732.500</td>
+                <td class="number-cell">366.250</td>
+                <td class="number-cell">549.375</td>
+                <td class="number-cell">549.375</td>
+                <td class="number-cell">1.647.875</td>
+                <td class="number-cell">1.055.000</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">0</td>
+                <td class="number-cell">925.000</td>
+
+                <!-- Final Totals -->
+                <td class="number-cell">28.621.625</td>
+                <td class="number-cell">1</td>
+                <td class="number-cell">0</td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
+        <div style="text-align: center; width: 150px;">
+            <div>Menyetujui,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Diperiksa oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Dibuat oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+    </div>
+</body>
+</html>
