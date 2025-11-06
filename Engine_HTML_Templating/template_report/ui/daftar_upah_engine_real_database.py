@@ -247,6 +247,53 @@ class DaftarUpahEngineRealFixed:
             return format(value, format_str)
         return str(value)
 
+    def get_employee_payrate(self, emp_code: str) -> float:
+        """Get employee payrate from database"""
+        try:
+            import pyodbc
+            import json
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Query to get payrate
+            query = """
+            SELECT TOP 1 "PayRate"
+            FROM "HR_PAYROLL"
+            WHERE "EmpCode" = ?
+            """
+
+            cursor.execute(query, emp_code.strip())
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            return result[0] if result and result[0] else 0
+
+        except Exception as e:
+            print(f"[WARN] Failed to get payrate for {emp_code}: {e}")
+            return 0
+
+    def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int, hk_minggu: int, hk_nasional: int) -> int:
+        """Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)"""
+        total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
+        hari_kerja = max(0, hk_count - total_cuti)
+        return hari_kerja
+
+    def calculate_gaji_pokok(self, hk_count: int, payrate: float) -> float:
+        """Calculate Gaji Pokok = JML HK x Payrate (Rp)"""
+        return hk_count * payrate
+
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
         def clean_nik(nik):
@@ -260,6 +307,21 @@ class DaftarUpahEngineRealFixed:
 
             # Get real HK count from database
             hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+
+            # Get employee payrate from database
+            payrate = self.get_employee_payrate(emp['nik'])
+
+            # Calculate Hari Kerja
+            hari_kerja = self.calculate_hari_kerja(
+                hk_count,
+                emp.get('cuti_tahunan_hari', 0),
+                emp.get('cuti_sakit_hari', 0),
+                emp.get('cuti_minggu_hari', 0),
+                emp.get('cuti_nasional_hari', 0)
+            )
+
+            # Calculate Gaji Pokok
+            gaji_pokok = self.calculate_gaji_pokok(hk_count, payrate)
 
             # Prepare cuti data with alternating colors and red text (5 kolom)
             cuti_data = [
@@ -276,7 +338,9 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-no center-cell">{i}</td>
                     <td class="text-cell col-gender center-cell">{emp['jenis_kelamin']}</td>
                     <td class="nik-cell col-nik center-cell">{clean_emp_nik}</td>
-                    <td class="text-cell col-name text-left center-cell">{emp['nama']}</td>"""
+                    <td class="text-cell col-name text-left center-cell">{emp['nama']}</td>
+                    <td class="number-cell col-upah-dasar center-cell">{self.format_value(payrate, ',.0f')}</td>
+                    <td class="number-cell col-hari-kerja center-cell">{self.format_value(hari_kerja)}</td>"""
 
             # Add cuti columns with alternating colors and red text
             for j, (field, value) in enumerate(cuti_data):
@@ -289,9 +353,9 @@ class DaftarUpahEngineRealFixed:
             # Add HK column
             hk_value = self.format_value(hk_count)
             employee_rows += f"""
-                    <td class="number-cell col-hk center-cell">{hk_value}</td>"""
+                    <td class="number-cell col-hk center-cell">{hk_value}</td>
+                    <td class="number-cell col-gaji-pokok center-cell">{self.format_value(gaji_pokok, ',.0f')}</td>"""
 
-            
             # Add Tunjangan columns
             tunjangan_values = [
                 25,  # HK Tunjangan

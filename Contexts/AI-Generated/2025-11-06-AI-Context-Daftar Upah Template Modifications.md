@@ -168,6 +168,34 @@ WHERE EmpCode = ?
 - ✅ **H0130**: Tahunan=0, Sakit+haid=0, Minggu=4, Nasional=3, Izin=0
 - ✅ **H0459**: Tahunan=0, Sakit+haid=0, Minggu=1, Nasional=1, Izin=0
 
+## Kolom Upah Dasar & Hari Kerja - November 2025
+
+### Changes Made:
+1. **Kolom Baru**:
+   - **Upah Dasar**: Diambil dari `HR_PAYROLL.PayRate` menggunakan `get_payrate_emp_code.sql`
+   - **Hari Kerja**: Dihasilkan dari formula `JML HK - (Tahunan + Sakit + Minggu + Nasional)`
+
+2. **Template Structure Baru**:
+   ```
+   NO | L/P | NIK | NAMA | UPAH DASAR | HARI KERJA | TAHUNAN (Izin) | SAKIT + HAID | MINGGU | NASIONAL | IZIN | JML HK | ...
+   ```
+
+3. **Engine Updates**:
+   - `get_employee_payrate()`: Query PayRate dari database
+   - `calculate_hari_kerja()`: Hitung hari kerja actual
+   - CSS styling untuk kolom baru (Upah Dasar: right-align, bold; Hari Kerja: background biru)
+
+4. **Testing Results (Updated)**:
+   - **H0130**: Upah Dasar=129,220, Hari Kerja=24, HK=31, Cuti=7 (0+0+4+3)
+   - **H0019**: Upah Dasar=129,220, Hari Kerja=21, HK=31, Cuti=10 (2+1+4+3)
+   - **H0459**: Upah Dasar=129,220, Hari Kerja=3, HK=5, Cuti=2 (0+0+1+1)
+
+5. **File Size**: 28,685 bytes (bertambah 1,275 bytes untuk 2 kolom baru)
+
+### Latest Output:
+- File: `daftar_upah_gang_H1M_real_2025-11-06_15-02-45.html`
+- Status: ✅ All features working correctly
+
 ## Perhitungan Cuti Sakit + Haid - Update Terbaru
 
 ### Changes Made:
