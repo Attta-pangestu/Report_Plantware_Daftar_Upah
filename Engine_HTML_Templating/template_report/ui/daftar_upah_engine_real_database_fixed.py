@@ -261,13 +261,15 @@ class DaftarUpahEngineRealFixed:
             # Get real HK count from database
             hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
 
-            # Prepare cuti data with alternating colors and red text (5 kolom)
+            # Prepare cuti data with alternating colors and red text
             cuti_data = [
-                ('cuti_tahunan_hari', emp.get('cuti_tahunan_hari', 0)),  # Tahunan (Izin)
-                ('cuti_sakit_hari', emp.get('cuti_sakit_hari', 0)),  # Sakit + Haid (gabungan)
-                ('cuti_minggu_hari', emp.get('cuti_minggu_hari', 0)),  # Minggu
-                ('cuti_nasional_hari', emp.get('cuti_nasional_hari', 0)),  # Nasional
-                ('cuti_izin_hari', emp.get('cuti_izin_hari', 0))  # Izin (biasa)
+                ('cuti_tahunan_hari', emp.get('cuti_tahunan_hari', 0)),
+                ('cuti_sakit_hari', emp.get('cuti_sakit_hari', 0)),
+                ('cuti_haid_hari', emp.get('cuti_haid_hari', 0)),
+                ('cuti_minggu_hari', emp.get('cuti_minggu_hari', 0)),
+                ('cuti_nasional_hari', emp.get('cuti_nasional_hari', 0)),
+                ('cuti_melahirkan_hari', emp.get('cuti_melahirkan_hari', 0)),
+                ('cuti_izin_hari', emp.get('cuti_izin_hari', 0))
             ]
 
             # Start building the row
@@ -291,7 +293,22 @@ class DaftarUpahEngineRealFixed:
             employee_rows += f"""
                     <td class="number-cell col-hk center-cell">{hk_value}</td>"""
 
-            
+            # Add Total Cuti/Libur (Rp) columns
+            cuti_rps = [
+                emp.get('cuti_tahunan_jumlah', 0),
+                emp.get('cuti_sakit_jumlah', 0),
+                emp.get('cuti_haid_jumlah', 0),
+                emp.get('cuti_minggu_hari', 0) * 50000,
+                emp.get('cuti_nasional_hari', 0) * 100000,
+                emp.get('cuti_melahirkan_jumlah', 0),
+                emp.get('cuti_izin_jumlah', 0)
+            ]
+
+            for rp_value in cuti_rps:
+                formatted_rp = self.format_value(rp_value, ",.0f")
+                employee_rows += f"""
+                    <td class="number-cell col-rp center-cell cuti-libur-text">{formatted_rp}</td>"""
+
             # Add Tunjangan columns
             tunjangan_values = [
                 25,  # HK Tunjangan
@@ -473,12 +490,21 @@ class DaftarUpahEngineRealFixed:
                 'karyawan': merged_employees,
                 'total_karyawan': len(merged_employees),
                 'total': {
-                    # Cut/Cuti totals (5 kolom)
-                    'cuti_tahunan_hari': 0,
-                    'cuti_sakit_hari': 0,  # Sakit + Haid gabungan
+                    # Cut/Cuti totals
+                    'cuti_tahun_hari': 0,
+                    'cuti_tahun_jumlah': 0,
+                    'cuti_sakit_hari': 0,
+                    'cuti_sakit_jumlah': 0,
+                    'cuti_haid_hari': 0,
+                    'cuti_haid_jumlah': 0,
                     'cuti_minggu_hari': 0,
+                    'cuti_minggu_jumlah': 0,
                     'cuti_nasional_hari': 0,
+                    'cuti_nasional_jumlah': 0,
+                    'cuti_hamil_hari': 0,
+                    'cuti_hamil_jumlah': 0,
                     'cuti_izin_hari': 0,
+                    'cuti_izin_jumlah': 0,
 
                     # Working days
                     'jumlah_hk': 25 * len(merged_employees),

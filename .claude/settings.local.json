@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "mcp__obsidian-mcp-tools__create_vault_file",
+      "Bash(python:*)",
+      "Bash(copy:*)"
     ],
     "deny": [],
     "ask": []

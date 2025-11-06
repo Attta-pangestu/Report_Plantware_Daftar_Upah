@@ -1,0 +1,2 @@
+perbahrui struktur template laporan dan perhitungan cuti/liburnya, Personal Anuall leave (cuti tahunan) di header nya tambahkan Tahunan (Izin), terus unutk Sakit dan Haid digabung saja       
+  sebagai personal sick leave, terus untuk kolom ini Total Cuti/Libur (Rp) dihapus saja,  

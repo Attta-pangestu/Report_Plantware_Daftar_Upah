@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAFTAR UPAH - Mei 2025</title>
+    <style>
+        @page {
+            margin: 0.5in 0.3in;
+            size: A4 landscape;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 8pt;
+            margin: 0;
+            padding: 5px;
+            background: white;
+        }
+
+        .report-wrapper {
+            max-width: 100%;
+            overflow-x: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 10px;
+        }
+
+        .header-info {
+            margin-bottom: 15px;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 3px;
+            align-items: center;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .header-value {
+            flex: 1;
+            font-weight: normal;
+        }
+
+        .report-title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #000;
+            background: #f0f0f0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #000;
+            background: white;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: auto;
+            font-size: 7pt;
+            min-width: 3000px;
+        }
+
+        th, td {
+            border: 0.5pt solid black;
+            padding: 2px 4px;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: nowrap;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .header-cell {
+            background: #f0f0f0;
+            font-weight: bold;
+            font-size: 6pt;
+            padding: 2px;
+        }
+
+        .main-header {
+            background: #e0e0e0;
+            font-weight: bold;
+            font-size: 7pt;
+        }
+
+        .section-header {
+            background: #f5f5f5;
+            font-weight: bold;
+            font-size: 6pt;
+        }
+
+        .total-row {
+            background: #ffffcc;
+            font-weight: bold;
+        }
+
+        .employee-row:hover {
+            background: #f9f9f9;
+        }
+
+        /* Column widths */
+        .col-no { width: 25px; min-width: 25px; }
+        .col-gender { width: 20px; min-width: 20px; }
+        .col-nik { width: 70px; min-width: 70px; }
+        .col-name { width: 150px; min-width: 120px; }
+        .col-cuti { width: 25px; min-width: 20px; }
+        .col-rp { width: 60px; min-width: 50px; }
+        .col-hk { width: 30px; min-width: 25px; }
+        .col-tunjangan { width: 45px; min-width: 40px; }
+        .col-potongan { width: 50px; min-width: 45px; }
+        .col-upah { width: 80px; min-width: 70px; }
+        .col-tidak-hadir { width: 25px; min-width: 20px; }
+
+        /* Special formatting for NIK */
+        .nik-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive adjustments */
+        @media print {
+            body { font-size: 7pt; }
+            .table-wrapper { overflow: visible; }
+            table { min-width: 3000px; }
+        }
+
+        /* Custom scrollbar */
+        .table-wrapper::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-wrapper">
+        <div class="header-info">
+            <div class="header-row">
+                <div class="header-label">PERUSAHAAN:</div>
+                <div class="header-value">PT. REBINMAS</div>
+            </div>
+            <div class="header-row">
+                <div class="header-label">PERIODE:</div>
+                <div class="header-value">Mei 2025</div>
+            </div>
+        </div>
+
+        <div class="report-title">
+            DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <!-- Main Header Row -->
+                <tr>
+                    <td rowspan="3" class="header-cell col-no main-header">NO</td>
+                    <td rowspan="3" class="header-cell col-gender main-header">L/P</td>
+                    <td rowspan="3" class="header-cell col-nik main-header">NIK</td>
+                    <td rowspan="3" class="header-cell col-name main-header text-left">NAMA</td>
+                    <td colspan="7" class="header-cell section-header">Cuti/Libur</td>
+                    <td rowspan="3" class="header-cell col-hk main-header">JML HK</td>
+                    <td colspan="7" class="header-cell section-header">Total Cuti/Libur (Rp)</td>
+                    <td colspan="18" class="header-cell section-header">TUNJANGAN / PREMI</td>
+                    <td colspan="13" class="header-cell section-header">POTONGAN</td>
+                    <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
+                    <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
+                </tr>
+
+                <!-- Second Header Row - Detail Types -->
+                <tr>
+                    <!-- Cuti/Libur Headers -->
+                    <td class="header-cell col-cuti">TAHUN</td>
+                    <td class="header-cell col-cuti">SAKIT</td>
+                    <td class="header-cell col-cuti">HAID</td>
+                    <td class="header-cell col-cuti">MINGGU</td>
+                    <td class="header-cell col-cuti">NASIONAL</td>
+                    <td class="header-cell col-cuti">MELAHIRKAN</td>
+                    <td class="header-cell col-cuti">IZIN</td>
+
+                    <!-- Total Cuti/Libur (Rp) Headers -->
+                    <td class="header-cell col-rp">TAHUN</td>
+                    <td class="header-cell col-rp">SAKIT</td>
+                    <td class="header-cell col-rp">HAID</td>
+                    <td class="header-cell col-rp">MINGGU</td>
+                    <td class="header-cell col-rp">NASIONAL</td>
+                    <td class="header-cell col-rp">MELAHIRKAN</td>
+                    <td class="header-cell col-rp">IZIN</td>
+
+                    <!-- Tunjangan Headers -->
+                    <td class="header-cell col-tunjangan">HK</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Normal</td>
+                    <td class="header-cell col-tunjangan">Lembur</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">TBS</td>
+                    <td class="header-cell col-tunjangan">Puru</td>
+                    <td class="header-cell col-tunjangan">Kontan</td>
+                    <td class="header-cell col-tunjangan">Pekerja</td>
+                    <td class="header-cell col-tunjangan">Majikan</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+
+                    <!-- Potongan Headers -->
+                    <td class="header-cell col-potongan">PPH21</td>
+                    <td class="header-cell col-potongan">Kontan</td>
+                    <td class="header-cell col-potongan">THR</td>
+                    <td class="header-cell col-potongan">Pinjam</td>
+                    <td class="header-cell col-potongan">KL</td>
+                    <td class="header-cell col-potongan">BPJS Kes</td>
+                    <td class="header-cell col-potongan">BPJS Pek</td>
+                    <td class="header-cell col-potongan">BPJS Maj</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+
+                    <!-- Tidak Hadir Headers -->
+                    <td class="header-cell col-tidak-hadir">CTH</td>
+                    <td class="header-cell col-tidak-hadir">ALPA</td>
+                </tr>
+
+                <!-- Third Header Row - Units -->
+                <tr>
+                    <!-- Cuti/Libur Units -->
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+
+                    <!-- Total Cuti/Libur (Rp) Units -->
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                    <td class="header-cell col-rp">Jumlah</td>
+                </tr>
+
+                <!-- Data Rows -->
+                
+                <tr class="employee-row">
+                    <td class="number-cell col-no">1</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0330</td>
+                    <td class="text-cell col-name text-left">AFRIWANTONI ( Yusna Yetti )                                     </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">2</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0510</td>
+                    <td class="text-cell col-name text-left">AGUS SATRIAWAN (SUMARNI)                                        </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">3</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0476</td>
+                    <td class="text-cell col-name text-left">AGUS SURYADI (HAINI)                                            </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">4</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0502</td>
+                    <td class="text-cell col-name text-left">AHYAR RASIDI (NURHAENI)                                         </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">5</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0488</td>
+                    <td class="text-cell col-name text-left">ALMAN ( Inaq Alman )                                            </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">6</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0514</td>
+                    <td class="text-cell col-name text-left">ANDREAN AGUSTIN HADI (NAPISAH)                                  </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">7</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0500</td>
+                    <td class="text-cell col-name text-left">AWALUDIN (INUN)                                                 </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">8</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0515</td>
+                    <td class="text-cell col-name text-left">HAMDI (NURMAH)                                                  </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">9</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0202</td>
+                    <td class="text-cell col-name text-left">HENDRI SUSILO ( PARTINI )                                       </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no">10</td>
+                    <td class="text-cell col-gender">L</td>
+                    <td class="nik-cell col-nik">H0498</td>
+                    <td class="text-cell col-name text-left">HERI SUTANTO (MUSRI)                                            </td>
+
+                    <!-- Cuti/Libur Hari Columns -->
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- JML HK Column -->
+                    <td class="number-cell col-hk">25</td>
+
+                    <!-- Total Cuti/Libur (Rp) Columns -->
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+                    <td class="number-cell col-rp">0</td>
+
+                    <!-- Tunjangan/Premi Columns -->
+                    <td class="number-cell col-tunjangan">25</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">4,000,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">500,000</td>
+                    <td class="number-cell col-tunjangan">300,000</td>
+                    <td class="number-cell col-tunjangan">200,000</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">0</td>
+                    <td class="number-cell col-tunjangan">5,000,000</td>
+
+                    <!-- Potongan Columns -->
+                    <td class="number-cell col-potongan">150,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">200,000</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+                    <td class="number-cell col-potongan">0</td>
+
+                    <!-- Upah Bersih Column -->
+                    <td class="number-cell col-upah">4,250,000</td>
+
+                    <!-- Tidak Hadir Columns -->
+                    <td class="number-cell col-tidak-hadir">0</td>
+                    <td class="number-cell col-tidak-hadir">0</td>
+                </tr>
+
+                <!-- Total Row -->
+                <tr class="total-row">
+                    <td colspan="4" class="header-cell text-left">TOTAL</td>
+
+                    <!-- Cuti Hari Totals -->
+                    <td class="number-cell col-cuti">{total.cuti_tahunan_hari}</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">0</td>
+                    <td class="number-cell col-cuti">{total.cuti_melahirkan_hari}</td>
+                    <td class="number-cell col-cuti">0</td>
+
+                    <!-- HK Total -->
+                    <td class="number-cell col-hk">250</td>
+
+                    <!-- Total Cuti/Libur (Rp) Totals -->
+                    <td class="number-cell col-rp">{total.cuti_tahunan_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_sakit_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_haid_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_minggu_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_nasional_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_melahirkan_jumlah:,.0f}</td>
+                    <td class="number-cell col-rp">{total.cuti_izin_jumlah:,.0f}</td>
+
+                    <!-- Tunjangan Totals -->
+                    <td class="number-cell col-tunjangan">{total.tunjangan_hk_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_normal_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_lembur_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_lembur_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_tbs_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_puru_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_kontan_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_pekerja_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_majikan_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total1:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total2:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total3:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total4:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total5:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total6:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total7:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total8:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.tunjangan_total9:,.0f}</td>
+
+                    <!-- Potongan Totals -->
+                    <td class="number-cell col-potongan">{total.potongan_pph21_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_kontan_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_thr_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_pinjam_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_kl_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_bpjs_kes_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_bpjs_pek_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_bpjs_maj_total:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_total1:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_total2:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_total3:,.0f}</td>
+                    <td class="number-cell col-potongan">{total.potongan_total4:,.0f}</td>
+
+                    <!-- Final Totals -->
+                    <td class="number-cell col-upah">{total.upah_bersih_total:,.0f}</td>
+                    <td class="number-cell col-tidak-hadir">{total.tidak_hadir_cth_total}</td>
+                    <td class="number-cell col-tidak-hadir">{total.tidak_hadir_alpa_total}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
+            <div style="text-align: center; width: 150px;">
+                <div>Menyetujui,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+            <div style="text-align: center; width: 150px;">
+                <div>Diperiksa oleh,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+            <div style="text-align: center; width: 150px;">
+                <div>Dibuat oleh,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px; font-size: 8pt; font-style: italic; color: #666;">
+            Dicetak tanggal: 05-11-2025
+        </div>
+    </div>
+</body>
+</html>
