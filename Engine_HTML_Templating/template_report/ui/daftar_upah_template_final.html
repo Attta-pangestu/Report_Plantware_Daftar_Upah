@@ -135,6 +135,7 @@
         .col-hk { width: 35px; max-width: 40px; min-width: 30px; }
         .col-gaji-pokok { width: 100px; max-width: 120px; min-width: 90px; }
         .col-tunjangan { width: 50px; max-width: 60px; min-width: 45px; }
+        .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
         .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
         .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
         .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
@@ -177,6 +178,25 @@
             font-size: 9pt;
             background-color: #b4e06e;
             color: #000000;
+        }
+
+        /* Tunjangan styling */
+        .sub-header-tunjangan {
+            background-color: #e1f5fe;
+            color: #0d47a1;
+            font-weight: bold;
+            text-align: center;
+            font-size: 8pt;
+        }
+
+        .col-total-tunjangan {
+            background-color: #fff3e0;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #e65100;
+            border: 2px solid #ff9800;
         }
 
         /* Special formatting for NIK */
@@ -243,7 +263,8 @@
                     <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
                     <td rowspan="3" class="header-cell col-hk main-header">JML HK</td>
                     <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK<br>(Rp)</td>
-                    <td colspan="18" class="header-cell section-header">TUNJANGAN / PREMI</td>
+                    <td colspan="9" class="header-cell section-header">TUNJANGAN</td>
+                    <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
                     <td colspan="13" class="header-cell section-header">POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
                     <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
@@ -258,25 +279,12 @@
                     <td class="header-cell col-cuti">NASIONAL</td>
                     <td class="header-cell col-cuti">IZIN</td>
 
-                    <!-- Tunjangan Headers -->
-                    <td class="header-cell col-tunjangan">HK</td>
-                    <td class="header-cell col-tunjangan">Jumlah</td>
-                    <td class="header-cell col-tunjangan">Normal</td>
-                    <td class="header-cell col-tunjangan">Lembur</td>
-                    <td class="header-cell col-tunjangan">Jumlah</td>
-                    <td class="header-cell col-tunjangan">TBS</td>
-                    <td class="header-cell col-tunjangan">Puru</td>
-                    <td class="header-cell col-tunjangan">Kontan</td>
-                    <td class="header-cell col-tunjangan">Pekerja</td>
-                    <td class="header-cell col-tunjangan">Majikan</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
-                    <td class="header-cell col-tunjangan">Total</td>
+                    <!-- Tunjangan Sub-Headers -->
+                    <td colspan="2" class="header-cell sub-header-tunjangan">BERAS</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">JABATAN</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">MASA KERJA</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">LEMBUR</td>
+                    <td class="header-cell sub-header-tunjangan">LAINNYA</td>
                     <td class="header-cell col-tunjangan">Total</td>
 
                     <!-- Potongan Headers -->
@@ -306,6 +314,18 @@
                     <td class="header-cell col-cuti">H</td>
                     <td class="header-cell col-cuti">H</td>
                     <td class="header-cell col-cuti">H</td>
+
+                    <!-- Tunjangan Rate & Jumlah Headers -->
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
                 </tr>
 
                 <!-- Data Rows -->
@@ -328,24 +348,20 @@
                     <!-- Gaji Pokok Total (will be calculated dynamically) -->
                     <td class="number-cell col-gaji-pokok">0</td>
 
-                    <!-- Tunjangan Totals -->
-                    <td class="number-cell col-tunjangan">{total.tunjangan_hk_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_jumlah_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_normal_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_lembur_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_lembur_jumlah_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_tbs_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_puru_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_kontan_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_pekerja_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_majikan_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total1:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total2:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total3:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total4:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total5:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total6:,.0f}</td>
-                    <td class="number-cell col-tunjangan">{total.tunjangan_total7:,.0f}</td>
+                    <!-- Tunjangan Category Totals -->
+                    <td class="number-cell col-tunjangan">{total.beras_rate_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.beras_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.jabatan_rate_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.jabatan_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.masa_kerja_rate_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.masa_kerja_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.lembur_rate_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.lembur_jumlah_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.lainnya_rate_total:,.0f}</td>
+                    <td class="number-cell col-tunjangan">{total.lainnya_jumlah_total:,.0f}</td>
+
+                    <!-- Total Tunjangan -->
+                    <td class="number-cell col-total-tunjangan">{total.total_tunjangan:,.0f}</td>
                     <td class="number-cell col-tunjangan">{total.tunjangan_total8:,.0f}</td>
                     <td class="number-cell col-tunjangan">{total.tunjangan_total9:,.0f}</td>
 

@@ -193,8 +193,46 @@ WHERE EmpCode = ?
 5. **File Size**: 28,685 bytes (bertambah 1,275 bytes untuk 2 kolom baru)
 
 ### Latest Output:
-- File: `daftar_upah_gang_H1M_real_2025-11-06_15-02-45.html`
+- File: `daftar_upah_gang_H1M_real_2025-11-06_15-14-14.html`
 - Status: ✅ All features working correctly
+
+## Kolom Gaji Pokok (Rp) - November 2025
+
+### Changes Made:
+1. **Kolom Baru**:
+   - **Gaji Pokok (Rp)**: Formula **JML HK × Payrate (Rp)**
+   - Positioned di samping kanan JML HK
+
+2. **Template Structure Terbaru**:
+   ```
+   NO | L/P | NIK | NAMA | UPAH DASAR | HARI KERJA | TAHUNAN (Izin) | SAKIT + HAID | MINGGU | NASIONAL | IZIN | JML HK | GAJI POKOK (Rp) | ...
+   ```
+
+3. **Styling**:
+   - Background color: **#b4e06e** (hijau)
+   - Text alignment: Right
+   - Font weight: **bold**
+   - Padding right: 5px
+
+4. **Formula Implementation**:
+   - `calculate_gaji_pokok(hk_count, payrate)`: JML HK × Payrate
+   - Payrate diambil dari `HR_PAYROLL.PayRate` (129,220)
+   - JML HK dari query `PR_EMP_ATTN`
+
+5. **Testing Results (Updated)**:
+   - **H0130**: HK=31 × Payrate=129,220 = **4,005,820**
+   - **H0019**: HK=31 × Payrate=129,220 = **4,005,820**
+   - **H0459**: HK=5 × Payrate=129,220 = **646,100**
+
+6. **File Size**: 29,548 bytes (bertambah 863 bytes untuk kolom baru)
+
+### Verification:
+- ✅ **Background Color**: #b4e06e (hijau)
+- ✅ **Bold Text**: font-weight: bold
+- ✅ **Right Alignment**: text-align: right
+- ✅ **Formula**: HK × Payrate = Gaji Pokok
+- ✅ **Payrate**: 129,220 (dari database)
+- ✅ **Format**: Currency (Rp) with comma separator
 
 ## Perhitungan Cuti Sakit + Haid - Update Terbaru
 

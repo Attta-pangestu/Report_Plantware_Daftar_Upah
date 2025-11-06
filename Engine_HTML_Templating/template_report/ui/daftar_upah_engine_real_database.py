@@ -290,9 +290,9 @@ class DaftarUpahEngineRealFixed:
         hari_kerja = max(0, hk_count - total_cuti)
         return hari_kerja
 
-    def calculate_gaji_pokok(self, hk_count: int, payrate: float) -> float:
+    def calculate_gaji_pokok(self, hk_count: int, payrate) -> float:
         """Calculate Gaji Pokok = JML HK x Payrate (Rp)"""
-        return hk_count * payrate
+        return hk_count * float(payrate) if payrate else 0
 
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
@@ -356,25 +356,66 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-hk center-cell">{hk_value}</td>
                     <td class="number-cell col-gaji-pokok center-cell">{self.format_value(gaji_pokok, ',.0f')}</td>"""
 
-            # Add Tunjangan columns
-            tunjangan_values = [
-                25,  # HK Tunjangan
-                emp['tunjangan_makan'],
-                emp['gaji_pokok'],
-                emp.get('uang_lembur', 0),
-                emp.get('uang_lembur', 0) + emp['gaji_pokok'],
-                0, 0, 0, 0, 0,  # Zeros
-                emp['tunjangan_transport'],
-                emp['tunjangan_makan'],
-                emp.get('tunjangan_lain', 0),
-                0, 0, 0, 0, 0, 0, 0,  # More zeros
-                emp['gaji_pokok'] + emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
+            # Prepare tunjangan data with new structure
+            tunjangan_data = {
+                # Beras: Rate = Hari Kerja × 15,000 (asumsi), Jumlah = Hari Kerja × Rate
+                'beras_rate': emp['hari_kerja'] * 15000 if 'hari_kerja' in emp else 0,
+                'beras_jumlah': 0,  # Will be calculated
+
+                # Jabatan: Rate = Payrate × 0.2, Jumlah = Rate × HK
+                'jabatan_rate': float(payrate) * 0.2 if payrate else 0,
+                'jabatan_jumlah': 0,  # Will be calculated
+
+                # Masa Kerja: Rate = Payrate × 0.1 × ServiceYears (asumsi), Jumlah = Rate × HK
+                'masa_kerja_rate': 0,  # Simplified
+                'masa_kerja_jumlah': 0,  # Simplified
+
+                # Lembur: Rate = 20,000 per hour, Jumlah = Rate × LemburHours
+                'lembur_rate': 20000,
+                'lembur_jumlah': emp.get('uang_lembur', 0),
+
+                # Lainnya: Transport + Makan + Lainnya
+                'lainnya_rate': 0,  # Will be calculated as average
+                'lainnya_jumlah': emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
+            }
+
+            # Calculate Jumlah for each category
+            tunjangan_data['beras_jumlah'] = emp['hari_kerja'] * tunjangan_data['beras_rate'] if 'hari_kerja' in emp else 0
+            tunjangan_data['jabatan_jumlah'] = tunjangan_data['jabatan_rate'] * hk_count
+            tunjangan_data['masa_kerja_jumlah'] = tunjangan_data['masa_kerja_rate'] * hk_count if tunjangan_data['masa_kerja_rate'] > 0 else 0
+
+            # Calculate average rate for Lainnya
+            total_jumlah_lainnya = tunjangan_data['lainnya_jumlah']
+            if hk_count > 0:
+                tunjangan_data['lainnya_rate'] = total_jumlah_lainnya / hk_count
+
+            # Calculate total tunjangan
+            total_tunjangan = (tunjangan_data['beras_jumlah'] + tunjangan_data['jabatan_jumlah'] +
+                             tunjangan_data['masa_kerja_jumlah'] + tunjangan_data['lembur_jumlah'] +
+                             tunjangan_data['lainnya_jumlah'])
+
+            # Add Tunjangan columns with new structure
+            tunjangan_order = [
+                ('beras_rate', tunjangan_data['beras_rate']),
+                ('beras_jumlah', tunjangan_data['beras_jumlah']),
+                ('jabatan_rate', tunjangan_data['jabatan_rate']),
+                ('jabatan_jumlah', tunjangan_data['jabatan_jumlah']),
+                ('masa_kerja_rate', tunjangan_data['masa_kerja_rate']),
+                ('masa_kerja_jumlah', tunjangan_data['masa_kerja_jumlah']),
+                ('lembur_rate', tunjangan_data['lembur_rate']),
+                ('lembur_jumlah', tunjangan_data['lembur_jumlah']),
+                ('lainnya_rate', tunjangan_data['lainnya_rate']),
+                ('lainnya_jumlah', tunjangan_data['lainnya_jumlah'])
             ]
 
-            for tunj_value in tunjangan_values:
-                formatted_tun = self.format_value(tunj_value, ",.0f")
+            for field_name, value in tunjangan_order:
+                formatted_value = self.format_value(value, ",.0f")
                 employee_rows += f"""
-                    <td class="number-cell col-tunjangan center-cell">{formatted_tun}</td>"""
+                    <td class="number-cell col-tunjangan center-cell">{formatted_value}</td>"""
+
+            # Add Total Tunjangan column
+            employee_rows += f"""
+                    <td class="number-cell col-total-tunjangan center-cell">{self.format_value(total_tunjangan, ',.0f')}</td>"""
 
             # Add Potongan columns
             potongan_values = [
@@ -450,10 +491,63 @@ class DaftarUpahEngineRealFixed:
             print(f"\n[3] Merging data with real cuti information...")
             merged_employees = self.merge_employee_with_cuti_data(employees, "Mei", "2025")
 
-            # Calculate totals
+            # Calculate tunjangan totals for new structure
+            total_tunjangan = 0
+            total_beras_rate = 0
+            total_beras_jumlah = 0
+            total_jabatan_rate = 0
+            total_jabatan_jumlah = 0
+            total_masa_kerja_rate = 0
+            total_masa_kerja_jumlah = 0
+            total_lembur_rate = 0
+            total_lembur_jumlah = 0
+            total_lainnya_rate = 0
+            total_lainnya_jumlah = 0
+
+            for emp in merged_employees:
+                # Get employee data for calculations
+                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                payrate = self.get_employee_payrate(emp['nik'])
+                hari_kerja = self.calculate_hari_kerja(
+                    hk_count,
+                    emp.get('cuti_tahunan_hari', 0),
+                    emp.get('cuti_sakit_hari', 0),
+                    emp.get('cuti_minggu_hari', 0),
+                    emp.get('cuti_nasional_hari', 0)
+                )
+
+                # Calculate for this employee
+                emp_beras_rate = hari_kerja * 15000
+                emp_beras_jumlah = hari_kerja * emp_beras_rate if hari_kerja else 0
+                emp_jabatan_rate = float(payrate) * 0.2 if payrate else 0
+                emp_jabatan_jumlah = emp_jabatan_rate * hk_count
+                emp_masa_kerja_rate = 0  # Simplified
+                emp_masa_kerja_jumlah = 0  # Simplified
+                emp_lembur_rate = 20000
+                emp_lembur_jumlah = emp.get('uang_lembur', 0)
+                emp_lainnya_jumlah = emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
+                emp_lainnya_rate = emp_lainnya_jumlah / hk_count if hk_count > 0 else 0
+
+                # Add to totals
+                total_beras_rate += emp_beras_rate
+                total_beras_jumlah += emp_beras_jumlah
+                total_jabatan_rate += emp_jabatan_rate
+                total_jabatan_jumlah += emp_jabatan_jumlah
+                total_masa_kerja_rate += emp_masa_kerja_rate
+                total_masa_kerja_jumlah += emp_masa_kerja_jumlah
+                total_lembur_rate += emp_lembur_rate
+                total_lembur_jumlah += emp_lembur_jumlah
+                total_lainnya_rate += emp_lainnya_rate
+                total_lainnya_jumlah += emp_lainnya_jumlah
+
+                # Add to total tunjangan
+                emp_total_tunjangan = (emp_beras_jumlah + emp_jabatan_jumlah +
+                                         emp_masa_kerja_jumlah + emp_lembur_jumlah +
+                                         emp_lainnya_jumlah)
+                total_tunjangan += emp_total_tunjangan
+
+            # Calculate other totals
             total_gaji_pokok = sum(emp['gaji_pokok'] for emp in merged_employees)
-            total_uang_lembur = sum(emp['uang_lembur'] for emp in merged_employees)
-            total_tunjangan = sum(emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp['tunjangan_lain'] for emp in merged_employees)
             total_potongan = sum(emp['potongan_bpjs'] + emp['potongan_pph'] + emp['potongan_lain'] + emp['potongan_pinjaman_uang'] for emp in merged_employees)
             total_upah_bersih = sum(emp['upah_bersih'] for emp in merged_employees)
 
@@ -547,14 +641,27 @@ class DaftarUpahEngineRealFixed:
                     # Working days
                     'jumlah_hk': 25 * len(merged_employees),
 
-                    # Allowances (Tunjangan)
-                    'tunjangan_beras': 0,
-                    'tunjangan_beras_jumlah': 0,
-                    'tunjangan_jabatan': 0,
-                    'tunjangan_jabatan_hk': 0,
-                    'tunjangan_masa_kerja': 0,
-                    'tunjangan_masa_kerja_jumlah': 0,
-                    'tunjangan_lembur': total_uang_lembur,
+                    # Allowances (Tunjangan) - New Structure with Rate/Jumlah
+                    'beras_rate_total': total_beras_rate,
+                    'beras_jumlah_total': total_beras_jumlah,
+                    'jabatan_rate_total': total_jabatan_rate,
+                    'jabatan_jumlah_total': total_jabatan_jumlah,
+                    'masa_kerja_rate_total': total_masa_kerja_rate,
+                    'masa_kerja_jumlah_total': total_masa_kerja_jumlah,
+                    'lembur_rate_total': total_lembur_rate,
+                    'lembur_jumlah_total': total_lembur_jumlah,
+                    'lainnya_rate_total': total_lainnya_rate,
+                    'lainnya_jumlah_total': total_lainnya_jumlah,
+                    'total_tunjangan': total_tunjangan,
+
+                    # Legacy tunjangan fields (for compatibility)
+                    'tunjangan_beras': total_beras_jumlah,
+                    'tunjangan_beras_jumlah': total_beras_jumlah,
+                    'tunjangan_jabatan': total_jabatan_jumlah,
+                    'tunjangan_jabatan_hk': total_jabatan_jumlah,
+                    'tunjangan_masa_kerja': total_masa_kerja_jumlah,
+                    'tunjangan_masa_kerja_jumlah': total_masa_kerja_jumlah,
+                    'tunjangan_lembur': total_lembur_jumlah,
                     'tunjangan_premi': 0,
                     'tunjangan_angkut_tbs': 0,
                     'tunjangan_angkut_pc_tbk': 0,
@@ -566,6 +673,16 @@ class DaftarUpahEngineRealFixed:
                     'upah_kotor': total_gaji_pokok + total_tunjangan,
 
                     # Deductions (Potongan)
+                    'potongan_pph21_total': sum(emp['potongan_pph'] for emp in merged_employees),
+                    'potongan_kontan_total': 0,
+                    'potongan_thr_total': 0,
+                    'potongan_pinjam_total': sum(emp['potongan_pinjaman_uang'] for emp in merged_employees),
+                    'potongan_kl_total': 0,
+                    'potongan_bpjs_kes_total': 0,
+                    'potongan_bpjs_pek_total': sum(emp['potongan_bpjs'] for emp in merged_employees),
+                    'potongan_bpjs_maj_total': 0,
+
+                    # Legacy potongan fields (for compatibility)
                     'potongan_astek_pekerja': 0,
                     'potongan_astek_majikan': 0,
                     'potongan_astek_jumlah': 0,
@@ -579,10 +696,21 @@ class DaftarUpahEngineRealFixed:
                     'potongan_lebih_potong_pajak_thr': 0,
                     'potongan_pinjaman_uang': sum(emp['potongan_pinjaman_uang'] for emp in merged_employees),
 
-                    # Final totals
-                    'upah_bersih': total_upah_bersih,
+                    # Additional potongan totals for template compatibility
+                    'potongan_total1': 0,
+                    'potongan_total2': 0,
+                    'potongan_total3': 0,
+                    'potongan_total4': 0,
+                    'tunjangan_total8': 0,
+                    'tunjangan_total9': 0,
+
+                  # Final totals
+                    'upah_bersih_total': total_upah_bersih,
                     'tidak_hadir_cth': 0,
-                    'tidak_hadir_alpa': 0
+                    'tidak_hadir_alpa': 0,
+
+                  # Legacy final totals (for compatibility)
+                    'upah_bersih': total_upah_bersih
                 },
                 'tanggal_cetak': datetime.now().strftime('%d-%m-%Y'),
                 'data_source': 'Real Database Query + Sample Payroll'
