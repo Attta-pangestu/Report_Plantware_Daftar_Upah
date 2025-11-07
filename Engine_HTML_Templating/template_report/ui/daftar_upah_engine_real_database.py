@@ -647,6 +647,7 @@ class DaftarUpahEngineRealFixed:
         """Get employee BRONDOL amount using get_brondol_amount.sql"""
         try:
             import pyodbc
+            from datetime import datetime
 
             # Load database config
             with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
@@ -666,18 +667,21 @@ class DaftarUpahEngineRealFixed:
                 query = f.read()
 
             # Calculate date range for the specified month and year
-            start_date = f"{year}-{month:02d}-01"
+            start_date = f"{year:04d}-{month:02d}-01"
             if month == 12:
-                end_date = f"{year+1}-01-01"
+                end_date = f"{year+1:04d}-01-01"
             else:
-                end_date = f"{year}-{month+1:02d}-01"
+                end_date = f"{year:04d}-{month+1:02d}-01"
 
-            # Replace hardcoded values
-            query = query.replace("'H0510'", "?")
-            query = query.replace("'2025-05-01'", "?")
-            query = query.replace("'2025-06-01'", "?")
+            # Replace hardcoded values with proper parameter placeholders (no CAST - use simple strings like original)
+            query = query.replace("LFLN.EmpCode LIKE 'H0510'", "LFLN.EmpCode LIKE ?")
+            query = query.replace("LF.DocDate >= '2025-05-01'", "LF.DocDate >= ?")
+            query = query.replace("LF.DocDate < '2025-06-01'", "LF.DocDate < ?")
 
-            cursor.execute(query, emp_code, start_date, end_date)
+            # Trim employee code to remove extra spaces
+            emp_code_clean = emp_code.strip()
+
+            cursor.execute(query, emp_code_clean, start_date, end_date)
             result = cursor.fetchone()
 
             cursor.close()
@@ -693,6 +697,7 @@ class DaftarUpahEngineRealFixed:
         """Get employee premi amount by DocDesc using get_tunjangan_premi_amount.sql"""
         try:
             import pyodbc
+            from datetime import datetime
 
             # Load database config
             with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
@@ -712,25 +717,46 @@ class DaftarUpahEngineRealFixed:
                 query = f.read()
 
             # Calculate date range for the specified month and year
-            start_date = f"{year}-{month:02d}-01"
+            start_date = f"{year:04d}-{month:02d}-01"
             if month == 12:
-                end_date = f"{year+1}-01-01"
+                end_date = f"{year+1:04d}-01-01"
             else:
-                end_date = f"{year}-{month+1:02d}-01"
+                end_date = f"{year:04d}-{month+1:02d}-01"
 
-            # Replace hardcoded values
-            query = query.replace("'H0033'", "?")
-            query = query.replace("'TUNJANGAN MASA KERJA'", "?")
-            query = query.replace("'2025-05-01'", "?")
-            query = query.replace("'2025-06-01'", "?")
+            # Replace hardcoded values with proper parameter placeholders (no CAST - use simple strings like original)
+            query = query.replace("t.EmpCode = 'H0033'", "t.EmpCode = ?")
+            query = query.replace("DocDesc = 'TUNJANGAN MASA KERJA'", "DocDesc = ?")
+            query = query.replace("t.DocDate >= '2025-05-01'", "t.DocDate >= ?")
+            query = query.replace("t.DocDate <  '2025-06-01'", "t.DocDate < ?")
 
-            cursor.execute(query, emp_code, doc_desc, start_date, end_date)
-            result = cursor.fetchone()
+            # Trim employee code to remove extra spaces
+            emp_code_clean = emp_code.strip()
+
+            # Execute query with correct parameter order matching the SQL query: EmpCode, DocDate, DocDate, DocDesc
+            cursor.execute(query, emp_code_clean, start_date, end_date, doc_desc)
+            results = cursor.fetchall()
 
             cursor.close()
             conn.close()
 
-            return float(result[1]) if result and len(result) > 1 and result[1] else 0
+            # Sum all Amount values from the results (Amount is typically the last column)
+            total_amount = 0
+            for row in results:
+                if row and len(row) >= 1:
+                    # Try to get the Amount column (usually last column, check multiple positions)
+                    amount = 0
+                    for col_idx in [len(row)-1, len(row)-2, 7, 8]:  # Try different possible positions
+                        if col_idx >= 0 and col_idx < len(row):
+                            try:
+                                amount_val = row[col_idx]
+                                if amount_val is not None:
+                                    amount = float(amount_val)
+                                    break
+                            except (ValueError, TypeError):
+                                continue
+                    total_amount += amount
+
+            return total_amount
 
         except Exception as e:
             print(f"[ERROR] Failed to get {doc_desc} amount for {emp_code}: {e}")
@@ -951,7 +977,6 @@ class DaftarUpahEngineRealFixed:
 
     def generate_report_from_real_database(self, gang_code: str = 'H1H', limit: int = 100,
                                          template_file: str = "daftar_upah_template_final.html",
-                                         sample_data_file: str = "large_data.json",
                                          output_file: Optional[str] = None) -> Optional[Path]:
         """Generate report using real database query"""
         try:
@@ -963,7 +988,7 @@ class DaftarUpahEngineRealFixed:
 
             print(f"[INFO] Gang Code: {gang_code}")
             print(f"[TEMPLATE] Template: {template_file}")
-            print(f"[SAMPLE] Sample Data: {sample_data_file}")
+            print(f"[DATA SOURCE] Real Database (No Sample Data)")
             print(f"[QUERY] Query File: {self.query_manager.query_file_path}")
             print(f"[LIMIT] Max Employees: {limit}")
 
@@ -984,9 +1009,9 @@ class DaftarUpahEngineRealFixed:
             for i, emp in enumerate(employees[:3], 1):
                 print(f"   {i}. {emp.nik} - {emp.nama} ({emp.jenis_kelamin}) - {emp.LocCode}")
 
-            # Load sample payroll data
-            print(f"\n[2] Loading sample payroll data...")
-            sample_data = self.load_sample_payroll_data(sample_data_file)
+            # Use database data only (no sample data dependency)
+            print(f"\n[2] Preparing database-driven payroll data...")
+            sample_data = {}  # Empty sample data to force database-driven generation
 
             # Merge employee data with real cuti data
             print(f"\n[3] Merging data with real cuti information...")
@@ -1633,7 +1658,6 @@ def main():
     parser.add_argument('--gang', default='H1H', help='Gang code (default: H1H)')
     parser.add_argument('--limit', type=int, default=100, help='Maximum employees (default: 100)')
     parser.add_argument('--template', default='daftar_upah_template_final.html', help='Template file')
-    parser.add_argument('--sample-data', default='large_data.json', help='Sample data file')
     parser.add_argument('--output', help='Output file name')
 
     args = parser.parse_args()
@@ -1647,7 +1671,6 @@ def main():
             gang_code=args.gang,
             limit=args.limit,
             template_file=args.template,
-            sample_data_file=args.sample_data,
             output_file=args.output
         )
 
