@@ -7,4 +7,4 @@ JOIN   PR_ADTRANSLN    AS ln
 WHERE  t.EmpCode = 'H0033'
   AND  t.DocDate >= '2025-05-01'
   AND  t.DocDate <  '2025-06-01'
-  AND DocDesc = 'TUNJANGAN JABATAN'
+  AND DocDesc = 'TUNJANGAN MASA KERJA'

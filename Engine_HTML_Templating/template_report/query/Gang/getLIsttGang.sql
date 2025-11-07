@@ -1,0 +1,1 @@
+SELECT "GangCode", "Description" FROM "HR_GANG"

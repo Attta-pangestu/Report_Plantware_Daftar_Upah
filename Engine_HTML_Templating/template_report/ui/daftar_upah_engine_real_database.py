@@ -320,8 +320,57 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get beras payrate for {emp_code}: {e}")
             return 0  # Default
 
+    def get_employee_jabatan_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee jabatan tunjangan amount directly from database using Get_Amount_Tunjangan_Jabatan.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Gett_Amount_Tunjangan_Jabatan.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace the hardcoded values in query with parameterized query
+            query = query.replace("'H0330'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code.strip(), start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            # Return the Amount (Jumlah in Rp)
+            if result and len(result) > 0 and result[-1] is not None:
+                return float(result[-1])
+            return 0  # Default if not found
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get jabatan amount for {emp_code}: {e}")
+            return 0  # Default
+
     def get_employee_jabatan_payrate(self, emp_code: str, month: int, year: int) -> float:
-        """Get employee jabatan payrate from database using Payrate_Jabatan.sql"""
+        """Get employee jabatan payrate from database using Payrate_Jabatan.sql (legacy function - kept for compatibility)"""
         try:
             import pyodbc
 
@@ -368,15 +417,106 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get jabatan payrate for {emp_code}: {e}")
             return 0  # Default
 
+    def get_employee_masa_kerja_years(self, emp_code: str) -> int:
+        """Get employee masa kerja (work period) in years using count_masa_kerja.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "count_masa_kerja.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Replace hardcoded EmpCode with parameter
+            query = query.replace("'H0093'", "?")
+
+            cursor.execute(query, emp_code.strip())
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            # Return the calculated years (Lama in Thn)
+            if result and len(result) > 0 and result[-1] is not None:
+                return int(result[-1])
+            return 0  # Default if not found
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get masa kerja years for {emp_code}: {e}")
+            return 0  # Default
+
+    def get_employee_masa_kerja_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee masa kerja allowance amount using get_amount_masa_kerja.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_amount_masa_kerja.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace hardcoded values in query with parameterized query
+            query = query.replace("'H0033'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code.strip(), start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            # Return the Amount (Jumlah in Rp)
+            if result and len(result) > 0 and result[-1] is not None:
+                return float(result[-1])
+            return 0  # Default if not found
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get masa kerja amount for {emp_code}: {e}")
+            return 0  # Default
+
     def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int, hk_minggu: int, hk_nasional: int) -> int:
         """Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)"""
         total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
         hari_kerja = max(0, hk_count - total_cuti)
         return hari_kerja
 
-    def calculate_gaji_pokok(self, hk_count: int, payrate) -> float:
-        """Calculate Gaji Pokok = JML HK x Payrate (Rp)"""
-        return hk_count * float(payrate) if payrate else 0
+    def calculate_gaji_pokok(self, hk_count: int, payrate, cuti_tahunan: int = 0, cuti_sakit: int = 0, hk_minggu: int = 0, hk_nasional: int = 0) -> float:
+        """Calculate Gaji Pokok = (HK - Total Cuti) x Payrate (Rp)"""
+        total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
+        hari_kerja = max(0, hk_count - total_cuti)
+        return hari_kerja * float(payrate) if payrate else 0
 
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
@@ -404,7 +544,7 @@ class DaftarUpahEngineRealFixed:
                 emp.get('cuti_nasional_hari', 0)
             )
 
-            # Calculate Gaji Pokok
+            # Calculate Gaji Pokok (legacy, not rendered as salary in Gaji Pokok column)
             gaji_pokok = self.calculate_gaji_pokok(hk_count, payrate)
 
             # Prepare cuti data with alternating colors and red text (5 kolom)
@@ -426,6 +566,22 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-upah-dasar center-cell">{self.format_value(payrate, ',.0f')}</td>
                     <td class="number-cell col-hari-kerja center-cell">{self.format_value(hari_kerja)}</td>"""
 
+            # Add Upah Pokok column (Hari Kerja × Upah Dasar) right after Hari Kerja
+            upah_pokok = self.calculate_gaji_pokok(
+                hk_count,
+                payrate,
+                emp.get('cuti_tahunan_hari', 0),
+                emp.get('cuti_sakit_hari', 0),
+                emp.get('cuti_minggu_hari', 0),
+                emp.get('cuti_nasional_hari', 0)
+            )
+            employee_rows += f"""
+                    <td class="number-cell col-upah-pokok center-cell">{self.format_value(upah_pokok, ',.0f')}</td>"""
+
+            # Add Gaji Pokok column mapped to Cuti Tahunan (display leave days, not salary)
+            employee_rows += f"""
+                    <td class="number-cell col-gaji-pokok center-cell">{self.format_value(emp.get('cuti_tahunan_hari', 0))}</td>"""
+
             # Add cuti columns with alternating colors and red text
             for j, (field, value) in enumerate(cuti_data):
                 bg_class = 'cuti-col-odd' if j % 2 == 0 else 'cuti-col-even'
@@ -434,15 +590,22 @@ class DaftarUpahEngineRealFixed:
                 employee_rows += f"""
                     <td class="number-cell col-cuti center-cell {bg_class} {red_class}">{clean_value}</td>"""
 
-            # Add HK column
+            # Add HK column (JML HK) after Cuti columns to match header layout section
             hk_value = self.format_value(hk_count)
             employee_rows += f"""
-                    <td class="number-cell col-hk center-cell">{hk_value}</td>
-                    <td class="number-cell col-gaji-pokok center-cell">{self.format_value(gaji_pokok, ',.0f')}</td>"""
+                    <td class="number-cell col-hk center-cell">{hk_value}</td>"""
 
             # Get payrates from database
             beras_payrate = self.get_employee_beras_payrate(emp['nik'])
-            jabatan_payrate = self.get_employee_jabatan_payrate(emp['nik'], 5, 2025)  # May 2025
+
+            # Get tunjangan jabatan amount directly from database
+            jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], 5, 2025)  # May 2025
+            # Calculate jabatan rate as amount ÷ hari kerja
+            jabatan_rate = jabatan_amount / hari_kerja if hari_kerja > 0 and jabatan_amount > 0 else 0
+
+            # Get masa kerja data from database using the two queries
+            masa_kerja_years = self.get_employee_masa_kerja_years(emp['nik'])
+            masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], 5, 2025)  # May 2025
 
             # Prepare tunjangan data with new structure
             tunjangan_data = {
@@ -450,13 +613,13 @@ class DaftarUpahEngineRealFixed:
                 'beras_rate': beras_payrate,
                 'beras_jumlah': hk_count * beras_payrate if beras_payrate > 0 else 0,
 
-                # Jabatan: Rate = Payrate dari database, Jumlah = Hari Kerja × Rate (jika ada payrate)
-                'jabatan_rate': jabatan_payrate,
-                'jabatan_jumlah': hari_kerja * jabatan_payrate if jabatan_payrate > 0 else 0,
+                # Jabatan: Jumlah dari Get_Amount_Tunjangan_Jabatan.sql, Rate = Jumlah ÷ Hari Kerja
+                'jabatan_rate': jabatan_rate,
+                'jabatan_jumlah': jabatan_amount,
 
-                # Masa Kerja: Rate = Payrate × 0.1 × ServiceYears (asumsi), Jumlah = Rate × HK
-                'masa_kerja_rate': 0,  # Simplified
-                'masa_kerja_jumlah': 0,  # Simplified
+                # Masa Kerja: Lama (Thn) from count_masa_kerja.sql, Jumlah (Rp) from get_amount_masa_kerja.sql
+                'masa_kerja_rate': masa_kerja_years,  # This will show as Lama (Thn)
+                'masa_kerja_jumlah': masa_kerja_amount,  # This will show as Jumlah (Rp)
 
                 # Lembur: Rate = 20,000 per hour, Jumlah = Rate × LemburHours
                 'lembur_rate': 20000,
@@ -466,9 +629,6 @@ class DaftarUpahEngineRealFixed:
                 'lainnya_rate': 0,  # Will be calculated as average
                 'lainnya_jumlah': emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
             }
-
-            # Calculate Jumlah for each category (already calculated above, removing duplicate calculation)
-            tunjangan_data['masa_kerja_jumlah'] = tunjangan_data['masa_kerja_rate'] * hk_count if tunjangan_data['masa_kerja_rate'] > 0 else 0
 
             # Calculate average rate for Lainnya
             total_jumlah_lainnya = tunjangan_data['lainnya_jumlah']
@@ -604,13 +764,21 @@ class DaftarUpahEngineRealFixed:
 
                 # Get payrates from database for this employee
                 emp_beras_rate = self.get_employee_beras_payrate(emp['nik'])
-                emp_jabatan_rate = self.get_employee_jabatan_payrate(emp['nik'], 5, 2025)  # May 2025
+
+                # Get tunjangan jabatan amount directly from database
+                emp_jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], 5, 2025)  # May 2025
+                # Calculate jabatan rate as amount ÷ hari kerja
+                emp_jabatan_rate = emp_jabatan_amount / hari_kerja if hari_kerja > 0 and emp_jabatan_amount > 0 else 0
+
+                # Get masa kerja data from database using the two queries
+                emp_masa_kerja_years = self.get_employee_masa_kerja_years(emp['nik'])
+                emp_masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], 5, 2025)  # May 2025
 
                 # Calculate for this employee using database payrates
                 emp_beras_jumlah = hk_count * emp_beras_rate if emp_beras_rate > 0 else 0
-                emp_jabatan_jumlah = hari_kerja * emp_jabatan_rate if emp_jabatan_rate > 0 else 0
-                emp_masa_kerja_rate = 0  # Simplified
-                emp_masa_kerja_jumlah = 0  # Simplified
+                emp_jabatan_jumlah = emp_jabatan_amount  # Direct amount from query
+                emp_masa_kerja_rate = emp_masa_kerja_years  # Lama (Thn)
+                emp_masa_kerja_jumlah = emp_masa_kerja_amount  # Jumlah (Rp)
                 emp_lembur_rate = 20000
                 emp_lembur_jumlah = emp.get('uang_lembur', 0)
                 emp_lainnya_jumlah = emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
@@ -638,6 +806,55 @@ class DaftarUpahEngineRealFixed:
             total_gaji_pokok = sum(emp['gaji_pokok'] for emp in merged_employees)
             total_potongan = sum(emp['potongan_bpjs'] + emp['potongan_pph'] + emp['potongan_lain'] + emp['potongan_pinjaman_uang'] for emp in merged_employees)
             total_upah_bersih = sum(emp['upah_bersih'] for emp in merged_employees)
+
+            # Calculate actual grand totals from employee data
+            grand_total_cuti_tahunan = sum(emp.get('cuti_tahunan_hari', 0) for emp in merged_employees)
+            grand_total_cuti_sakit = sum(emp.get('cuti_sakit_hari', 0) for emp in merged_employees)
+            grand_total_cuti_minggu = sum(emp.get('cuti_minggu_hari', 0) for emp in merged_employees)
+            grand_total_cuti_nasional = sum(emp.get('cuti_nasional_hari', 0) for emp in merged_employees)
+            grand_total_cuti_izin = sum(emp.get('cuti_izin_hari', 0) for emp in merged_employees)
+
+            grand_total_hk = sum(self.get_employee_hk_count(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
+            # Calculate grand total Upah Pokok as sum of (Hari Kerja × Upah Dasar) for all employees
+            grand_total_upah_pokok = 0
+            for emp in merged_employees:
+                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                payrate = self.get_employee_payrate(emp['nik'])
+                upah_pokok = self.calculate_gaji_pokok(hk_count, payrate,
+                                                     emp.get('cuti_tahunan_hari', 0),
+                                                     emp.get('cuti_sakit_hari', 0),
+                                                     emp.get('cuti_minggu_hari', 0),
+                                                     emp.get('cuti_nasional_hari', 0))
+                grand_total_upah_pokok += upah_pokok
+
+            # Grand totals for tunjangan (calculated from actual employee data)
+            grand_total_beras_rate = total_beras_rate
+            grand_total_beras_jumlah = total_beras_jumlah
+            grand_total_jabatan_rate = total_jabatan_rate
+            grand_total_jabatan_jumlah = total_jabatan_jumlah
+            grand_total_masa_kerja_rate = total_masa_kerja_rate
+            grand_total_masa_kerja_jumlah = total_masa_kerja_jumlah
+            grand_total_lembur_rate = total_lembur_rate
+            grand_total_lembur_jumlah = total_lembur_jumlah
+            grand_total_lainnya_rate = total_lainnya_rate
+            grand_total_lainnya_jumlah = total_lainnya_jumlah
+            grand_total_tunjangan = total_tunjangan
+
+            # Grand totals for potongan
+            grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
+            grand_total_kontan = 0
+            grand_total_thr = 0
+            grand_total_pinjam = sum(emp['potongan_pinjaman_uang'] for emp in merged_employees)
+            grand_total_kl = 0
+            grand_total_bpjs_kes = 0
+            grand_total_bpjs_pek = sum(emp['potongan_bpjs'] for emp in merged_employees)
+            grand_total_bpjs_maj = 0
+
+            # Grand totals for final columns
+            grand_total_upah_bersih = total_upah_bersih
+            grand_total_cth = sum(emp.get('tidak_hadir_cth', 0) for emp in merged_employees)
+            grand_total_alpa = sum(emp.get('tidak_hadir_alpa', 0) for emp in merged_employees)
 
             # Clean NIK function
             def clean_nik(nik):
@@ -800,6 +1017,58 @@ class DaftarUpahEngineRealFixed:
                   # Legacy final totals (for compatibility)
                     'upah_bersih': total_upah_bersih
                 },
+                'grand_total': {
+                    # Cut/Libur Grand Totals
+                    'cuti_tahunan_hari': grand_total_cuti_tahunan,
+                    'cuti_sakit_hari': grand_total_cuti_sakit,
+                    'cuti_minggu_hari': grand_total_cuti_minggu,
+                    'cuti_nasional_hari': grand_total_cuti_nasional,
+                    'cuti_izin_hari': grand_total_cuti_izin,
+
+                    # Working Days Grand Total
+                    'jumlah_hk': grand_total_hk,
+
+                    # Upah Pokok Grand Total (Hari Kerja × Upah Dasar)
+                    'upah_pokok_total': grand_total_upah_pokok,
+
+                    # Tunjangan Grand Totals
+                    'beras_rate_total': grand_total_beras_rate,
+                    'beras_jumlah_total': grand_total_beras_jumlah,
+                    'jabatan_rate_total': grand_total_jabatan_rate,
+                    'jabatan_jumlah_total': grand_total_jabatan_jumlah,
+                    'masa_kerja_rate_total': grand_total_masa_kerja_rate,
+                    'masa_kerja_jumlah_total': grand_total_masa_kerja_jumlah,
+                    'lembur_rate_total': grand_total_lembur_rate,
+                    'lembur_jumlah_total': grand_total_lembur_jumlah,
+                    'lainnya_rate_total': grand_total_lainnya_rate,
+                    'lainnya_jumlah_total': grand_total_lainnya_jumlah,
+                    'total_tunjangan': grand_total_tunjangan,
+
+                    # Additional tunjangan grand totals
+                    'tunjangan_total8': 0,
+                    'tunjangan_total9': 0,
+
+                    # Potongan Grand Totals
+                    'potongan_pph21_total': grand_total_pph21,
+                    'potongan_kontan_total': grand_total_kontan,
+                    'potongan_thr_total': grand_total_thr,
+                    'potongan_pinjam_total': grand_total_pinjam,
+                    'potongan_kl_total': grand_total_kl,
+                    'potongan_bpjs_kes_total': grand_total_bpjs_kes,
+                    'potongan_bpjs_pek_total': grand_total_bpjs_pek,
+                    'potongan_bpjs_maj_total': grand_total_bpjs_maj,
+
+                    # Additional potongan grand totals
+                    'potongan_total1': 0,
+                    'potongan_total2': 0,
+                    'potongan_total3': 0,
+                    'potongan_total4': 0,
+
+                    # Final Grand Totals
+                    'upah_bersih_total': grand_total_upah_bersih,
+                    'tidak_hadir_cth_total': grand_total_cth,
+                    'tidak_hadir_alpa_total': grand_total_alpa
+                },
                 'tanggal_cetak': datetime.now().strftime('%d-%m-%Y'),
                 'data_source': 'Real Database Query + Sample Payroll'
             }
@@ -831,6 +1100,46 @@ class DaftarUpahEngineRealFixed:
             total = report_data['total']
             for key, value in total.items():
                 html_content = html_content.replace(f'{{total.{key}}}', str(value))
+
+            # Grand Total placeholders with proper formatting
+            grand_total = report_data['grand_total']
+
+            # Replace placeholders with exact match including formatting
+            html_content = html_content.replace('{grand_total.cuti_tahunan_hari}', f"{int(grand_total['cuti_tahunan_hari'])}")
+            html_content = html_content.replace('{grand_total.cuti_sakit_hari}', f"{int(grand_total['cuti_sakit_hari'])}")
+            html_content = html_content.replace('{grand_total.cuti_minggu_hari}', f"{int(grand_total['cuti_minggu_hari'])}")
+            html_content = html_content.replace('{grand_total.cuti_nasional_hari}', f"{int(grand_total['cuti_nasional_hari'])}")
+            html_content = html_content.replace('{grand_total.cuti_izin_hari}', f"{int(grand_total['cuti_izin_hari'])}")
+            html_content = html_content.replace('{grand_total.jumlah_hk}', f"{int(grand_total['jumlah_hk'])}")
+            html_content = html_content.replace('{grand_total.upah_pokok_total:,.0f}', f"{grand_total['upah_pokok_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.beras_rate_total:,.0f}', f"{grand_total['beras_rate_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.beras_jumlah_total:,.0f}', f"{grand_total['beras_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.jabatan_rate_total:,.0f}', f"{grand_total['jabatan_rate_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.jabatan_jumlah_total:,.0f}', f"{grand_total['jabatan_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.masa_kerja_rate_total:,.0f}', f"{grand_total['masa_kerja_rate_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.masa_kerja_jumlah_total:,.0f}', f"{grand_total['masa_kerja_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.lembur_rate_total:,.0f}', f"{grand_total['lembur_rate_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.lembur_jumlah_total:,.0f}', f"{grand_total['lembur_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.lainnya_rate_total:,.0f}', f"{grand_total['lainnya_rate_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.lainnya_jumlah_total:,.0f}', f"{grand_total['lainnya_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.total_tunjangan:,.0f}', f"{grand_total['total_tunjangan']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_total8:,.0f}', f"{grand_total['tunjangan_total8']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_total9:,.0f}', f"{grand_total['tunjangan_total9']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_thr_total:,.0f}', f"{grand_total['potongan_thr_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_pinjam_total:,.0f}', f"{grand_total['potongan_pinjam_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_kl_total:,.0f}', f"{grand_total['potongan_kl_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_bpjs_kes_total:,.0f}', f"{grand_total['potongan_bpjs_kes_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_bpjs_pek_total:,.0f}', f"{grand_total['potongan_bpjs_pek_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_bpjs_maj_total:,.0f}', f"{grand_total['potongan_bpjs_maj_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_total1:,.0f}', f"{grand_total['potongan_total1']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_total2:,.0f}', f"{grand_total['potongan_total2']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_total3:,.0f}', f"{grand_total['potongan_total3']:,.0f}")
+            html_content = html_content.replace('{grand_total.potongan_total4:,.0f}', f"{grand_total['potongan_total4']:,.0f}")
+            html_content = html_content.replace('{grand_total.upah_bersih_total:,.0f}', f"{grand_total['upah_bersih_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tidak_hadir_cth_total}', f"{int(grand_total['tidak_hadir_cth_total'])}")
+            html_content = html_content.replace('{grand_total.tidak_hadir_alpa_total}', f"{int(grand_total['tidak_hadir_alpa_total'])}")
 
             # Generate output filename
             if output_file is None:
