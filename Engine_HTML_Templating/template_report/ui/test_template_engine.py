@@ -60,7 +60,7 @@ class DaftarUpahTemplateEngine:
         lembur_jumlah = employee.get('tunjangan_lembur', 0)
         total_tunj_base = tunj_beras_jumlah + tunj_jabatan_rate + masa_kerja_jumlah + lembur_jumlah
 
-        # Premi 7 columns
+        # Premi 8 columns (including Koreksi)
         premi_cols = [
             employee.get('tunjangan_premi', 0),
             employee.get('tunjangan_angkut_tbs', 0),
@@ -69,7 +69,12 @@ class DaftarUpahTemplateEngine:
             employee.get('tunjangan_antar_jemput', 0),
             employee.get('tunjangan_angkut_puru', 0),
             employee.get('tunjangan_angkut_bibit', 0),
+            employee.get('tunjangan_koreksi', 0),
         ]
+
+        # Summary calculations
+        total_premi = sum(premi_cols)
+        jumlah_upah_kotor = gaji_pokok + total_tunj_base + total_premi
 
         # Potongan 13 columns (map best-effort)
         potongan_pph21 = employee.get('potongan_pph21', employee.get('potongan_pph', 0))
@@ -120,7 +125,7 @@ class DaftarUpahTemplateEngine:
             <!-- Total Tunjangan -->
             <td class="number-cell">{self.format_rupiah(total_tunj_base)}</td>
 
-            <!-- Premi (7 kolom) -->
+            <!-- Premi (8 kolom termasuk Koreksi) -->
             <td class="number-cell">{self.format_rupiah(premi_cols[0])}</td>
             <td class="number-cell">{self.format_rupiah(premi_cols[1])}</td>
             <td class="number-cell">{self.format_rupiah(premi_cols[2])}</td>
@@ -128,6 +133,11 @@ class DaftarUpahTemplateEngine:
             <td class="number-cell">{self.format_rupiah(premi_cols[4])}</td>
             <td class="number-cell">{self.format_rupiah(premi_cols[5])}</td>
             <td class="number-cell">{self.format_rupiah(premi_cols[6])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[7])}</td>
+
+            <!-- Summary: Total Premi & Jumlah Upah Kotor -->
+            <td class="number-cell">{self.format_rupiah(total_premi)}</td>
+            <td class="number-cell">{self.format_rupiah(jumlah_upah_kotor)}</td>
 
             <!-- Potongan (13 kolom) -->
             <td class="number-cell">{self.format_rupiah(potongan_pph21)}</td>
@@ -234,6 +244,38 @@ class DaftarUpahTemplateEngine:
         # Replace total variables
         for key, value in totals.items():
             template = template.replace(f'{{total.{key}}}', self.format_rupiah(value))
+
+        # Compute and replace grand total placeholders used in final template
+        employees = data.get('karyawan', [])
+        grand_total_koreksi = totals.get('tunjangan_koreksi', 0)
+        grand_total_total_premi = (
+            totals.get('tunjangan_premi', 0) +
+            totals.get('tunjangan_angkut_tbs', 0) +
+            totals.get('tunjangan_angkut_pc_tbk', 0) +
+            totals.get('tunjangan_premi_retase', 0) +
+            totals.get('tunjangan_antar_jemput', 0) +
+            totals.get('tunjangan_angkut_puru', 0) +
+            totals.get('tunjangan_angkut_bibit', 0) +
+            grand_total_koreksi
+        )
+
+        grand_total_gaji_pokok = sum(
+            (emp.get('upah_dasar', 0) or 0) * (emp.get('jumlah_hk', emp.get('hari_kerja', 0)) or 0)
+            for emp in employees
+        )
+
+        total_tunj_base_total = (
+            totals.get('tunjangan_beras_jumlah', 0) +
+            totals.get('tunjangan_jabatan', 0) +
+            totals.get('tunjangan_masa_kerja_jumlah', 0) +
+            totals.get('tunjangan_lembur', 0)
+        )
+
+        grand_total_jumlah_upah_kotor = grand_total_gaji_pokok + total_tunj_base_total + grand_total_total_premi
+
+        template = template.replace('{grand_total.koreksi_total}', self.format_rupiah(grand_total_koreksi))
+        template = template.replace('{grand_total.total_premi_total}', self.format_rupiah(grand_total_total_premi))
+        template = template.replace('{grand_total.jumlah_upah_kotor_total}', self.format_rupiah(grand_total_jumlah_upah_kotor))
 
         return template
 

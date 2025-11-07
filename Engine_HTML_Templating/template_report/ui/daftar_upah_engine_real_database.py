@@ -770,6 +770,76 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get PRUNING amount for {emp_code}: {e}")
             return 0
 
+    def get_employee_koreksi_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee Koreksi amount using get_koreksi_emp.sql"""
+        try:
+            import pyodbc
+            from datetime import datetime
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_koreksi_emp.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year:04d}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1:04d}-01-01"
+            else:
+                end_date = f"{year:04d}-{month+1:02d}-01"
+
+            # Replace hardcoded values with proper parameter placeholders (no CAST - use simple strings like original)
+            query = query.replace("t.EmpCode = 'H0033'", "t.EmpCode = ?")
+            query = query.replace("t.DocDate >= '2025-05-01'", "t.DocDate >= ?")
+            query = query.replace("t.DocDate <  '2025-06-01'", "t.DocDate < ?")
+            # Keep the LIKE clause for Koreksi
+            query = query.replace("AND DocDesc LIKE '%KOREKSI%'", "AND DocDesc LIKE ?")
+
+            # Trim employee code to remove extra spaces
+            emp_code_clean = emp_code.strip()
+
+            # Execute query with correct parameter order matching the SQL query: EmpCode, DocDate, DocDate, DocDesc
+            cursor.execute(query, emp_code_clean, start_date, end_date, '%KOREKSI%')
+            results = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            # Sum all Amount values from the results (Amount is typically the last column)
+            total_amount = 0
+            for row in results:
+                if row and len(row) >= 1:
+                    # Try to get the Amount column (usually last column, check multiple positions)
+                    amount = 0
+                    for col_idx in [len(row)-1, len(row)-2, 7, 8]:  # Try different possible positions
+                        if col_idx >= 0 and col_idx < len(row):
+                            try:
+                                amount_val = row[col_idx]
+                                if amount_val is not None:
+                                    amount = float(amount_val)
+                                    break
+                            except (ValueError, TypeError):
+                                continue
+                    total_amount += amount
+
+            return total_amount
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get Koreksi amount for {emp_code}: {e}")
+            return 0
+
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
         def clean_nik(nik):
@@ -935,14 +1005,35 @@ class DaftarUpahEngineRealFixed:
                     amount = self.get_employee_premi_amount_by_docdesc(emp['nik'], header, 5, 2025)
                     premi_values.append(amount)
 
+            # Get Koreksi amount from get_koreksi_emp.sql
+            koreksi_amount = self.get_employee_koreksi_amount(emp['nik'], 5, 2025)  # May 2025
+
+            # Add Koreksi as the 8th Premi column
+            premi_values.append(koreksi_amount)
+
             # Pad with zeros if we don't have enough values
-            while len(premi_values) < 7:
+            while len(premi_values) < 8:
                 premi_values.append(0)
+
+            # Calculate Total Premi = sum of all Premi values (including Koreksi)
+            total_premi = sum(premi_values)
+
+            # Calculate Jumlah Upah Kotor = Gaji Pokok + Tunjangan (Beras, Jabatan, Masa Kerja, Lembur) + Total Premi
+            gaji_pokok = emp['gaji_pokok']
+            jumlah_upah_kotor = gaji_pokok + total_tunjangan + total_premi
 
             for premi_val in premi_values:
                 formatted_premi = self.format_value(premi_val, ',.0f')
                 employee_rows += f"""
                     <td class="number-cell col-premi center-cell">{formatted_premi}</td>"""
+
+            # Add Total Premi column
+            employee_rows += f"""
+                    <td class="number-cell col-total-premi center-cell">{self.format_value(total_premi, ',.0f')}</td>"""
+
+            # Add Jumlah Upah Kotor column
+            employee_rows += f"""
+                    <td class="number-cell col-jumlah-upah-kotor center-cell">{self.format_value(jumlah_upah_kotor, ',.0f')}</td>"""
 
             # Add Potongan columns
             potongan_values = [
@@ -1154,6 +1245,17 @@ class DaftarUpahEngineRealFixed:
             grand_total_antar_jemput = grand_total_premi_dynamic[4] if len(grand_total_premi_dynamic) > 4 else 0
             grand_total_angkut_puru = 0
             grand_total_angkut_bibit = 0
+
+            # Calculate Grand Total Koreksi
+            grand_total_koreksi = sum(self.get_employee_koreksi_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
+            # Calculate Grand Total Total Premi = sum of all premi grand totals + koreksi
+            grand_total_total_premi = (grand_total_brondol + grand_total_pruning +
+                                      sum(grand_total_premi_dynamic) + grand_total_koreksi)
+
+            # Calculate Grand Total Jumlah Upah Kotor = Gaji Pokok + Total Tunjangan + Total Premi
+            grand_total_jumlah_upah_kotor = (grand_total_gaji_pokok + grand_total_tunjangan +
+                                            grand_total_total_premi)
 
             # Grand totals for potongan
             grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
@@ -1380,6 +1482,11 @@ class DaftarUpahEngineRealFixed:
                     'tunjangan_total8': 0,
                     'tunjangan_total9': 0,
 
+                    # New Summary Columns
+                    'koreksi_total': grand_total_koreksi,
+                    'total_premi_total': grand_total_total_premi,
+                    'jumlah_upah_kotor_total': grand_total_jumlah_upah_kotor,
+
                     # Potongan Grand Totals
                     'potongan_pph21_total': grand_total_pph21,
                     'potongan_kontan_total': grand_total_kontan,
@@ -1483,6 +1590,12 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.tunjangan_antar_jemput_total:,.0f}', f"{grand_total['tunjangan_antar_jemput_total']:,.0f}")
             html_content = html_content.replace('{grand_total.tunjangan_angkut_puru_total:,.0f}', f"{grand_total['tunjangan_angkut_puru_total']:,.0f}")
             html_content = html_content.replace('{grand_total.tunjangan_angkut_bibit_total:,.0f}', f"{grand_total['tunjangan_angkut_bibit_total']:,.0f}")
+
+            # New Summary Columns
+            html_content = html_content.replace('{grand_total.koreksi_total:,.0f}', f"{grand_total['koreksi_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.total_premi_total:,.0f}', f"{grand_total['total_premi_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.jumlah_upah_kotor_total:,.0f}', f"{grand_total['jumlah_upah_kotor_total']:,.0f}")
+
             html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_thr_total:,.0f}', f"{grand_total['potongan_thr_total']:,.0f}")

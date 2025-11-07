@@ -101,10 +101,58 @@ def get_employee_pruning_amount(self, emp_code: str, month: int, year: int) -> f
 3. **Result Processing**: Database queries may return different column structures than expected
 4. **Error Handling**: Essential for robust data retrieval systems
 
+## Additional Implementation Today (November 7, 2025)
+
+### New Columns Added
+1. **Koreksi Column**:
+   - Source: `get_koreksi_emp.sql`
+   - Retrieves amounts where DocDesc LIKE '%KOREKSI%'
+   - Added as 8th Premi column
+
+2. **Total Premi Summary Column**:
+   - Calculation: `sum(all Premi sub-headers) + Koreksi`
+   - Provides comprehensive total of all Premi-related payments
+
+3. **Jumlah Upah Kotor Column**:
+   - Calculation: `Gaji Pokok + Tunjangan (Beras, Jabatan, Masa Kerja, Lembur) + Total Premi`
+   - Shows gross salary before deductions
+
+### Technical Implementation Details
+
+#### New Function Added
+```python
+def get_employee_koreksi_amount(self, emp_code: str, month: int, year: int) -> float:
+    """Get employee Koreksi amount using get_koreksi_emp.sql"""
+    # Uses PR_ADTRANS + PR_ADTRANSLN tables
+    # Filters by DocDesc LIKE '%KOREKSI%'
+    # Returns sum of all matching Amount values
+```
+
+#### Updated Calculations
+```python
+# In employee row generation:
+koreksi_amount = self.get_employee_koreksi_amount(emp['nik'], 5, 2025)
+premi_values.append(koreksi_amount)  # Add as 8th Premi column
+total_premi = sum(premi_values)  # Calculate Total Premi
+jumlah_upah_kotor = gaji_pokok + total_tunjangan + total_premi  # Calculate Jumlah Upah Kotor
+
+# In grand total calculations:
+grand_total_koreksi = sum(self.get_employee_koreksi_amount(emp['nik'], 5, 2025) for emp in merged_employees)
+grand_total_total_premi = (grand_total_brondol + grand_total_pruning +
+                          sum(grand_total_premi_dynamic) + grand_total_koreksi)
+grand_total_jumlah_upah_kotor = (grand_total_gaji_pokok + grand_total_tunjangan +
+                                grand_total_total_premi)
+```
+
+#### HTML Template Integration
+- Added column classes: `col-total-premi`, `col-jumlah-upah-kotor`
+- Template variables: `{grand_total.koreksi_total:,.0f}`, `{grand_total.total_premi_total:,.0f}`, `{grand_total.jumlah_upah_kotor_total:,.0f}`
+
 ## Next Steps (If Needed)
 - Performance optimization for large employee datasets
 - Additional Premi types if requested
 - Excel format output if needed
+- Template CSS styling for new columns if needed
 
 ## Related Notes
 - [[2025-11-07-AI-Context-Daftar-Upah-Project]] - Overall project context

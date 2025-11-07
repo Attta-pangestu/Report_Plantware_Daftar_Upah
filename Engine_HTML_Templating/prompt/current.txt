@@ -1,15 +1,5 @@
-Untuk nilai di kolom header Brondol didapatk 'd:\Gawean Rebinmas\Monitoring Database\Plantware_Auto_Report\Daftar_Upah_Reporting\Engine_HTML_Templating\template_report\query\Tunjangan\get_brondol_amount.sql', gunakan query itu untuk dapatan , kemudian unutk prunning didapatkan dari total amount        
-dari tiap baris data dengan DocDesc nya adalah Prunning jadi yang ditampilkan di report adlah total data dengan tag yang sama tadi, nah untuk jenis premi lainnya menyesuaikan dengan 'd:\Gawean Rebinmas\Monitoring 
-Database\Plantware_Auto_Report\Daftar_Upah_Reporting\Engine_HTML_Templating\template_report\query\Tunjangan\get_tunjangan_premi_amount.sql'tinggal meneyuaikan dengN DocDesc dengan nama Header nya masing-masing sesuai dengan judul sub header premi nya 
-
-● Saya akan mengimplementasikan sistem untuk mengambil nilai BRONDOL dari query khusus, PRUNING dari total amount per DocDesc, dan premi lainnya menggunakan query yang sudah ada. Mari saya mulai dengan memeriksa query yang ada:
-
-Potongan Pph 21
-POTONGAN PPH 21
-POTONGAN PPH21
-PPH 21
-PPH21 , POTONGAN SPSI
-SPSI, KOREKSI
-KOREKSI PANEN
-POTONGAN KOREKSI
-POTONGAN KOREKSI PANEN,
+add new column name Koreksi nah tiap empcode nya nilai nya didaptkan dari query ini 'd:\Gawean Rebinmas\Monitoring        
+Database\Plantware_Auto_Report\Daftar_Upah_Reporting\Engine_HTML_Templating\template_report\query\Tunjangan\get_koreksi_    
+emp.sql', nah buatkan Kolumn summary dengan judul header nya Total Premi, yang merupakan penjumlahan dari sub header di     
+heaader premi, ditambah dengan koreksi,  setelah itu buatkan kolumn baru dengan nama Jumlah Upah Kotor yang didapatkan      
+dari perhitungan gaji pokok + tunjangan beras, jabatan, Masa kerja, lembur, dan Total Premi 

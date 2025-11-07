@@ -277,7 +277,9 @@
                     <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
                     <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
                     <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
-                    <td colspan="7" class="header-cell section-header">PREMI</td>
+                    <td colspan="8" class="header-cell section-header">PREMI</td>
+                    <td rowspan="3" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
+                    <td rowspan="3" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
                     <td colspan="13" class="header-cell section-header">POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
                     <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
@@ -306,6 +308,7 @@
                     <td class="header-cell sub-header-premi">PREMI BLOWER</td>
                     <td class="header-cell sub-header-premi">TABUR PUPUK</td>
                     <td class="header-cell sub-header-premi">INCENTIVE</td>
+                    <td class="header-cell sub-header-premi">KOREKSI</td>
 
                     <!-- Potongan Headers -->
                     <td class="header-cell col-potongan">PPH21</td>
@@ -346,6 +349,7 @@
                     <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
 
                     <!-- Premi Units -->
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
@@ -402,6 +406,11 @@
                     <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_antar_jemput_total:,.0f}</td>
                     <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_puru_total:,.0f}</td>
                     <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_bibit_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.koreksi_total:,.0f}</td>
+
+                    <!-- Summary Grand Totals -->
+                    <td class="number-cell col-total-premi" style="background-color: #2c3e50; color: white;">{grand_total.total_premi_total:,.0f}</td>
+                    <td class="number-cell col-jumlah-upah-kotor" style="background-color: #2c3e50; color: white;">{grand_total.jumlah_upah_kotor_total:,.0f}</td>
 
                     <!-- Potongan Grand Totals -->
                     <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">{grand_total.potongan_pph21_total:,.0f}</td>
