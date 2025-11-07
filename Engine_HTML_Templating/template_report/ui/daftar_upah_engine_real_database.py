@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader, Template
 
 from simple_database_query import SimpleEmployeeQueryManager
 from cuti_data_manager import CutiDataManager
+from gang_description import get_gang_description
 
 
 @dataclass
@@ -1554,6 +1555,14 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{loc_code}', report_data['loc_code'])
             html_content = html_content.replace('{tanggal_cetak}', report_data['tanggal_cetak'])
             html_content = html_content.replace('{employee_rows}', report_data['employee_rows'])
+
+            # Get gang description from database
+            gang_desc_result = get_gang_description(report_data['gang_code'])
+            if gang_desc_result['success']:
+                gang_description = gang_desc_result['formatted_description']
+            else:
+                gang_description = f"PT. Rebinmas Jaya | GANG {report_data['gang_code']}"
+            html_content = html_content.replace('{gang_description}', gang_description)
 
             # Total placeholders
             total = report_data['total']

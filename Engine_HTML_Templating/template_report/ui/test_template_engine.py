@@ -1,5 +1,7 @@
 import json
 import os
+import re
+from datetime import datetime
 from pathlib import Path
 
 class DaftarUpahTemplateEngine:
@@ -91,12 +93,16 @@ class DaftarUpahTemplateEngine:
         pot_total3 = 0
         pot_total4 = 0
 
+        # Sanitize name: remove any text from '(' to ')' and trim
+        raw_name = employee.get('nama', '')
+        clean_name = re.sub(r"\s*\([^)]*\)", "", raw_name).strip()
+
         row = f"""
-        <tr>
+        <tr class="employee-row">
             <td class="text-center">{index}</td>
             <td class="text-center">{employee.get('jenis_kelamin', '')}</td>
             <td class="text-center">{employee.get('nik', '')}</td>
-            <td class="text-left">{employee.get('nama', '')}</td>
+            <td class="text-left">{clean_name}</td>
             <td class="number-cell">{self.format_rupiah(upah_dasar)}</td>
             <td class="text-center">{hari_kerja}</td>
             <td class="number-cell">{self.format_rupiah(upah_pokok)}</td>
@@ -228,6 +234,12 @@ class DaftarUpahTemplateEngine:
         template = template.replace('{tahun}', data.get('tahun', ''))
         template = template.replace('{catatan}', data.get('catatan', ''))
         template = template.replace('{upah_dasar}', data.get('upah_dasar', ''))
+        template = template.replace('{gang_code}', data.get('gang_code', 'H1H'))
+        template = template.replace('{loc_code}', data.get('loc_code', 'AB2'))
+        template = template.replace('{tanggal_cetak}', data.get('tanggal_cetak', datetime.now().strftime('%d-%m-%Y')))
+        template = template.replace('{gang_description}', data.get('gang_description', ''))
+        template = template.replace('{company_logo_url}', data.get('company_logo_url', ''))
+        template = template.replace('{company_name}', data.get('company_name', 'PT. REBINMAS'))
 
         # Process employee data rows
         employee_rows = ""
@@ -288,6 +300,14 @@ class DaftarUpahTemplateEngine:
 
         print("Loading data...")
         data = self.load_data(data_file)
+        # Ensure default header values exist for placeholders
+        data.setdefault('gang_code', 'H1H')
+        data.setdefault('loc_code', 'AB2')
+        data.setdefault('tanggal_cetak', datetime.now().strftime('%d-%m-%Y'))
+        data.setdefault('company_name', 'PT. REBINMAS')
+        data.setdefault('company_logo_url', '')
+        # Optional gang description; can be set by upstream database integration
+        data.setdefault('gang_description', '')
         print(f"Loaded {len(data.get('karyawan', []))} employee records")
 
         print("Rendering template...")

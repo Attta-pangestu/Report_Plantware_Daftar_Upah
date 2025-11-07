@@ -4,7 +4,9 @@
       "Bash(dir:*)",
       "mcp__obsidian-mcp-tools__create_vault_file",
       "Bash(python:*)",
-      "Bash(copy:*)"
+      "Bash(copy:*)",
+      "mcp__obsidian-mcp-tools__append_to_vault_file",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

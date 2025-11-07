@@ -6,8 +6,9 @@
     <title>DAFTAR UPAH - Mei 2025</title>
     <style>
         @page {
-            margin: 0.5in 0.3in;
-            size: A4 landscape;
+            /* F4 landscape with minimum 1cm margins */
+            size: 330mm 210mm;
+            margin: 10mm;
         }
 
         body {
@@ -27,7 +28,7 @@
         }
 
         .header-info {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             font-size: 10pt;
             font-weight: bold;
         }
@@ -59,6 +60,14 @@
             background: #f0f0f0;
         }
 
+        .gang-desc {
+            text-align: center;
+            font-size: 9pt;
+            font-style: italic;
+            color: #444;
+            margin: -12px 0 12px 0;
+        }
+
         .table-wrapper {
             overflow-x: auto;
             border: 1px solid #000;
@@ -76,7 +85,7 @@
         th, td {
             border: 0.5pt solid black;
             padding: 2px 4px;
-            text-align: center;
+            text-align: center; /* center all headers/columns by default */
             vertical-align: middle;
             word-wrap: break-word;
             white-space: nowrap;
@@ -119,9 +128,9 @@
             font-weight: bold;
         }
 
-        .employee-row:hover {
-            background: #f9f9f9;
-        }
+        .employee-row:hover { background: #f7fafc; }
+        .employee-row:nth-child(odd) { background: #f9fbfd; } /* zebra striping */
+        .employee-row:nth-child(even) { background: #ffffff; }
 
         /* Column widths */
         .col-no { width: 30px; max-width: 40px; min-width: 30px; }
@@ -223,6 +232,15 @@
             body { font-size: 7pt; }
             .table-wrapper { overflow: visible; }
             table { min-width: 3000px; }
+            .print-header, .print-footer {
+                position: fixed;
+                left: 0; right: 0;
+                color: #555;
+                font-size: 8pt;
+            }
+            .print-header { top: 0; text-align: center; }
+            .print-footer { bottom: 0; text-align: center; }
+            body { margin-top: 16mm; margin-bottom: 16mm; }
         }
 
         /* Custom scrollbar */
@@ -249,17 +267,21 @@
         <div class="header-info">
             <div class="header-row">
                 <div class="header-label">PERUSAHAAN:</div>
-                <div class="header-value">PT. REBINMAS</div>
+                <div class="header-value">{company_name}</div>
             </div>
             <div class="header-row">
                 <div class="header-label">PERIODE:</div>
                 <div class="header-value">Mei 2025</div>
+            </div>
+            <div class="header-row" style="justify-content: flex-end;">
+                <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
             </div>
         </div>
 
         <div class="report-title">
             DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
         </div>
+        <div class="gang-desc">{gang_description}</div>
 
         <div class="table-wrapper">
             <table>
@@ -2012,9 +2034,7 @@
             </div>
         </div>
 
-        <div style="text-align: center; margin-top: 10px; font-size: 8pt; font-style: italic; color: #666;">
-            Dicetak tanggal: 07-11-2025
-        </div>
+        <div class="print-footer">Dicetak tanggal: 07-11-2025</div>
     </div>
 </body>
 </html>
