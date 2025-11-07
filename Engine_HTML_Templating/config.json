@@ -1,0 +1,18 @@
+{
+  "database": {
+    "driver": "ODBC Driver 17 for SQL Server",
+    "server": "localhost",
+    "port": 1433,
+    "username": "sa",
+    "password": "windows0819",
+    "database_name": "db_ptrj",
+    "trusted_connection": false,
+    "encrypt": false
+  },
+  "constants": {
+    "Caruman_Astek": {
+      "Pekerja": 38766,
+      "Majikan": 155064
+    }
+  }
+}

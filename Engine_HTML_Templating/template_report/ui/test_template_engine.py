@@ -31,8 +31,85 @@ class DaftarUpahTemplateEngine:
             data_path = self.template_dir / data_file
 
         print(f"Loading data from: {data_path}")
-        with open(data_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(data_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print("Data file not found. Using minimal fallback dataset for preview.")
+            # Minimal dataset sufficient to render headers, totals, and a few rows
+            fallback = {
+                "bulan": "Mei",
+                "tahun": "2025",
+                "catatan": "Preview dengan data minimal",
+                "upah_dasar": 129220,
+                "gang_code": "H1H",
+                "loc_code": "AB2",
+                "tanggal_cetak": datetime.now().strftime('%d-%m-%Y'),
+                "company_name": "PT. Rebinmas Jaya",
+                "company_logo_url": "",
+                "gang_description": "HARVESTING AIK BANGEK H1H",
+                "karyawan": [
+                    {
+                        "nama": "AFRIWANTONI (Yuna Test)",
+                        "jenis_kelamin": "L",
+                        "nik": "H0330",
+                        "upah_dasar": 129220,
+                        "jumlah_hk": 31,
+                        "hari_kerja": 31,
+                        "tunjangan_beras": 3700,
+                        "tunjangan_beras_jumlah": 114150,
+                        "tunjangan_jabatan": 3500,
+                        "tunjangan_jabatan_hk": 59_500,
+                        "tunjangan_masa_kerja_jumlah": 0,
+                        "tunjangan_lembur": 0,
+                        "tunjangan_lembur_jam": 0,
+                        "tunjangan_premi": 0,
+                        "tunjangan_angkut_tbs": 0,
+                        "tunjangan_angkut_pc_tbk": 0,
+                        "tunjangan_premi_retase": 0,
+                        "tunjangan_antar_jemput": 0,
+                        "tunjangan_angkut_puru": 0,
+                        "tunjangan_angkut_bibit": 0,
+                        "tunjangan_koreksi": 0,
+                        "potongan_pph21": 0,
+                        "potongan_kontan": 0,
+                        "potongan_lebih_potong_pajak_thr": 0,
+                        "potongan_pinjaman_uang": 0,
+                        "tidak_hadir_cth": 0,
+                        "tidak_hadir_alpa": 0
+                    },
+                    {
+                        "nama": "AGUS SUTRIANA (Sugriani)",
+                        "jenis_kelamin": "L",
+                        "nik": "H0510",
+                        "upah_dasar": 129220,
+                        "jumlah_hk": 31,
+                        "hari_kerja": 31,
+                        "tunjangan_beras": 3650,
+                        "tunjangan_beras_jumlah": 114150,
+                        "tunjangan_jabatan": 3500,
+                        "tunjangan_jabatan_hk": 59_500,
+                        "tunjangan_masa_kerja_jumlah": 0,
+                        "tunjangan_lembur": 0,
+                        "tunjangan_lembur_jam": 0,
+                        "tunjangan_premi": 0,
+                        "tunjangan_angkut_tbs": 0,
+                        "tunjangan_angkut_pc_tbk": 0,
+                        "tunjangan_premi_retase": 0,
+                        "tunjangan_antar_jemput": 0,
+                        "tunjangan_angkut_puru": 0,
+                        "tunjangan_angkut_bibit": 0,
+                        "tunjangan_koreksi": 0,
+                        "potongan_pph21": 0,
+                        "potongan_kontan": 0,
+                        "potongan_lebih_potong_pajak_thr": 0,
+                        "potongan_pinjaman_uang": 0,
+                        "tidak_hadir_cth": 0,
+                        "tidak_hadir_alpa": 0
+                    }
+                ]
+            }
+            return fallback
 
     def render_employee_row(self, index, employee):
         """Render a single employee row compatible with final template structure"""
@@ -233,7 +310,7 @@ class DaftarUpahTemplateEngine:
         template = template.replace('{bulan}', data.get('bulan', ''))
         template = template.replace('{tahun}', data.get('tahun', ''))
         template = template.replace('{catatan}', data.get('catatan', ''))
-        template = template.replace('{upah_dasar}', data.get('upah_dasar', ''))
+        template = template.replace('{upah_dasar}', str(data.get('upah_dasar', '')))
         template = template.replace('{gang_code}', data.get('gang_code', 'H1H'))
         template = template.replace('{loc_code}', data.get('loc_code', 'AB2'))
         template = template.replace('{tanggal_cetak}', data.get('tanggal_cetak', datetime.now().strftime('%d-%m-%Y')))
