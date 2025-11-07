@@ -417,6 +417,57 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get jabatan payrate for {emp_code}: {e}")
             return 0  # Default
 
+    def get_employee_lembur_hours_and_amount(self, emp_code: str, month: int, year: int) -> tuple:
+        """Get employee overtime (Lembur) hours and amount using get_amount_lembur.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_amount_lembur.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace the hardcoded values in query with parameterized placeholders
+            query = query.replace("'H0330'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code.strip(), start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            # Result columns: TotalAmount, TotalHours
+            if result and len(result) >= 2:
+                total_amount = float(result[0] or 0)
+                total_hours = float(result[1] or 0)
+                return total_hours, total_amount
+            return 0.0, 0.0
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get lembur hours/amount for {emp_code}: {e}")
+            return 0.0, 0.0
+
     def get_employee_masa_kerja_years(self, emp_code: str) -> int:
         """Get employee masa kerja (work period) in years using count_masa_kerja.sql"""
         try:
@@ -624,24 +675,23 @@ class DaftarUpahEngineRealFixed:
                 'masa_kerja_rate': masa_kerja_years,  # This will show as Lama (Thn)
                 'masa_kerja_jumlah': masa_kerja_amount,  # This will show as Jumlah (Rp)
 
-                # Lembur: Rate = 20,000 per hour, Jumlah = Rate × LemburHours
-                'lembur_rate': 20000,
-                'lembur_jumlah': emp.get('uang_lembur', 0),
-
-                # Lainnya: Transport + Makan + Lainnya
-                'lainnya_rate': 0,  # Will be calculated as average
-                'lainnya_jumlah': emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
+                # Lembur: Jam & Jumlah (Rp) from get_amount_lembur.sql
+                'lembur_jam': 0,
+                'lembur_jumlah': 0,
             }
 
-            # Calculate average rate for Lainnya
-            total_jumlah_lainnya = tunjangan_data['lainnya_jumlah']
-            if hk_count > 0:
-                tunjangan_data['lainnya_rate'] = total_jumlah_lainnya / hk_count
+            # Fetch lembur hours and amount from DB
+            lembur_hours, lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], 5, 2025)
+            tunjangan_data['lembur_jam'] = lembur_hours
+            tunjangan_data['lembur_jumlah'] = lembur_amount
 
             # Calculate total tunjangan
-            total_tunjangan = (tunjangan_data['beras_jumlah'] + tunjangan_data['jabatan_jumlah'] +
-                             tunjangan_data['masa_kerja_jumlah'] + tunjangan_data['lembur_jumlah'] +
-                             tunjangan_data['lainnya_jumlah'])
+            total_tunjangan = (
+                tunjangan_data['beras_jumlah'] +
+                tunjangan_data['jabatan_jumlah'] +
+                tunjangan_data['masa_kerja_jumlah'] +
+                tunjangan_data['lembur_jumlah']
+            )
 
             # Add Tunjangan columns with new structure
             tunjangan_order = [
@@ -651,10 +701,8 @@ class DaftarUpahEngineRealFixed:
                 ('jabatan_jumlah', tunjangan_data['jabatan_jumlah']),
                 ('masa_kerja_rate', tunjangan_data['masa_kerja_rate']),
                 ('masa_kerja_jumlah', tunjangan_data['masa_kerja_jumlah']),
-                ('lembur_rate', tunjangan_data['lembur_rate']),
-                ('lembur_jumlah', tunjangan_data['lembur_jumlah']),
-                ('lainnya_rate', tunjangan_data['lainnya_rate']),
-                ('lainnya_jumlah', tunjangan_data['lainnya_jumlah'])
+                ('lembur_jam', tunjangan_data['lembur_jam']),
+                ('lembur_jumlah', tunjangan_data['lembur_jumlah'])
             ]
 
             for field_name, value in tunjangan_order:
@@ -665,6 +713,22 @@ class DaftarUpahEngineRealFixed:
             # Add Total Tunjangan column
             employee_rows += f"""
                     <td class="number-cell col-total-tunjangan center-cell">{self.format_value(total_tunjangan, ',.0f')}</td>"""
+
+            # Add Premi columns (7 columns)
+            premi_values = [
+                emp.get('tunjangan_premi', 0),
+                emp.get('tunjangan_angkut_tbs', 0),
+                emp.get('tunjangan_angkut_pc_tbk', 0),
+                emp.get('tunjangan_premi_retase', 0),
+                emp.get('tunjangan_antar_jemput', 0),
+                emp.get('tunjangan_angkut_puru', 0),
+                emp.get('tunjangan_angkut_bibit', 0),
+            ]
+
+            for premi_val in premi_values:
+                formatted_premi = self.format_value(premi_val, ',.0f')
+                employee_rows += f"""
+                    <td class="number-cell col-premi center-cell">{formatted_premi}</td>"""
 
             # Add Potongan columns
             potongan_values = [
@@ -750,8 +814,6 @@ class DaftarUpahEngineRealFixed:
             total_masa_kerja_jumlah = 0
             total_lembur_rate = 0
             total_lembur_jumlah = 0
-            total_lainnya_rate = 0
-            total_lainnya_jumlah = 0
             grand_total_hari_kerja = 0
 
             for emp in merged_employees:
@@ -783,10 +845,7 @@ class DaftarUpahEngineRealFixed:
                 emp_jabatan_jumlah = emp_jabatan_amount  # Direct amount from query
                 emp_masa_kerja_rate = emp_masa_kerja_years  # Lama (Thn)
                 emp_masa_kerja_jumlah = emp_masa_kerja_amount  # Jumlah (Rp)
-                emp_lembur_rate = 20000
-                emp_lembur_jumlah = emp.get('uang_lembur', 0)
-                emp_lainnya_jumlah = emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
-                emp_lainnya_rate = emp_lainnya_jumlah / hk_count if hk_count > 0 else 0
+                emp_lembur_hours, emp_lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], 5, 2025)
 
                 # Add to totals
                 total_beras_rate += emp_beras_rate
@@ -795,16 +854,17 @@ class DaftarUpahEngineRealFixed:
                 total_jabatan_jumlah += emp_jabatan_jumlah
                 total_masa_kerja_rate += emp_masa_kerja_rate
                 total_masa_kerja_jumlah += emp_masa_kerja_jumlah
-                total_lembur_rate += emp_lembur_rate
-                total_lembur_jumlah += emp_lembur_jumlah
-                total_lainnya_rate += emp_lainnya_rate
-                total_lainnya_jumlah += emp_lainnya_jumlah
+                total_lembur_rate += emp_lembur_hours
+                total_lembur_jumlah += emp_lembur_amount
                 grand_total_hari_kerja += hari_kerja
 
                 # Add to total tunjangan
-                emp_total_tunjangan = (emp_beras_jumlah + emp_jabatan_jumlah +
-                                         emp_masa_kerja_jumlah + emp_lembur_jumlah +
-                                         emp_lainnya_jumlah)
+                emp_total_tunjangan = (
+                    emp_beras_jumlah +
+                    emp_jabatan_jumlah +
+                    emp_masa_kerja_jumlah +
+                    emp_lembur_amount
+                )
                 total_tunjangan += emp_total_tunjangan
 
             # Calculate other totals
@@ -850,9 +910,16 @@ class DaftarUpahEngineRealFixed:
             grand_total_masa_kerja_jumlah = total_masa_kerja_jumlah
             grand_total_lembur_rate = total_lembur_rate
             grand_total_lembur_jumlah = total_lembur_jumlah
-            grand_total_lainnya_rate = total_lainnya_rate
-            grand_total_lainnya_jumlah = total_lainnya_jumlah
             grand_total_tunjangan = total_tunjangan
+
+            # Grand totals for Premi (7 columns)
+            grand_total_premi = sum(emp.get('tunjangan_premi', 0) for emp in merged_employees)
+            grand_total_angkut_tbs = sum(emp.get('tunjangan_angkut_tbs', 0) for emp in merged_employees)
+            grand_total_angkut_pc_tbk = sum(emp.get('tunjangan_angkut_pc_tbk', 0) for emp in merged_employees)
+            grand_total_premi_retase = sum(emp.get('tunjangan_premi_retase', 0) for emp in merged_employees)
+            grand_total_antar_jemput = sum(emp.get('tunjangan_antar_jemput', 0) for emp in merged_employees)
+            grand_total_angkut_puru = sum(emp.get('tunjangan_angkut_puru', 0) for emp in merged_employees)
+            grand_total_angkut_bibit = sum(emp.get('tunjangan_angkut_bibit', 0) for emp in merged_employees)
 
             # Grand totals for potongan
             grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
@@ -968,8 +1035,7 @@ class DaftarUpahEngineRealFixed:
                     'masa_kerja_jumlah_total': total_masa_kerja_jumlah,
                     'lembur_rate_total': total_lembur_rate,
                     'lembur_jumlah_total': total_lembur_jumlah,
-                    'lainnya_rate_total': total_lainnya_rate,
-                    'lainnya_jumlah_total': total_lainnya_jumlah,
+                # Removed 'lainnya' totals to align with updated template
                     'total_tunjangan': total_tunjangan,
 
                     # Legacy tunjangan fields (for compatibility)
@@ -1057,9 +1123,17 @@ class DaftarUpahEngineRealFixed:
                     'masa_kerja_jumlah_total': grand_total_masa_kerja_jumlah,
                     'lembur_rate_total': grand_total_lembur_rate,
                     'lembur_jumlah_total': grand_total_lembur_jumlah,
-                    'lainnya_rate_total': grand_total_lainnya_rate,
-                    'lainnya_jumlah_total': grand_total_lainnya_jumlah,
+                # Removed 'lainnya' grand totals to align with updated template
                     'total_tunjangan': grand_total_tunjangan,
+
+                    # Premi Grand Totals (7 columns)
+                    'tunjangan_premi_total': grand_total_premi,
+                    'tunjangan_angkut_tbs_total': grand_total_angkut_tbs,
+                    'tunjangan_angkut_pc_tbk_total': grand_total_angkut_pc_tbk,
+                    'tunjangan_premi_retase_total': grand_total_premi_retase,
+                    'tunjangan_antar_jemput_total': grand_total_antar_jemput,
+                    'tunjangan_angkut_puru_total': grand_total_angkut_puru,
+                    'tunjangan_angkut_bibit_total': grand_total_angkut_bibit,
 
                     # Additional tunjangan grand totals
                     'tunjangan_total8': 0,
@@ -1142,11 +1216,15 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.masa_kerja_jumlah_total:,.0f}', f"{grand_total['masa_kerja_jumlah_total']:,.0f}")
             html_content = html_content.replace('{grand_total.lembur_rate_total:,.0f}', f"{grand_total['lembur_rate_total']:,.0f}")
             html_content = html_content.replace('{grand_total.lembur_jumlah_total:,.0f}', f"{grand_total['lembur_jumlah_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.lainnya_rate_total:,.0f}', f"{grand_total['lainnya_rate_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.lainnya_jumlah_total:,.0f}', f"{grand_total['lainnya_jumlah_total']:,.0f}")
+            # Removed 'lainnya' replacements to match updated template
             html_content = html_content.replace('{grand_total.total_tunjangan:,.0f}', f"{grand_total['total_tunjangan']:,.0f}")
-            html_content = html_content.replace('{grand_total.tunjangan_total8:,.0f}', f"{grand_total['tunjangan_total8']:,.0f}")
-            html_content = html_content.replace('{grand_total.tunjangan_total9:,.0f}', f"{grand_total['tunjangan_total9']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_premi_total:,.0f}', f"{grand_total['tunjangan_premi_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_angkut_tbs_total:,.0f}', f"{grand_total['tunjangan_angkut_tbs_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_angkut_pc_tbk_total:,.0f}', f"{grand_total['tunjangan_angkut_pc_tbk_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_premi_retase_total:,.0f}', f"{grand_total['tunjangan_premi_retase_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_antar_jemput_total:,.0f}', f"{grand_total['tunjangan_antar_jemput_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_angkut_puru_total:,.0f}', f"{grand_total['tunjangan_angkut_puru_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.tunjangan_angkut_bibit_total:,.0f}', f"{grand_total['tunjangan_angkut_bibit_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_thr_total:,.0f}', f"{grand_total['potongan_thr_total']:,.0f}")

@@ -33,97 +33,119 @@ class DaftarUpahTemplateEngine:
             return json.load(f)
 
     def render_employee_row(self, index, employee):
-        """Render a single employee row compatible with the new template structure"""
+        """Render a single employee row compatible with final template structure"""
+        # Compute fields to match final template columns
+        upah_dasar = employee.get('upah_dasar', 0)
+        jumlah_hk = employee.get('jumlah_hk', 0)
+        hari_kerja = employee.get('hari_kerja', jumlah_hk)
+        upah_pokok = employee.get('upah_pokok', upah_dasar * max(hari_kerja, 0))
+        gaji_pokok = upah_dasar * jumlah_hk if upah_dasar and jumlah_hk else 0
+
+        cuti_tahunan = employee.get('cuti_tahun_hari', employee.get('cuti_tahunan_hari', 0))
+        cuti_sakit = employee.get('cuti_sakit_hari', 0)
+        cuti_haid = employee.get('cuti_haid_hari', 0)
+        cuti_sakit_haid = cuti_sakit + cuti_haid
+        cuti_minggu = employee.get('cuti_minggu_hari', 0)
+        cuti_nasional = employee.get('cuti_nasional_hari', 0)
+        cuti_izin = employee.get('cuti_izin_hari', 0)
+
+        # Tunjangan base
+        tunj_beras_rate = employee.get('tunjangan_beras', 0)
+        tunj_beras_jumlah = employee.get('tunjangan_beras_jumlah', 0)
+        tunj_jabatan_rate = employee.get('tunjangan_jabatan', 0)
+        tunj_jabatan_jumlah = employee.get('tunjangan_jabatan_jumlah', employee.get('tunjangan_jabatan_hk', 0))
+        masa_kerja_tahun = employee.get('masa_kerja_tahun', employee.get('tunjangan_masa_kerja', 0))
+        masa_kerja_jumlah = employee.get('tunjangan_masa_kerja_jumlah', 0)
+        lembur_jam = employee.get('tunjangan_lembur_jam', 0)
+        lembur_jumlah = employee.get('tunjangan_lembur', 0)
+        total_tunj_base = tunj_beras_jumlah + tunj_jabatan_rate + masa_kerja_jumlah + lembur_jumlah
+
+        # Premi 7 columns
+        premi_cols = [
+            employee.get('tunjangan_premi', 0),
+            employee.get('tunjangan_angkut_tbs', 0),
+            employee.get('tunjangan_angkut_pc_tbk', 0),
+            employee.get('tunjangan_premi_retase', 0),
+            employee.get('tunjangan_antar_jemput', 0),
+            employee.get('tunjangan_angkut_puru', 0),
+            employee.get('tunjangan_angkut_bibit', 0),
+        ]
+
+        # Potongan 13 columns (map best-effort)
+        potongan_pph21 = employee.get('potongan_pph21', employee.get('potongan_pph', 0))
+        potongan_kontan = employee.get('potongan_kontan', employee.get('potongan_premi_kontan', 0))
+        potongan_thr = employee.get('potongan_thr', employee.get('potongan_lebih_potong_pajak_thr', 0))
+        potongan_pinjam = employee.get('potongan_pinjaman_uang', 0)
+        potongan_kl = employee.get('potongan_kl', employee.get('potongan_lain', 0))
+        pot_bpjs_kes = employee.get('potongan_bpjs_kesehatan', 0)
+        pot_bpjs_pek = employee.get('potongan_bpjs_pekerja', employee.get('potongan_bpjs', 0))
+        pot_bpjs_maj = employee.get('potongan_bpjs_majikan', 0)
+        pot_bpjs_total = employee.get('potongan_bpjs_jumlah', pot_bpjs_kes + pot_bpjs_pek + pot_bpjs_maj)
+        pot_total1 = 0
+        pot_total2 = 0
+        pot_total3 = 0
+        pot_total4 = 0
+
         row = f"""
         <tr>
             <td class="text-center">{index}</td>
             <td class="text-center">{employee.get('jenis_kelamin', '')}</td>
             <td class="text-center">{employee.get('nik', '')}</td>
             <td class="text-left">{employee.get('nama', '')}</td>
+            <td class="number-cell">{self.format_rupiah(upah_dasar)}</td>
+            <td class="text-center">{hari_kerja}</td>
+            <td class="number-cell">{self.format_rupiah(upah_pokok)}</td>
 
-            <!-- Cuti Tahun -->
-            <td class="text-center">{employee.get('cuti_tahun_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_tahun_jumlah', 0))}</td>
+            <!-- Cuti/Libur (5 kolom) -->
+            <td class="text-center">{cuti_tahunan}</td>
+            <td class="text-center">{cuti_sakit_haid}</td>
+            <td class="text-center">{cuti_minggu}</td>
+            <td class="text-center">{cuti_nasional}</td>
+            <td class="text-center">{cuti_izin}</td>
 
-            <!-- Cuti Sakit -->
-            <td class="text-center">{employee.get('cuti_sakit_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_sakit_jumlah', 0))}</td>
+            <!-- JML HK & Gaji Pokok -->
+            <td class="text-center">{jumlah_hk}</td>
+            <td class="number-cell">{self.format_rupiah(gaji_pokok)}</td>
 
-            <!-- Cuti Haid -->
-            <td class="text-center">{employee.get('cuti_haid_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_haid_jumlah', 0))}</td>
+            <!-- Tunjangan Base (8 kolom) -->
+            <td class="number-cell">{self.format_rupiah(tunj_beras_rate)}</td>
+            <td class="number-cell">{self.format_rupiah(tunj_beras_jumlah)}</td>
+            <td class="number-cell">{self.format_rupiah(tunj_jabatan_rate)}</td>
+            <td class="number-cell">{tunj_jabatan_jumlah}</td>
+            <td class="number-cell">{masa_kerja_tahun}</td>
+            <td class="number-cell">{self.format_rupiah(masa_kerja_jumlah)}</td>
+            <td class="number-cell">{lembur_jam}</td>
+            <td class="number-cell">{self.format_rupiah(lembur_jumlah)}</td>
 
-            <!-- Cuti Minggu -->
-            <td class="text-center">{employee.get('cuti_minggu_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_minggu_jumlah', 0))}</td>
+            <!-- Total Tunjangan -->
+            <td class="number-cell">{self.format_rupiah(total_tunj_base)}</td>
 
-            <!-- Cuti Nasional -->
-            <td class="text-center">{employee.get('cuti_nasional_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_nasional_jumlah', 0))}</td>
+            <!-- Premi (7 kolom) -->
+            <td class="number-cell">{self.format_rupiah(premi_cols[0])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[1])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[2])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[3])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[4])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[5])}</td>
+            <td class="number-cell">{self.format_rupiah(premi_cols[6])}</td>
 
-            <!-- Cuti Hamil/Melahirkan -->
-            <td class="text-center">{employee.get('cuti_hamil_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_hamil_jumlah', 0))}</td>
+            <!-- Potongan (13 kolom) -->
+            <td class="number-cell">{self.format_rupiah(potongan_pph21)}</td>
+            <td class="number-cell">{self.format_rupiah(potongan_kontan)}</td>
+            <td class="number-cell">{self.format_rupiah(potongan_thr)}</td>
+            <td class="number-cell">{self.format_rupiah(potongan_pinjam)}</td>
+            <td class="number-cell">{self.format_rupiah(potongan_kl)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_bpjs_kes)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_bpjs_pek)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_bpjs_maj)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_bpjs_total)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_total1)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_total2)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_total3)}</td>
+            <td class="number-cell">{self.format_rupiah(pot_total4)}</td>
 
-            <!-- Cuti Izin -->
-            <td class="text-center">{employee.get('cuti_izin_hari', 0)}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('cuti_izin_jumlah', 0))}</td>
-
-            <!-- Jumlah HK -->
-            <td class="text-center">{employee.get('jumlah_hk', 0)}</td>
-
-            <!-- Tunjangan Beras -->
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_beras', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_beras_jumlah', 0))}</td>
-
-            <!-- Tunjangan Jabatan -->
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_jabatan', 0))}</td>
-            <td class="text-center">{employee.get('tunjangan_jabatan_hk', 0)}</td>
-
-            <!-- Tunjangan Masa Kerja -->
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_masa_kerja', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_masa_kerja_jumlah', 0))}</td>
-
-            <!-- Lembur -->
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_lembur', 0))}</td>
-
-            <!-- Premium Columns -->
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_premi', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_angkut_tbs', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_angkut_pc_tbk', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_premi_retase', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_antar_jemput', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_angkut_puru', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_angkut_bibit', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_jaga_genset', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_premi_kontan', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('tunjangan_koreksi', 0))}</td>
-
-            <!-- Upah Kotor -->
-            <td class="number-cell">{self.format_rupiah(employee.get('upah_kotor', 0))}</td>
-
-            <!-- Potongan ASTEK -->
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_astek_pekerja', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_astek_majikan', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_astek_jumlah', 0))}</td>
-
-            <!-- Potongan BPJS -->
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_bpjs_kesehatan', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_bpjs_pekerja', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_bpjs_pensiun', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_bpjs_majikan', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_bpjs_jumlah', 0))}</td>
-
-            <!-- Potongan Lainnya -->
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_pph21', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_premi_kontan', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_lebih_potong_pajak_thr', 0))}</td>
-            <td class="number-cell">{self.format_rupiah(employee.get('potongan_pinjaman_uang', 0))}</td>
-
-            <!-- Upah Bersih -->
+            <!-- Upah Bersih & Tidak Hadir -->
             <td class="number-cell">{self.format_rupiah(employee.get('upah_bersih', 0))}</td>
-
-            <!-- Tidak Hadir -->
             <td class="text-center">{employee.get('tidak_hadir_cth', 0)}</td>
             <td class="text-center">{employee.get('tidak_hadir_alpa', 0)}</td>
         </tr>
@@ -215,9 +237,9 @@ class DaftarUpahTemplateEngine:
 
         return template
 
-    def generate_report(self, template_file="daftar_upah_template.html",
+    def generate_report(self, template_file="daftar_upah_template_final.html",
                        data_file="../large_data.json",
-                       output_file="daftar_upah_report_large.html"):
+                       output_file="daftar_upah_preview.html"):
         """Generate complete HTML report"""
         print("Loading template...")
         template_content = self.load_template(template_file)

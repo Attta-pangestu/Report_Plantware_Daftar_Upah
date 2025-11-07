@@ -275,8 +275,9 @@
                     <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
                     <td rowspan="3" class="header-cell col-hk main-header">JML HK</td>
                     <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
-                    <td colspan="9" class="header-cell section-header">TUNJANGAN</td>
+                    <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
                     <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
+                    <td colspan="7" class="header-cell section-header">PREMI</td>
                     <td colspan="13" class="header-cell section-header">POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
                     <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
@@ -296,8 +297,15 @@
                     <td colspan="2" class="header-cell sub-header-tunjangan">JABATAN</td>
                     <td colspan="2" class="header-cell sub-header-tunjangan">MASA KERJA</td>
                     <td colspan="2" class="header-cell sub-header-tunjangan">LEMBUR</td>
-                    <td class="header-cell sub-header-tunjangan">LAINNYA</td>
-                    <td class="header-cell col-tunjangan">Total</td>
+
+                    <!-- Premi Sub-Headers -->
+                    <td class="header-cell sub-header-premi">PANEN</td>
+                    <td class="header-cell sub-header-premi">BRONDOL</td>
+                    <td class="header-cell sub-header-premi">PRUNING</td>
+                    <td class="header-cell sub-header-premi">CUCI UNIT</td>
+                    <td class="header-cell sub-header-premi">PREMI BLOWER</td>
+                    <td class="header-cell sub-header-premi">TABUR PUPUK</td>
+                    <td class="header-cell sub-header-premi">INCENTIVE</td>
 
                     <!-- Potongan Headers -->
                     <td class="header-cell col-potongan">PPH21</td>
@@ -334,10 +342,17 @@
                     <td class="header-cell col-tunjangan">Jumlah</td>
                     <td class="header-cell col-tunjangan">Lama<br>(Thn)</td>
                     <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
-                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
-                    <td class="header-cell col-tunjangan">Jumlah</td>
-                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
-                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Jam</td>
+                    <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
+
+                    <!-- Premi Units -->
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                 </tr>
 
                 <!-- Data Rows -->
@@ -375,13 +390,18 @@
                     <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.masa_kerja_jumlah_total:,.0f}</td>
                     <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.lembur_rate_total:,.0f}</td>
                     <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.lembur_jumlah_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.lainnya_rate_total:,.0f}</td>
-                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.lainnya_jumlah_total:,.0f}</td>
 
                     <!-- Total Tunjangan Grand Total -->
                     <td class="number-cell col-total-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.total_tunjangan:,.0f}</td>
-                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_total8:,.0f}</td>
-                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_total9:,.0f}</td>
+
+                    <!-- Premi Grand Totals -->
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_premi_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_tbs_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_pc_tbk_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_premi_retase_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_antar_jemput_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_puru_total:,.0f}</td>
+                    <td class="number-cell col-premi" style="background-color: #2c3e50; color: white;">{grand_total.tunjangan_angkut_bibit_total:,.0f}</td>
 
                     <!-- Potongan Grand Totals -->
                     <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">{grand_total.potongan_pph21_total:,.0f}</td>
