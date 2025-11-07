@@ -142,16 +142,36 @@ summary: Simplified visual design from gradients to solid professional colors ba
 4. **Testing**: Verified engine functionality with new design
 5. **Documentation**: Recorded all changes for future reference
 
-## Latest Update: Dark Professional Blue - Report Title Color Match
+## Latest Update: Solid Border Styling - Fixed Puzzle-Like Gaps
 
-### User Request: "saya lebih suka warna biru gelap profesional seperti warna di background judul Daftar Upah karyawan itu"
+### User Request: "seakrang perbaiki kolom-kolpm cell yang sepertinya masih berantakan secar fit content, jadi seperti terlihat pecah-pecah puzzle gitu antar cell ada celah, tidak solid"
 
 ### Implementation Details
-**Dark Professional Blue Color Scheme (Matching Report Title):**
-- **Primary Color**: `#34495e` (dark professional blue - same as report title)
-- **Text Color**: `white` (high contrast)
-- **Border Color**: `#2c3e50` (darker blue border)
-- **Z-Index Priority**: Highest priority (1000-2001) for headers and grand total
+**Complete Border Unification System:**
+- **All Borders**: Unified to `#d0d0d0` (consistent light gray)
+- **Border Thickness**: `1px` for all cells (solid and uniform)
+- **Border Collapse**: `border-collapse: collapse` for seamless connection
+- **No More Gaps**: All cell borders connect perfectly without puzzle-like gaps
+- **Color Consistency**: All cells use the same border color regardless of background
+
+### Technical Changes Applied:
+1. **Base Table Styling**: All `th, td` borders unified to `1px solid #d0d0d0`
+2. **All Column Classes**: Border colors standardized across all columns
+3. **Header Borders**: Consistent with data cells for seamless flow
+4. **Grand Total Borders**: Unified with table structure
+5. **Special Columns**: All unique border colors replaced with consistent gray
+
+### Border Color Replacements:
+- `#bdc3c7` → `#d0d0d0` (header wrapper)
+- `#000` → `#d0d0d0` (black borders)
+- `#ffeaa7` → `#d0d0d0` (yellow borders)
+- `#c3e6cb` → `#d0d0d0` (green borders)
+- `#c8e6c9` → `#d0d0d0` (light green borders)
+- `#f5c6cb` → `#d0d0d0` (pink borders)
+- `#dee2e6` → `#d0d0d0` (gray borders)
+- `#1e5a8d` → `#d0d0d0` (blue borders with !important)
+- `#2c3e50` → `#d0d0d0` (dark blue borders)
+- `#90caf9` → `#d0d0d0` (light blue borders)
 
 ### Changes Made
 
@@ -220,29 +240,31 @@ summary: Simplified visual design from gradients to solid professional colors ba
 ```
 
 ### Final Testing Results
-- **Status**: ✅ Perfect completion with dark professional blue matching report title
-- **Processing Time**: 17.23 seconds
+- **Status**: ✅ Perfect completion with solid borders and no puzzle gaps
+- **Processing Time**: 19.19 seconds
 - **Employee Count**: 30 employees
-- **Output File**: `daftar_upah_gang_H1H_real_2025-11-07_21-39-47.html`
-- **All Headers**: Dark professional blue (`#34495e`) matching report title
-- **Grand Total**: Maximum z-index priority (2000-2001) with same color
+- **Output File**: `daftar_upah_gang_H1H_real_2025-11-07_21-51-31.html`
+- **All Headers**: Dark professional blue (`#34495e`) with consistent borders
+- **Border Unity**: All cells use `1px solid #d0d0d0` (seamless connection)
+- **No More Gaps**: Perfect solid table structure without puzzle-like separations
 - **Data Integrity**: All calculations working correctly
-- **Perfect Color Match**: Headers/grand total match report title background exactly
+- **Visual Consistency**: Complete border harmony across entire table
 
-### Dark Professional Excellence Achieved
-1. **Color Consistency**: All headers/sub-headers/grand total use exact same color as report title
-2. **Z-Index Priority System**: Headers (1000-1004), Grand Total (2000-2001)
-3. **Professional Identity**: Dark blue color used in executive reports
-4. **Maximum Contrast**: White text on dark blue background
-5. **Visual Hierarchy**: Clear priority system with perfect color harmony
+### Solid Border Excellence Achieved
+1. **Complete Border Unification**: All cells use identical border styling
+2. **No Puzzle Gaps**: Seamless cell connections throughout table
+3. **Professional Appearance**: Clean, solid table structure
+4. **Consistent Thickness**: Uniform 1px borders everywhere
+5. **Visual Harmony**: Single border color (#d0d0d0) creates solid appearance
 
-### Final Professional Color Scheme
-- **Report Title & Headers**: `#34495e` background, white text (dark professional blue)
-- **All Sub-Headers**: `#34495e` background, white text (matching title)
-- **Grand Total**: `#34495e` background, white text, highest z-index
+### Ultimate Professional Table Structure
+- **Report Title & Headers**: `#34495e` background, white text, consistent borders
+- **All Cells**: Unified `1px solid #d0d0d0` border styling
+- **Table Structure**: `border-collapse: collapse` for seamless flow
+- **No Visual Gaps**: Perfect solid table appearance
 - **Important Columns**: Still highlighted (Total Premi, Jumlah Upah Kotor)
-- **Data Rows**: Simple zebra striping (`#ffffff`/`#f8f9fa`)
-- **Color Harmony**: Perfect match between title and all headers
+- **Data Rows**: Simple zebra striping with consistent borders
+- **Border Consistency**: Single color creates unified solid look
 
 ## Lessons Learned
 
