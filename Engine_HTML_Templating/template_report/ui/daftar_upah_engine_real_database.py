@@ -284,6 +284,90 @@ class DaftarUpahEngineRealFixed:
             print(f"[WARN] Failed to get payrate for {emp_code}: {e}")
             return 0
 
+    def get_employee_beras_payrate(self, emp_code: str) -> float:
+        """Get employee beras payrate from database using Payrate_Beras.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Payrate_Beras.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            cursor.execute(query, emp_code.strip())
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            if result and result[0] is not None:
+                return float(result[0])
+            return 0  # Default if not found
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get beras payrate for {emp_code}: {e}")
+            return 0  # Default
+
+    def get_employee_jabatan_payrate(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee jabatan payrate from database using Payrate_Jabatan.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Payrate_Jabatan.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace the hardcoded values in query with parameterized query
+            query = query.replace("'H0033'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code.strip(), start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            if result and len(result) > 0 and result[0] is not None:
+                return float(result[0])
+            return 0  # Default if not found
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get jabatan payrate for {emp_code}: {e}")
+            return 0  # Default
+
     def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int, hk_minggu: int, hk_nasional: int) -> int:
         """Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)"""
         total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
@@ -356,15 +440,19 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-hk center-cell">{hk_value}</td>
                     <td class="number-cell col-gaji-pokok center-cell">{self.format_value(gaji_pokok, ',.0f')}</td>"""
 
+            # Get payrates from database
+            beras_payrate = self.get_employee_beras_payrate(emp['nik'])
+            jabatan_payrate = self.get_employee_jabatan_payrate(emp['nik'], 5, 2025)  # May 2025
+
             # Prepare tunjangan data with new structure
             tunjangan_data = {
-                # Beras: Rate = Hari Kerja × 15,000 (asumsi), Jumlah = Hari Kerja × Rate
-                'beras_rate': emp['hari_kerja'] * 15000 if 'hari_kerja' in emp else 0,
-                'beras_jumlah': 0,  # Will be calculated
+                # Beras: Rate = Payrate dari database, Jumlah = JML HK × Rate
+                'beras_rate': beras_payrate,
+                'beras_jumlah': hk_count * beras_payrate if beras_payrate > 0 else 0,
 
-                # Jabatan: Rate = Payrate × 0.2, Jumlah = Rate × HK
-                'jabatan_rate': float(payrate) * 0.2 if payrate else 0,
-                'jabatan_jumlah': 0,  # Will be calculated
+                # Jabatan: Rate = Payrate dari database, Jumlah = Hari Kerja × Rate (jika ada payrate)
+                'jabatan_rate': jabatan_payrate,
+                'jabatan_jumlah': hari_kerja * jabatan_payrate if jabatan_payrate > 0 else 0,
 
                 # Masa Kerja: Rate = Payrate × 0.1 × ServiceYears (asumsi), Jumlah = Rate × HK
                 'masa_kerja_rate': 0,  # Simplified
@@ -379,9 +467,7 @@ class DaftarUpahEngineRealFixed:
                 'lainnya_jumlah': emp['tunjangan_transport'] + emp['tunjangan_makan'] + emp.get('tunjangan_lain', 0)
             }
 
-            # Calculate Jumlah for each category
-            tunjangan_data['beras_jumlah'] = emp['hari_kerja'] * tunjangan_data['beras_rate'] if 'hari_kerja' in emp else 0
-            tunjangan_data['jabatan_jumlah'] = tunjangan_data['jabatan_rate'] * hk_count
+            # Calculate Jumlah for each category (already calculated above, removing duplicate calculation)
             tunjangan_data['masa_kerja_jumlah'] = tunjangan_data['masa_kerja_rate'] * hk_count if tunjangan_data['masa_kerja_rate'] > 0 else 0
 
             # Calculate average rate for Lainnya
@@ -516,11 +602,13 @@ class DaftarUpahEngineRealFixed:
                     emp.get('cuti_nasional_hari', 0)
                 )
 
-                # Calculate for this employee
-                emp_beras_rate = hari_kerja * 15000
-                emp_beras_jumlah = hari_kerja * emp_beras_rate if hari_kerja else 0
-                emp_jabatan_rate = float(payrate) * 0.2 if payrate else 0
-                emp_jabatan_jumlah = emp_jabatan_rate * hk_count
+                # Get payrates from database for this employee
+                emp_beras_rate = self.get_employee_beras_payrate(emp['nik'])
+                emp_jabatan_rate = self.get_employee_jabatan_payrate(emp['nik'], 5, 2025)  # May 2025
+
+                # Calculate for this employee using database payrates
+                emp_beras_jumlah = hk_count * emp_beras_rate if emp_beras_rate > 0 else 0
+                emp_jabatan_jumlah = hari_kerja * emp_jabatan_rate if emp_jabatan_rate > 0 else 0
                 emp_masa_kerja_rate = 0  # Simplified
                 emp_masa_kerja_jumlah = 0  # Simplified
                 emp_lembur_rate = 20000
