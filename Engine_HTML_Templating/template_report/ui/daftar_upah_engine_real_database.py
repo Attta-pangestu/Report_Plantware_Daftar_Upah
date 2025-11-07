@@ -557,6 +557,80 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get masa kerja amount for {emp_code}: {e}")
             return 0  # Default
 
+    def get_dynamic_premi_headers(self, month: int, year: int) -> List[str]:
+        """Get dynamic Premi headers from database using get_dynamic_header.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_dynamic_header.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace hardcoded date values
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, start_date, end_date)
+            results = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            # Process results and filter out excluded headers
+            excluded_headers = {
+                'KOREKSI',
+                'POTONGAN PPH21',
+                'POTONGAN SPSI',
+                'TUNJANGAN JABATAN',
+                'TUNJANGAN MASA KERJA',
+                'PRUNING',
+                # Additional PPH21 variants
+                'PPH 21',
+                'PPH21',
+                # SPSI variants
+                'SPSI',
+                # KOREKSI variants
+                'KOREKSI PANEN',
+                'POTONGAN KOREKSI',
+                'POTONGAN KOREKSI PANEN'
+            }
+
+            dynamic_headers = []
+            for row in results:
+                if row and row[0]:
+                    header = row[0].strip()
+                    # Only include if not in excluded list
+                    if header not in excluded_headers:
+                        dynamic_headers.append(header)
+
+            # Limit to maximum 7 headers for Premi section
+            return dynamic_headers[:7]
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get dynamic premi headers: {e}")
+            # Return default headers if query fails
+            return ['PANEN', 'BRONDOL', 'PRUNING', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
+
     def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int, hk_minggu: int, hk_nasional: int) -> int:
         """Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)"""
         total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
@@ -568,6 +642,107 @@ class DaftarUpahEngineRealFixed:
         total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
         hari_kerja = max(0, hk_count - total_cuti)
         return hari_kerja * float(payrate) if payrate else 0
+
+    def get_employee_brondol_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee BRONDOL amount using get_brondol_amount.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_brondol_amount.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace hardcoded values
+            query = query.replace("'H0510'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code, start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            return float(result[0]) if result and result[0] else 0
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get BRONDOL amount for {emp_code}: {e}")
+            return 0
+
+    def get_employee_premi_amount_by_docdesc(self, emp_code: str, doc_desc: str, month: int, year: int) -> float:
+        """Get employee premi amount by DocDesc using get_tunjangan_premi_amount.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_tunjangan_premi_amount.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{month+1:02d}-01"
+
+            # Replace hardcoded values
+            query = query.replace("'H0033'", "?")
+            query = query.replace("'TUNJANGAN MASA KERJA'", "?")
+            query = query.replace("'2025-05-01'", "?")
+            query = query.replace("'2025-06-01'", "?")
+
+            cursor.execute(query, emp_code, doc_desc, start_date, end_date)
+            result = cursor.fetchone()
+
+            cursor.close()
+            conn.close()
+
+            return float(result[1]) if result and len(result) > 1 and result[1] else 0
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get {doc_desc} amount for {emp_code}: {e}")
+            return 0
+
+    def get_employee_pruning_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee PRUNING amount from DocDesc 'PRUNING' using get_tunjangan_premi_amount.sql"""
+        try:
+            return self.get_employee_premi_amount_by_docdesc(emp_code, 'PRUNING', month, year)
+        except Exception as e:
+            print(f"[ERROR] Failed to get PRUNING amount for {emp_code}: {e}")
+            return 0
 
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
@@ -714,16 +889,29 @@ class DaftarUpahEngineRealFixed:
             employee_rows += f"""
                     <td class="number-cell col-total-tunjangan center-cell">{self.format_value(total_tunjangan, ',.0f')}</td>"""
 
-            # Add Premi columns (7 columns)
-            premi_values = [
-                emp.get('tunjangan_premi', 0),
-                emp.get('tunjangan_angkut_tbs', 0),
-                emp.get('tunjangan_angkut_pc_tbk', 0),
-                emp.get('tunjangan_premi_retase', 0),
-                emp.get('tunjangan_antar_jemput', 0),
-                emp.get('tunjangan_angkut_puru', 0),
-                emp.get('tunjangan_angkut_bibit', 0),
-            ]
+            # Add Premi columns (BRONDOL, PRUNING, and dynamic Premi headers)
+            # Get BRONDOL amount from get_brondol_amount.sql
+            brondol_amount = self.get_employee_brondol_amount(emp['nik'], 5, 2025)  # May 2025
+
+            # Get PRUNING amount from DocDesc 'PRUNING'
+            pruning_amount = self.get_employee_pruning_amount(emp['nik'], 5, 2025)  # May 2025
+
+            # Get dynamic Premi headers and their amounts
+            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+
+            # Fixed Premi values (BRONDOL and PRUNING are always first two)
+            premi_values = [brondol_amount, pruning_amount]
+
+            # Get dynamic Premi amounts using DocDesc matching
+            for header in dynamic_premi_headers:
+                if len(premi_values) < 7:  # Only take first 5 dynamic headers to match template
+                    # Try to get amount using the header as DocDesc
+                    amount = self.get_employee_premi_amount_by_docdesc(emp['nik'], header, 5, 2025)
+                    premi_values.append(amount)
+
+            # Pad with zeros if we don't have enough values
+            while len(premi_values) < 7:
+                premi_values.append(0)
 
             for premi_val in premi_values:
                 formatted_premi = self.format_value(premi_val, ',.0f')
@@ -912,14 +1100,35 @@ class DaftarUpahEngineRealFixed:
             grand_total_lembur_jumlah = total_lembur_jumlah
             grand_total_tunjangan = total_tunjangan
 
-            # Grand totals for Premi (7 columns)
-            grand_total_premi = sum(emp.get('tunjangan_premi', 0) for emp in merged_employees)
-            grand_total_angkut_tbs = sum(emp.get('tunjangan_angkut_tbs', 0) for emp in merged_employees)
-            grand_total_angkut_pc_tbk = sum(emp.get('tunjangan_angkut_pc_tbk', 0) for emp in merged_employees)
-            grand_total_premi_retase = sum(emp.get('tunjangan_premi_retase', 0) for emp in merged_employees)
-            grand_total_antar_jemput = sum(emp.get('tunjangan_antar_jemput', 0) for emp in merged_employees)
-            grand_total_angkut_puru = sum(emp.get('tunjangan_angkut_puru', 0) for emp in merged_employees)
-            grand_total_angkut_bibit = sum(emp.get('tunjangan_angkut_bibit', 0) for emp in merged_employees)
+            # Grand totals for Premi (BRONDOL, PRUNING, and dynamic Premi headers)
+            # Calculate BRONDOL grand total
+            grand_total_brondol = sum(self.get_employee_brondol_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
+            # Calculate PRUNING grand total from DocDesc 'PRUNING'
+            grand_total_pruning = sum(self.get_employee_pruning_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
+            # Calculate dynamic Premi grand totals using DocDesc matching
+            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+
+            # Initialize list for dynamic grand totals
+            grand_total_premi_dynamic = []
+            for header in dynamic_premi_headers:
+                if len(grand_total_premi_dynamic) < 5:  # Only take first 5 dynamic headers
+                    amount = sum(self.get_employee_premi_amount_by_docdesc(emp['nik'], header, 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+                    grand_total_premi_dynamic.append(amount)
+
+            # Pad with zeros if we don't have enough values
+            while len(grand_total_premi_dynamic) < 5:
+                grand_total_premi_dynamic.append(0)
+
+            # For compatibility, assign to existing variables
+            grand_total_premi = grand_total_premi_dynamic[0] if len(grand_total_premi_dynamic) > 0 else 0
+            grand_total_angkut_tbs = grand_total_premi_dynamic[1] if len(grand_total_premi_dynamic) > 1 else 0
+            grand_total_angkut_pc_tbk = grand_total_premi_dynamic[2] if len(grand_total_premi_dynamic) > 2 else 0
+            grand_total_premi_retase = grand_total_premi_dynamic[3] if len(grand_total_premi_dynamic) > 3 else 0
+            grand_total_antar_jemput = grand_total_premi_dynamic[4] if len(grand_total_premi_dynamic) > 4 else 0
+            grand_total_angkut_puru = 0
+            grand_total_angkut_bibit = 0
 
             # Grand totals for potongan
             grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
@@ -1005,6 +1214,10 @@ class DaftarUpahEngineRealFixed:
             unique_gangs = list(set(emp['gang_code'] for emp in merged_employees))
             unique_locs = list(set(emp['loc_code'] for emp in merged_employees))
 
+            # Get dynamic Premi headers first
+            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+            print(f"[OK] Found {len(dynamic_premi_headers)} dynamic Premi headers: {', '.join(dynamic_premi_headers)}")
+
             # Prepare comprehensive data for template
             report_data = {
                 'bulan': 'Mei',
@@ -1015,6 +1228,7 @@ class DaftarUpahEngineRealFixed:
                 'employee_rows': employee_rows,
                 'karyawan': merged_employees,
                 'total_karyawan': len(merged_employees),
+                'dynamic_premi_headers': dynamic_premi_headers,
                 'total': {
                     # Cut/Cuti totals (5 kolom)
                     'cuti_tahunan_hari': 0,
@@ -1126,7 +1340,9 @@ class DaftarUpahEngineRealFixed:
                 # Removed 'lainnya' grand totals to align with updated template
                     'total_tunjangan': grand_total_tunjangan,
 
-                    # Premi Grand Totals (7 columns)
+                    # Premi Grand Totals (BRONDOL, PRUNING, and dynamic Premi)
+                    'tunjangan_brondol_total': grand_total_brondol,
+                    'tunjangan_pruning_total': grand_total_pruning,
                     'tunjangan_premi_total': grand_total_premi,
                     'tunjangan_angkut_tbs_total': grand_total_angkut_tbs,
                     'tunjangan_angkut_pc_tbk_total': grand_total_angkut_pc_tbk,
@@ -1161,23 +1377,40 @@ class DaftarUpahEngineRealFixed:
                     'tidak_hadir_alpa_total': grand_total_alpa
                 },
                 'tanggal_cetak': datetime.now().strftime('%d-%m-%Y'),
-                'data_source': 'Real Database Query + Sample Payroll'
+                'data_source': 'Real Database Query + Sample Payroll',
+                'dynamic_premi_headers': dynamic_premi_headers
             }
 
             # Validation: ensure grand totals equal sums from rows
             self.validate_grand_totals(merged_employees, report_data['grand_total'])
 
+            # Get dynamic headers for Premi section
+            print(f"[4] Processing dynamic headers for template rendering...")
+
             # Load template
-            print(f"\n[4] Loading HTML template...")
+            print(f"\n[5] Loading HTML template...")
             template_path = self.template_dir / template_file
             if not template_path.exists():
                 print(f"[ERROR] Template file not found: {template_path}")
                 return None
 
-            # Render template using custom placeholder replacement
-            print(f"[5] Rendering template...")
+            # Render template using custom placeholder replacement with dynamic headers
+            print(f"[6] Rendering template with dynamic headers...")
             with open(template_path, 'r', encoding='utf-8') as f:
                 template_content = f.read()
+
+            # Replace static Premi headers with dynamic ones, keeping BRONDOL and PRUNING fixed at the beginning
+            # Fixed headers that should always appear at the beginning
+            fixed_headers = ['BRONDOL', 'PRUNING']
+
+            # Headers that can be replaced (starting after BRONDOL and PRUNING)
+            replaceable_headers = ['PANEN', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
+
+            # Replace replaceable headers with dynamic ones
+            for i, dynamic_header in enumerate(dynamic_premi_headers):
+                if i < len(replaceable_headers):
+                    static_header = replaceable_headers[i]
+                    template_content = template_content.replace(f">{static_header}<", f">{dynamic_header}<")
 
             # Replace placeholders safely (only replace specific placeholders)
             html_content = template_content
