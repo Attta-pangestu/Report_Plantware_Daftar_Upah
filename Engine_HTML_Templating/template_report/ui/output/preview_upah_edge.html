@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAFTAR UPAH - Mei 2025</title>
+    <style>
+        @page {
+            margin: 0.5in 0.3in;
+            size: A4 landscape;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 8pt;
+            margin: 0;
+            padding: 5px;
+            background: white;
+        }
+
+        .report-wrapper {
+            max-width: 100%;
+            overflow-x: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 10px;
+        }
+
+        .header-info {
+            margin-bottom: 15px;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 3px;
+            align-items: center;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .header-value {
+            flex: 1;
+            font-weight: normal;
+        }
+
+        .report-title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #000;
+            background: #f0f0f0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #000;
+            background: white;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: auto;
+            font-size: 7pt;
+            min-width: 3000px;
+        }
+
+        th, td {
+            border: 0.5pt solid black;
+            padding: 2px 4px;
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: nowrap;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .header-cell {
+            background: #f0f0f0;
+            font-weight: bold;
+            font-size: 6pt;
+            padding: 2px;
+        }
+
+        .main-header {
+            background: #e0e0e0;
+            font-weight: bold;
+            font-size: 7pt;
+        }
+
+        .section-header {
+            background: #f5f5f5;
+            font-weight: bold;
+            font-size: 6pt;
+        }
+
+        .total-row {
+            background: #ffffcc;
+            font-weight: bold;
+        }
+
+        .employee-row:hover {
+            background: #f9f9f9;
+        }
+
+        /* Column widths */
+        .col-no { width: 30px; max-width: 40px; min-width: 30px; }
+        .col-gender { width: 25px; max-width: 30px; min-width: 25px; }
+        .col-nik { width: 80px; max-width: 90px; min-width: 75px; }
+        .col-name { width: 120px; max-width: 150px; min-width: 100px; }
+        .col-upah-dasar { width: 90px; max-width: 100px; min-width: 80px; }
+        .col-hari-kerja { width: 40px; max-width: 45px; min-width: 35px; }
+        .col-upah-pokok { width: 100px; max-width: 120px; min-width: 90px; }
+        .col-cuti { width: 30px; max-width: 35px; min-width: 25px; }
+        .col-rp { width: 70px; max-width: 80px; min-width: 60px; }
+        .col-hk { width: 35px; max-width: 40px; min-width: 30px; }
+        .col-gaji-pokok { width: 100px; max-width: 120px; min-width: 90px; }
+        .col-tunjangan { width: 50px; max-width: 60px; min-width: 45px; }
+        .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
+        .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
+        .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
+        .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
+
+        /* Alternating row colors for cuti/libur columns */
+        .cuti-col-odd { background-color: #f5f5f5; }
+        .cuti-col-even { background-color: #ffffff; }
+
+        /* Red text for cuti/libur values */
+        .cuti-libur-text { color: #dc3545; font-weight: bold; }
+
+        /* Better centering */
+        .center-cell {
+            text-align: center !important;
+            vertical-align: middle !important;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Upah Dasar and Hari Kerja styling */
+        .col-upah-dasar {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+
+        .col-hari-kerja {
+            text-align: center !important;
+            font-weight: bold;
+            background-color: #e8f4fd;
+            color: #0066cc;
+        }
+
+        /* Gaji Pokok styling */
+        .col-gaji-pokok {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            background-color: #b4e06e;
+            color: #000000;
+        }
+
+        /* Upah Pokok styling */
+        .col-upah-pokok {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            background-color: #c8f7c5;
+            color: #000000;
+        }
+
+        /* Tunjangan styling */
+        .sub-header-tunjangan {
+            background-color: #e1f5fe;
+            color: #0d47a1;
+            font-weight: bold;
+            text-align: center;
+            font-size: 8pt;
+        }
+
+        .col-total-tunjangan {
+            background-color: #fff3e0;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #e65100;
+            border: 2px solid #ff9800;
+        }
+
+        /* Special formatting for NIK */
+        .nik-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive adjustments */
+        @media print {
+            body { font-size: 7pt; }
+            .table-wrapper { overflow: visible; }
+            table { min-width: 3000px; }
+        }
+
+        /* Custom scrollbar */
+        .table-wrapper::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-wrapper">
+        <div class="header-info">
+            <div class="header-row">
+                <div class="header-label">PERUSAHAAN:</div>
+                <div class="header-value">PT. REBINMAS</div>
+            </div>
+            <div class="header-row">
+                <div class="header-label">PERIODE:</div>
+                <div class="header-value">Mei 2025</div>
+            </div>
+        </div>
+
+        <div class="report-title">
+            DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <!-- Main Header Row -->
+                <tr>
+                    <td rowspan="3" class="header-cell col-no main-header">NO</td>
+                    <td rowspan="3" class="header-cell col-gender main-header">L/P</td>
+                    <td rowspan="3" class="header-cell col-nik main-header">NIK</td>
+                    <td rowspan="3" class="header-cell col-name main-header text-left">NAMA</td>
+                    <td rowspan="3" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</td>
+                    <td rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
+                    <td rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
+                    <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
+                    <td rowspan="3" class="header-cell col-hk main-header">JML HK</td>
+                    <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
+                    <td colspan="9" class="header-cell section-header">TUNJANGAN</td>
+                    <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
+                    <td colspan="13" class="header-cell section-header">POTONGAN</td>
+                    <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
+                    <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
+                </tr>
+
+                <!-- Second Header Row - Detail Types -->
+                <tr>
+                    <!-- Cuti/Libur Headers -->
+                    <td class="header-cell col-cuti">TAHUNAN<br>(Izin)</td>
+                    <td class="header-cell col-cuti">SAKIT +<br>HAID</td>
+                    <td class="header-cell col-cuti">MINGGU</td>
+                    <td class="header-cell col-cuti">NASIONAL</td>
+                    <td class="header-cell col-cuti">IZIN</td>
+
+                    <!-- Tunjangan Sub-Headers -->
+                    <td colspan="2" class="header-cell sub-header-tunjangan">BERAS</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">JABATAN</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">MASA KERJA</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">LEMBUR</td>
+                    <td class="header-cell sub-header-tunjangan">LAINNYA</td>
+                    <td class="header-cell col-tunjangan">Total</td>
+
+                    <!-- Potongan Headers -->
+                    <td class="header-cell col-potongan">PPH21</td>
+                    <td class="header-cell col-potongan">Kontan</td>
+                    <td class="header-cell col-potongan">THR</td>
+                    <td class="header-cell col-potongan">Pinjam</td>
+                    <td class="header-cell col-potongan">KL</td>
+                    <td class="header-cell col-potongan">BPJS Kes</td>
+                    <td class="header-cell col-potongan">BPJS Pek</td>
+                    <td class="header-cell col-potongan">BPJS Maj</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+
+                    <!-- Tidak Hadir Headers -->
+                    <td class="header-cell col-tidak-hadir">CTH</td>
+                    <td class="header-cell col-tidak-hadir">ALPA</td>
+                </tr>
+
+                <!-- Third Header Row - Units -->
+                <tr>
+                    <!-- Cuti/Libur Units -->
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+
+                    <!-- Tunjangan Rate & Jumlah Headers -->
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Lama<br>(Thn)</td>
+                    <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                </tr>
+
+                <!-- Data Rows -->
+                
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">1</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0330</td>
+                    <td class="text-cell col-name text-left center-cell">AFRIWANTONI ( Yusna Yetti )                                     </td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">17</td>
+                    <td class="number-cell col-upah-pokok center-cell">2,196,740</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell">3,700</td>
+                    <td class="number-cell col-tunjangan center-cell">114,700</td>
+                    <td class="number-cell col-tunjangan center-cell">3,500</td>
+                    <td class="number-cell col-tunjangan center-cell">59,500</td>
+                    <td class="number-cell col-tunjangan center-cell">3</td>
+                    <td class="number-cell col-tunjangan center-cell">7,500</td>
+                    <td class="number-cell col-tunjangan center-cell">20,000</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">32,258</td>
+                    <td class="number-cell col-tunjangan center-cell">1,000,000</td>
+                    <td class="number-cell col-total-tunjangan center-cell">1,181,700</td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">2</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0510</td>
+                    <td class="text-cell col-name text-left center-cell">AGUS SATRIAWAN (SUMARNI)                                        </td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">24</td>
+                    <td class="number-cell col-upah-pokok center-cell">3,101,280</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">20,000</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">32,258</td>
+                    <td class="number-cell col-tunjangan center-cell">1,000,000</td>
+                    <td class="number-cell col-total-tunjangan center-cell">1,000,000</td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">3</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0476</td>
+                    <td class="text-cell col-name text-left center-cell">AGUS SURYADI (HAINI)                                            </td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">24</td>
+                    <td class="number-cell col-upah-pokok center-cell">3,101,280</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell">4,650</td>
+                    <td class="number-cell col-tunjangan center-cell">144,150</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">1</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">20,000</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">32,258</td>
+                    <td class="number-cell col-tunjangan center-cell">1,000,000</td>
+                    <td class="number-cell col-total-tunjangan center-cell">1,144,150</td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                    <td class="number-cell col-tidak-hadir center-cell"></td>
+                </tr>
+
+                <!-- Grand Total Row -->
+                <tr class="grand-total-row" style="background-color: #2c3e50; color: white; font-weight: bold;">
+                    <td colspan="5" class="header-cell text-left" style="background-color: #2c3e50; color: white;">GRAND TOTAL</td>
+
+                    <!-- Hari Kerja Grand Total -->
+                    <td class="number-cell col-hari-kerja" style="background-color: #2c3e50; color: white;">65</td>
+
+                    <!-- Upah Pokok Grand Total (Hari Kerja × Upah Dasar) -->
+                    <td class="number-cell col-upah-pokok" style="background-color: #2c3e50; color: white;">8,399,300</td>
+
+                    <!-- Cuti Hari Grand Totals -->
+                    <td class="number-cell col-cuti" style="background-color: #2c3e50; color: white;">4</td>
+                    <td class="number-cell col-cuti" style="background-color: #2c3e50; color: white;">12</td>
+                    <td class="number-cell col-cuti" style="background-color: #2c3e50; color: white;">9</td>
+                    <td class="number-cell col-cuti" style="background-color: #2c3e50; color: white;">0</td>
+
+                    <!-- HK Grand Total (JML HK) -->
+                    <td class="number-cell col-hk" style="background-color: #2c3e50; color: white;">93</td>
+
+                    <!-- Gaji Pokok Grand Total (JML HK × Upah Dasar) placed next to HK -->
+                    <td class="number-cell col-gaji-pokok" style="background-color: #2c3e50; color: white;">12,017,460</td>
+
+                    <!-- Tunjangan Category Grand Totals -->
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">8,350</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">258,850</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">3,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">59,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">4</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">7,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">60,000</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">96,774</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">3,000,000</td>
+
+                    <!-- Total Tunjangan Grand Total -->
+                    <td class="number-cell col-total-tunjangan" style="background-color: #2c3e50; color: white;">3,325,850</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #2c3e50; color: white;">0</td>
+
+                    <!-- Potongan Grand Totals -->
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">450,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">600,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">600,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #2c3e50; color: white;">0</td>
+
+                    <!-- Final Grand Totals -->
+                    <td class="number-cell col-upah" style="background-color: #2c3e50; color: white;">12,750,000</td>
+                    <td class="number-cell col-tidak-hadir" style="background-color: #2c3e50; color: white;">0</td>
+                    <td class="number-cell col-tidak-hadir" style="background-color: #2c3e50; color: white;">0</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
+            <div style="text-align: center; width: 150px;">
+                <div>Menyetujui,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+            <div style="text-align: center; width: 150px;">
+                <div>Diperiksa oleh,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+            <div style="text-align: center; width: 150px;">
+                <div>Dibuat oleh,</div>
+                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+                <div>(.........................)</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 10px; font-size: 8pt; font-style: italic; color: #666;">
+            Dicetak tanggal: 07-11-2025
+        </div>
+    </div>
+</body>
+</html>

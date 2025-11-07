@@ -578,9 +578,7 @@ class DaftarUpahEngineRealFixed:
             employee_rows += f"""
                     <td class="number-cell col-upah-pokok center-cell">{self.format_value(upah_pokok, ',.0f')}</td>"""
 
-            # Add Gaji Pokok column mapped to Cuti Tahunan (display leave days, not salary)
-            employee_rows += f"""
-                    <td class="number-cell col-gaji-pokok center-cell">{self.format_value(emp.get('cuti_tahunan_hari', 0))}</td>"""
+            # (Removed) Previously mapped Gaji Pokok to Cuti Tahunan
 
             # Add cuti columns with alternating colors and red text
             for j, (field, value) in enumerate(cuti_data):
@@ -594,6 +592,11 @@ class DaftarUpahEngineRealFixed:
             hk_value = self.format_value(hk_count)
             employee_rows += f"""
                     <td class="number-cell col-hk center-cell">{hk_value}</td>"""
+
+            # Add Gaji Pokok column next to JML HK using formula: Upah Dasar × JML HK
+            gaji_pokok_jmlhk = (hk_count * float(payrate)) if payrate else 0
+            employee_rows += f"""
+                    <td class="number-cell col-gaji-pokok center-cell">{self.format_value(gaji_pokok_jmlhk, ',.0f')}</td>"""
 
             # Get payrates from database
             beras_payrate = self.get_employee_beras_payrate(emp['nik'])
@@ -749,6 +752,7 @@ class DaftarUpahEngineRealFixed:
             total_lembur_jumlah = 0
             total_lainnya_rate = 0
             total_lainnya_jumlah = 0
+            grand_total_hari_kerja = 0
 
             for emp in merged_employees:
                 # Get employee data for calculations
@@ -795,6 +799,7 @@ class DaftarUpahEngineRealFixed:
                 total_lembur_jumlah += emp_lembur_jumlah
                 total_lainnya_rate += emp_lainnya_rate
                 total_lainnya_jumlah += emp_lainnya_jumlah
+                grand_total_hari_kerja += hari_kerja
 
                 # Add to total tunjangan
                 emp_total_tunjangan = (emp_beras_jumlah + emp_jabatan_jumlah +
@@ -827,6 +832,14 @@ class DaftarUpahEngineRealFixed:
                                                      emp.get('cuti_minggu_hari', 0),
                                                      emp.get('cuti_nasional_hari', 0))
                 grand_total_upah_pokok += upah_pokok
+
+            # Calculate grand total Gaji Pokok as sum of (JML HK × Upah Dasar) for all employees
+            grand_total_gaji_pokok = 0
+            for emp in merged_employees:
+                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                payrate = self.get_employee_payrate(emp['nik'])
+                gaji_pokok_val = (hk_count * float(payrate)) if payrate else 0
+                grand_total_gaji_pokok += gaji_pokok_val
 
             # Grand totals for tunjangan (calculated from actual employee data)
             grand_total_beras_rate = total_beras_rate
@@ -1027,9 +1040,13 @@ class DaftarUpahEngineRealFixed:
 
                     # Working Days Grand Total
                     'jumlah_hk': grand_total_hk,
+                    'hari_kerja_total': grand_total_hari_kerja,
 
                     # Upah Pokok Grand Total (Hari Kerja × Upah Dasar)
                     'upah_pokok_total': grand_total_upah_pokok,
+
+                    # Gaji Pokok Grand Total (JML HK × Upah Dasar)
+                    'gaji_pokok_total': grand_total_gaji_pokok,
 
                     # Tunjangan Grand Totals
                     'beras_rate_total': grand_total_beras_rate,
@@ -1073,6 +1090,9 @@ class DaftarUpahEngineRealFixed:
                 'data_source': 'Real Database Query + Sample Payroll'
             }
 
+            # Validation: ensure grand totals equal sums from rows
+            self.validate_grand_totals(merged_employees, report_data['grand_total'])
+
             # Load template
             print(f"\n[4] Loading HTML template...")
             template_path = self.template_dir / template_file
@@ -1111,7 +1131,9 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.cuti_nasional_hari}', f"{int(grand_total['cuti_nasional_hari'])}")
             html_content = html_content.replace('{grand_total.cuti_izin_hari}', f"{int(grand_total['cuti_izin_hari'])}")
             html_content = html_content.replace('{grand_total.jumlah_hk}', f"{int(grand_total['jumlah_hk'])}")
+            html_content = html_content.replace('{grand_total.hari_kerja_total}', f"{int(grand_total['hari_kerja_total'])}")
             html_content = html_content.replace('{grand_total.upah_pokok_total:,.0f}', f"{grand_total['upah_pokok_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.gaji_pokok_total:,.0f}', f"{grand_total['gaji_pokok_total']:,.0f}")
             html_content = html_content.replace('{grand_total.beras_rate_total:,.0f}', f"{grand_total['beras_rate_total']:,.0f}")
             html_content = html_content.replace('{grand_total.beras_jumlah_total:,.0f}', f"{grand_total['beras_jumlah_total']:,.0f}")
             html_content = html_content.replace('{grand_total.jabatan_rate_total:,.0f}', f"{grand_total['jabatan_rate_total']:,.0f}")
@@ -1193,6 +1215,98 @@ class DaftarUpahEngineRealFixed:
             # Always cleanup database connections
             self.query_manager.cleanup()
             self.cuti_manager.cleanup()
+
+    def validate_grand_totals(self, merged_employees: List[Dict[str, Any]], grand_total: Dict[str, Any]) -> None:
+        """Verify that grand totals equal the SUM of all values above them in the same column.
+        Checks start from 'Hari Kerja' and include all numeric columns to the right.
+        Handles zeros, negatives, and decimals.
+        """
+        try:
+            print("\n[VALIDATION] Verifying grand totals against column sums...")
+
+            sum_hari_kerja = 0
+            sum_upah_pokok = 0
+            sum_gaji_pokok = 0
+            sum_jumlah_hk = 0
+            sum_upah_bersih = 0
+
+            # Column-wise sums
+            sum_cuti_tahunan = 0
+            sum_cuti_sakit = 0
+            sum_cuti_minggu = 0
+            sum_cuti_nasional = 0
+            sum_cuti_izin = 0
+            sum_potongan_pph = 0
+            sum_potongan_pinjam = 0
+            sum_potongan_bpjs_pek = 0
+
+            # Accumulate per-employee values consistent with row computation
+            for emp in merged_employees:
+                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                payrate = self.get_employee_payrate(emp['nik'])
+                hari_kerja = self.calculate_hari_kerja(
+                    hk_count,
+                    emp.get('cuti_tahunan_hari', 0),
+                    emp.get('cuti_sakit_hari', 0),
+                    emp.get('cuti_minggu_hari', 0),
+                    emp.get('cuti_nasional_hari', 0)
+                )
+                upah_pokok = self.calculate_gaji_pokok(
+                    hk_count,
+                    payrate,
+                    emp.get('cuti_tahunan_hari', 0),
+                    emp.get('cuti_sakit_hari', 0),
+                    emp.get('cuti_minggu_hari', 0),
+                    emp.get('cuti_nasional_hari', 0)
+                )
+                gaji_pokok = (hk_count * float(payrate)) if payrate else 0
+
+                sum_hari_kerja += hari_kerja
+                sum_upah_pokok += upah_pokok
+                sum_gaji_pokok += gaji_pokok
+                sum_jumlah_hk += hk_count
+                sum_upah_bersih += emp.get('upah_bersih', 0)
+
+                sum_cuti_tahunan += emp.get('cuti_tahunan_hari', 0)
+                sum_cuti_sakit += emp.get('cuti_sakit_hari', 0)
+                sum_cuti_minggu += emp.get('cuti_minggu_hari', 0)
+                sum_cuti_nasional += emp.get('cuti_nasional_hari', 0)
+                sum_cuti_izin += emp.get('cuti_izin_hari', 0)
+                sum_potongan_pph += emp.get('potongan_pph', 0)
+                sum_potongan_pinjam += emp.get('potongan_pinjaman_uang', 0)
+                sum_potongan_bpjs_pek += emp.get('potongan_bpjs', 0)
+
+            checks = [
+                ('hari_kerja_total', sum_hari_kerja),
+                ('upah_pokok_total', sum_upah_pokok),
+                ('gaji_pokok_total', sum_gaji_pokok),
+                ('jumlah_hk', sum_jumlah_hk),
+                ('upah_bersih_total', sum_upah_bersih),
+                ('cuti_tahunan_hari', sum_cuti_tahunan),
+                ('cuti_sakit_hari', sum_cuti_sakit),
+                ('cuti_minggu_hari', sum_cuti_minggu),
+                ('cuti_nasional_hari', sum_cuti_nasional),
+                ('cuti_izin_hari', sum_cuti_izin),
+                ('potongan_pph21_total', sum_potongan_pph),
+                ('potongan_pinjam_total', sum_potongan_pinjam),
+                ('potongan_bpjs_pek_total', sum_potongan_bpjs_pek),
+            ]
+
+            mismatches = []
+            for key, expected in checks:
+                actual = grand_total.get(key, 0)
+                if float(actual) != float(expected):
+                    mismatches.append((key, actual, expected))
+
+            if mismatches:
+                print('[VALIDATION] FAILED: mismatches found')
+                for key, actual, expected in mismatches:
+                    print(f"   - {key}: rendered={actual} expected={expected}")
+            else:
+                print('[VALIDATION] PASSED: all grand totals match the column sums.')
+
+        except Exception as e:
+            print(f"[VALIDATION] ERROR: {e}")
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get processing statistics"""

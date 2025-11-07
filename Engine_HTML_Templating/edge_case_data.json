@@ -1,0 +1,57 @@
+{
+  "bulan": "MEI",
+  "tahun": "2025",
+  "karyawan": [
+    {
+      "jenis_kelamin": "L",
+      "nik": "EC-001",
+      "nama": "EDGE ZERO",
+      "gaji_pokok": 4000000.50,
+      "uang_lembur": 0,
+      "tunjangan_transport": 0,
+      "tunjangan_makan": 0,
+      "tunjangan_lain": 0,
+      "potongan_bpjs": 0,
+      "potongan_pph": 0,
+      "potongan_lain": 0,
+      "potongan_pinjaman_uang": 0,
+      "upah_bersih": 4000000.50,
+      "tidak_hadir_cth": 0,
+      "tidak_hadir_alpa": 0
+    },
+    {
+      "jenis_kelamin": "P",
+      "nik": "EC-002",
+      "nama": "EDGE NEGATIVE",
+      "gaji_pokok": 3500000,
+      "uang_lembur": -50000,
+      "tunjangan_transport": 250000.75,
+      "tunjangan_makan": 300000.25,
+      "tunjangan_lain": -10000,
+      "potongan_bpjs": 200000,
+      "potongan_pph": -15000,
+      "potongan_lain": 0,
+      "potongan_pinjaman_uang": 50000,
+      "upah_bersih": 3600000,
+      "tidak_hadir_cth": 1,
+      "tidak_hadir_alpa": 0
+    },
+    {
+      "jenis_kelamin": "L",
+      "nik": "EC-003",
+      "nama": "EDGE DECIMAL",
+      "gaji_pokok": 4200000.99,
+      "uang_lembur": 12345.67,
+      "tunjangan_transport": 111111.11,
+      "tunjangan_makan": 222222.22,
+      "tunjangan_lain": 33333.33,
+      "potongan_bpjs": 44444.44,
+      "potongan_pph": 55555.55,
+      "potongan_lain": 6666.66,
+      "potongan_pinjaman_uang": 7777.77,
+      "upah_bersih": 4800000.88,
+      "tidak_hadir_cth": 0,
+      "tidak_hadir_alpa": 2
+    }
+  ]
+}
