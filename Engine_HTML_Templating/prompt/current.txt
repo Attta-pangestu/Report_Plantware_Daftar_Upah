@@ -1,5 +1,3 @@
-add new column name Koreksi nah tiap empcode nya nilai nya didaptkan dari query ini 'd:\Gawean Rebinmas\Monitoring        
-Database\Plantware_Auto_Report\Daftar_Upah_Reporting\Engine_HTML_Templating\template_report\query\Tunjangan\get_koreksi_    
-emp.sql', nah buatkan Kolumn summary dengan judul header nya Total Premi, yang merupakan penjumlahan dari sub header di     
-heaader premi, ditambah dengan koreksi,  setelah itu buatkan kolumn baru dengan nama Jumlah Upah Kotor yang didapatkan      
-dari perhitungan gaji pokok + tunjangan beras, jabatan, Masa kerja, lembur, dan Total Premi 
+formula dan calculasi yang digunakan untuk kolom dengan heasdder Potongan BPJS untuk kolom Kesehatan Pekerja dan Pensiun Pekerja didapatkan dari kalkulasi nilai  "potongan_bpjs": {
+        "gaji_pokok_min": 3876600
+      } + masa kerja nya ditamabah dulu semua itu, kemudian dikali 1% , sedangkan majikan adalah 4 kali dari pekerja itu 

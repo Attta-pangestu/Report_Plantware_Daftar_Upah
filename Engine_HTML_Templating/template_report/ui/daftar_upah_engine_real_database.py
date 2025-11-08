@@ -187,6 +187,9 @@ class DaftarUpahEngineRealFixed:
 
                 # Cuti data from real queries
                 'cuti_tahunan_hari': cuti_data.cuti_tahunan_hari,
+
+                # Add masa_kerja_jumlah for BPJS calculations
+                'masa_kerja_jumlah': 0,  # Will be calculated in report generation
                 'cuti_tahunan_jumlah': cuti_data.cuti_tahunan_jumlah,
                 'cuti_sakit_hari': cuti_data.cuti_sakit_hari,
                 'cuti_sakit_jumlah': cuti_data.cuti_sakit_jumlah,
@@ -971,6 +974,9 @@ class DaftarUpahEngineRealFixed:
             tunjangan_data['lembur_jam'] = lembur_hours
             tunjangan_data['lembur_jumlah'] = lembur_amount
 
+            # Update employee masa_kerja_jumlah for BPJS calculations
+            emp['masa_kerja_jumlah'] = tunjangan_data['masa_kerja_jumlah']
+
             # Calculate total tunjangan
             total_tunjangan = (
                 tunjangan_data['beras_jumlah'] +
@@ -1060,11 +1066,23 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-astek center-cell">{self.format_value(caruman_majikan, ',.0f')}</td>
                     <td class="number-cell col-astek center-cell">{self.format_value(caruman_jumlah, ',.0f')}</td>"""
 
-            # Add POTONGAN BPJS columns (placeholder for now)
-            bpjs_kesehatan_pekerja = 0
-            bpjs_kesehatan_majikan = 0
-            bpjs_pensiun_pekerja = 0
-            bpjs_pensiun_majikan = 0
+            # Add POTONGAN BPJS columns with dynamic calculations
+            # Formula: (gaji_pokok_min + masa_kerja_jumlah) × 1% for pekerja, majikan = 4 × pekerja
+            gaji_pokok_min = self.constants.get('potongan_bpjs', {}).get('gaji_pokok_min', 3876600)
+            masa_kerja_jumlah = emp.get('masa_kerja_jumlah', 0)  # Get masa_kerja Jumlah (Rp) from employee data
+
+            # Base calculation for BPJS using rupiah amount
+            bpjs_base = gaji_pokok_min + masa_kerja_jumlah
+
+            # Pekerja calculations (1% of base)
+            bpjs_kesehatan_pekerja = bpjs_base * 0.01
+            bpjs_pensiun_pekerja = bpjs_base * 0.01
+
+            # Majikan calculations (4 × pekerja amount)
+            bpjs_kesehatan_majikan = bpjs_kesehatan_pekerja * 4
+            bpjs_pensiun_majikan = bpjs_pensiun_pekerja * 4
+
+            # Total BPJS
             bpjs_jumlah = bpjs_kesehatan_pekerja + bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan
 
             employee_rows += f"""
@@ -1301,11 +1319,33 @@ class DaftarUpahEngineRealFixed:
             caruman_majikan_total = self.constants.get('Caruman_Astek', {}).get('Majikan', 0) * len(merged_employees)
             caruman_jumlah_total = caruman_pekerja_total + caruman_majikan_total
 
-            # Calculate Grand Total BPJS (placeholder values for now)
+            # Calculate Grand Total BPJS with dynamic formula
+            gaji_pokok_min = self.constants.get('potongan_bpjs', {}).get('gaji_pokok_min', 3876600)
+
             bpjs_kesehatan_pekerja_total = 0
             bpjs_kesehatan_majikan_total = 0
             bpjs_pensiun_pekerja_total = 0
             bpjs_pensiun_majikan_total = 0
+
+            # Calculate BPJS for each employee and sum up
+            for emp in merged_employees:
+                masa_kerja_jumlah = emp.get('masa_kerja_jumlah', 0)  # Get masa_kerja Jumlah (Rp)
+                bpjs_base = gaji_pokok_min + masa_kerja_jumlah
+
+                # Pekerja calculations (1% of base)
+                emp_bpjs_kesehatan_pekerja = bpjs_base * 0.01
+                emp_bpjs_pensiun_pekerja = bpjs_base * 0.01
+
+                # Majikan calculations (4 × pekerja amount)
+                emp_bpjs_kesehatan_majikan = emp_bpjs_kesehatan_pekerja * 4
+                emp_bpjs_pensiun_majikan = emp_bpjs_pensiun_pekerja * 4
+
+                # Add to totals
+                bpjs_kesehatan_pekerja_total += emp_bpjs_kesehatan_pekerja
+                bpjs_kesehatan_majikan_total += emp_bpjs_kesehatan_majikan
+                bpjs_pensiun_pekerja_total += emp_bpjs_pensiun_pekerja
+                bpjs_pensiun_majikan_total += emp_bpjs_pensiun_majikan
+
             bpjs_jumlah_total = bpjs_kesehatan_pekerja_total + bpjs_kesehatan_majikan_total + bpjs_pensiun_pekerja_total + bpjs_pensiun_majikan_total
 
             # Grand totals for potongan
