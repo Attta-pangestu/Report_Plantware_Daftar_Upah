@@ -162,17 +162,206 @@
             border: 1px solid #d0d0d0;
         }
 
-        /* Simple zebra striping for better readability */
+        /* Alternating column styles for better readability */
         .employee-row:hover {
             background: #e3f2fd !important;
         }
 
+        /* Row-level alternating */
         .employee-row:nth-child(odd) {
             background: #f8f9fa;
         }
 
         .employee-row:nth-child(even) {
             background: #ffffff;
+        }
+
+        /* Column-specific alternating patterns */
+        .employee-row:nth-child(odd) .col-no {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(even) .col-no {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-gender {
+            background: #fff8e1 !important;
+        }
+
+        .employee-row:nth-child(even) .col-gender {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(odd) .col-nik {
+            background: #e8f5e8 !important;
+        }
+
+        .employee-row:nth-child(even) .col-nik {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-name {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-name {
+            background: #f3e5f5 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-upah-dasar {
+            background: #fff3e0 !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah-dasar {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-hari-kerja {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(even) .col-hari-kerja {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-upah-pokok {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah-pokok {
+            background: #fff8e1 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-cuti {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(even) .col-cuti {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-rp {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-rp {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(odd) .col-hk {
+            background: #fff3e0 !important;
+        }
+
+        .employee-row:nth-child(even) .col-hk {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-gaji-pokok {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-gaji-pokok {
+            background: #e8f5e8 !important;
+        }
+
+        /* Tunjangan columns alternating styles */
+        .employee-row:nth-child(odd) .col-tunjangan {
+            background: #e8f5e8 !important;
+            color: #2e7d32 !important;
+        }
+
+        .employee-row:nth-child(even) .col-tunjangan {
+            background: #ffffff !important;
+            color: #333333 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-total-tunjangan {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+
+        .employee-row:nth-child(even) .col-total-tunjangan {
+            background: #ffffff !important;
+            color: #721c24 !important;
+        }
+
+        /* Premi columns alternating styles */
+        .employee-row:nth-child(odd) .col-premi {
+            background: #fff3cd !important;
+        }
+
+        .employee-row:nth-child(even) .col-premi {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-total-premi {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+
+        .employee-row:nth-child(even) .col-total-premi {
+            background: #ffffff !important;
+            color: #721c24 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-jumlah-upah-kotor {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+
+        .employee-row:nth-child(even) .col-jumlah-upah-kotor {
+            background: #ffffff !important;
+            color: #721c24 !important;
+        }
+
+        /* Caruman ASTEK alternating styles */
+        .employee-row:nth-child(odd) .col-astek {
+            background: #e8f5e8 !important;
+            color: #2e7d32 !important;
+        }
+
+        .employee-row:nth-child(even) .col-astek {
+            background: #ffffff !important;
+            color: #2e7d32 !important;
+        }
+
+        /* BPJS alternating styles */
+        .employee-row:nth-child(odd) .col-bpjs {
+            background: #fff3e0 !important;
+            color: #e65100 !important;
+        }
+
+        .employee-row:nth-child(even) .col-bpjs {
+            background: #ffffff !important;
+            color: #e65100 !important;
+        }
+
+        /* Potongan columns alternating styles */
+        .employee-row:nth-child(odd) .col-potongan {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(even) .col-potongan {
+            background: #ffffff !important;
+        }
+
+        /* Upah columns alternating styles */
+        .employee-row:nth-child(odd) .col-upah {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah {
+            background: #fff8e1 !important;
+        }
+
+        /* Tidak Hadir columns alternating styles */
+        .employee-row:nth-child(odd) .col-tidak-hadir {
+            background: #ffebee !important;
+        }
+
+        .employee-row:nth-child(even) .col-tidak-hadir {
+            background: #ffffff !important;
         }
 
         /* Column widths */
