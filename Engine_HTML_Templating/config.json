@@ -11,8 +11,11 @@
   },
   "constants": {
     "Caruman_Astek": {
-      "Pekerja": 38766,
-      "Majikan": 155064
+      "Pekerja": 77532 ,
+      "Majikan":  175998 
+    },
+    "potongan_bpjs": {
+      "gaji_pokok_min": 3876600
     }
   }
 }

@@ -45,11 +45,15 @@ class DaftarUpahEngineRealFixed:
 
         # Initialize database query manager
         query_file = "D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Engine_HTML_Templating/template_report/query/get_detail_emp_each_gang.sql"
-        config_file = "D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json"
+        config_file = "D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Engine_HTML_Templating/config.json"
         self.query_manager = SimpleEmployeeQueryManager(query_file, config_file)
 
         # Initialize cuti data manager
         self.cuti_manager = CutiDataManager(config_file)
+
+        # Load config constants
+        self.config_file = config_file
+        self.constants = self.load_constants()
 
         self.stats = {
             'reports_generated': 0,
@@ -57,6 +61,16 @@ class DaftarUpahEngineRealFixed:
             'database_queries_executed': 0,
             'processing_times': []
         }
+
+    def load_constants(self) -> Dict[str, Any]:
+        """Load constants from config file"""
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            return config.get('constants', {})
+        except Exception as e:
+            print(f"[ERROR] Failed to load constants from config: {e}")
+            return {}
 
     def load_sample_payroll_data(self, sample_data_path: str) -> Dict[str, Any]:
         """Load sample payroll data for merging"""
@@ -1036,6 +1050,30 @@ class DaftarUpahEngineRealFixed:
             employee_rows += f"""
                     <td class="number-cell col-jumlah-upah-kotor center-cell">{self.format_value(jumlah_upah_kotor, ',.0f')}</td>"""
 
+            # Add Caruman ASTEK columns
+            caruman_pekerja = self.constants.get('Caruman_Astek', {}).get('Pekerja', 0)
+            caruman_majikan = self.constants.get('Caruman_Astek', {}).get('Majikan', 0)
+            caruman_jumlah = caruman_pekerja + caruman_majikan
+
+            employee_rows += f"""
+                    <td class="number-cell col-astek center-cell">{self.format_value(caruman_pekerja, ',.0f')}</td>
+                    <td class="number-cell col-astek center-cell">{self.format_value(caruman_majikan, ',.0f')}</td>
+                    <td class="number-cell col-astek center-cell">{self.format_value(caruman_jumlah, ',.0f')}</td>"""
+
+            # Add POTONGAN BPJS columns (placeholder for now)
+            bpjs_kesehatan_pekerja = 0
+            bpjs_kesehatan_majikan = 0
+            bpjs_pensiun_pekerja = 0
+            bpjs_pensiun_majikan = 0
+            bpjs_jumlah = bpjs_kesehatan_pekerja + bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan
+
+            employee_rows += f"""
+                    <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_kesehatan_pekerja, ',.0f')}</td>
+                    <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_kesehatan_majikan, ',.0f')}</td>
+                    <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_pensiun_pekerja, ',.0f')}</td>
+                    <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_pensiun_majikan, ',.0f')}</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(bpjs_jumlah, ',.0f')}</td>"""
+
             # Add Potongan columns
             potongan_values = [
                 emp['potongan_pph'],
@@ -1257,6 +1295,18 @@ class DaftarUpahEngineRealFixed:
             # Calculate Grand Total Jumlah Upah Kotor = Gaji Pokok + Total Tunjangan + Total Premi
             grand_total_jumlah_upah_kotor = (grand_total_gaji_pokok + grand_total_tunjangan +
                                             grand_total_total_premi)
+
+            # Calculate Grand Total Caruman ASTEK
+            caruman_pekerja_total = self.constants.get('Caruman_Astek', {}).get('Pekerja', 0) * len(merged_employees)
+            caruman_majikan_total = self.constants.get('Caruman_Astek', {}).get('Majikan', 0) * len(merged_employees)
+            caruman_jumlah_total = caruman_pekerja_total + caruman_majikan_total
+
+            # Calculate Grand Total BPJS (placeholder values for now)
+            bpjs_kesehatan_pekerja_total = 0
+            bpjs_kesehatan_majikan_total = 0
+            bpjs_pensiun_pekerja_total = 0
+            bpjs_pensiun_majikan_total = 0
+            bpjs_jumlah_total = bpjs_kesehatan_pekerja_total + bpjs_kesehatan_majikan_total + bpjs_pensiun_pekerja_total + bpjs_pensiun_majikan_total
 
             # Grand totals for potongan
             grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
@@ -1488,6 +1538,18 @@ class DaftarUpahEngineRealFixed:
                     'total_premi_total': grand_total_total_premi,
                     'jumlah_upah_kotor_total': grand_total_jumlah_upah_kotor,
 
+                    # Caruman ASTEK Grand Totals
+                    'caruman_pekerja_total': caruman_pekerja_total,
+                    'caruman_majikan_total': caruman_majikan_total,
+                    'caruman_jumlah_total': caruman_jumlah_total,
+
+                    # BPJS Grand Totals
+                    'bpjs_kesehatan_pekerja_total': bpjs_kesehatan_pekerja_total,
+                    'bpjs_kesehatan_majikan_total': bpjs_kesehatan_majikan_total,
+                    'bpjs_pensiun_pekerja_total': bpjs_pensiun_pekerja_total,
+                    'bpjs_pensiun_majikan_total': bpjs_pensiun_majikan_total,
+                    'bpjs_jumlah_total': bpjs_jumlah_total,
+
                     # Potongan Grand Totals
                     'potongan_pph21_total': grand_total_pph21,
                     'potongan_kontan_total': grand_total_kontan,
@@ -1604,6 +1666,18 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.koreksi_total:,.0f}', f"{grand_total['koreksi_total']:,.0f}")
             html_content = html_content.replace('{grand_total.total_premi_total:,.0f}', f"{grand_total['total_premi_total']:,.0f}")
             html_content = html_content.replace('{grand_total.jumlah_upah_kotor_total:,.0f}', f"{grand_total['jumlah_upah_kotor_total']:,.0f}")
+
+            # Caruman ASTEK Grand Totals
+            html_content = html_content.replace('{grand_total.caruman_pekerja_total:,.0f}', f"{grand_total['caruman_pekerja_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.caruman_majikan_total:,.0f}', f"{grand_total['caruman_majikan_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.caruman_jumlah_total:,.0f}', f"{grand_total['caruman_jumlah_total']:,.0f}")
+
+            # BPJS Grand Totals
+            html_content = html_content.replace('{grand_total.bpjs_kesehatan_pekerja_total:,.0f}', f"{grand_total['bpjs_kesehatan_pekerja_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.bpjs_kesehatan_majikan_total:,.0f}', f"{grand_total['bpjs_kesehatan_majikan_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.bpjs_pensiun_pekerja_total:,.0f}', f"{grand_total['bpjs_pensiun_pekerja_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.bpjs_pensiun_majikan_total:,.0f}', f"{grand_total['bpjs_pensiun_majikan_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.bpjs_jumlah_total:,.0f}', f"{grand_total['bpjs_jumlah_total']:,.0f}")
 
             html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")

@@ -96,6 +96,20 @@
             white-space: nowrap;
         }
 
+        /* Double bottom border for rows to create separation */
+        tr {
+            border-bottom: 3px double #333;
+        }
+
+        /* Remove border from last cell in each row to avoid border stacking */
+        td:last-child {
+            border-right: 1px solid #d0d0d0;
+        }
+
+        th:last-child {
+            border-right: 1px solid #d0d0d0;
+        }
+
         .text-left {
             text-align: left;
         }
@@ -176,29 +190,31 @@
         .col-tunjangan { width: 50px; max-width: 60px; min-width: 45px; }
         .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
         .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
+        .col-astek { width: 60px; max-width: 70px; min-width: 55px; }
+        .col-bpjs { width: 60px; max-width: 70px; min-width: 55px; }
         .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
         .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
 
-        /* Total Premi Column - Important but subtle */
+        /* Total Premi Column - Matching Total Tunjangan styling */
         .col-total-premi {
-            background: #fdebd0 !important;
+            background: #f8d7da !important;
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
             font-size: 9pt;
-            color: #856404;
-            border: 2px solid #f39c12 !important;
+            color: #721c24 !important;
+            border: 1px solid #d0d0d0 !important;
         }
 
-        /* Jumlah Upah Kotor Column - Important but subtle */
+        /* Jumlah Upah Kotor Column - Matching Total Tunjangan styling */
         .col-jumlah-upah-kotor {
-            background: #d4edda !important;
+            background: #f8d7da !important;
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
             font-size: 10pt;
-            color: #155724;
-            border: 2px solid #28a745 !important;
+            color: #721c24 !important;
+            border: 1px solid #d0d0d0 !important;
         }
 
         /* Alternating row colors for cuti/libur columns */
@@ -207,6 +223,26 @@
 
         /* Red text for cuti/libur values */
         .cuti-libur-text { color: #dc3545; font-weight: bold; }
+
+        /* Caruman ASTEK column styling */
+        .col-astek {
+            text-align: right !important;
+            font-weight: bold;
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        /* Potongan BPJS column styling */
+        .col-bpjs {
+            text-align: right !important;
+            font-weight: bold;
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
 
         /* Premi sub-headers styling */
         .sub-header-premi {
@@ -218,6 +254,30 @@
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1004;
+        }
+
+        /* Caruman ASTEK sub-headers styling */
+        .sub-header-astek {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1005;
+        }
+
+        /* Potongan BPJS sub-headers styling */
+        .sub-header-bpjs {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1006;
         }
 
         /* Better centering */
@@ -240,6 +300,15 @@
         }
 
         .col-hari-kerja {
+            text-align: center !important;
+            font-weight: bold;
+            background: #e3f2fd;
+            color: #0c5460;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        .col-hk {
             text-align: center !important;
             font-weight: bold;
             background: #e3f2fd;
@@ -417,13 +486,15 @@
                     <td rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
                     <td rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
                     <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
-                    <td rowspan="3" class="header-cell col-hk main-header">JML HK</td>
+                    <td rowspan="3" class="header-cell col-hk main-header">Jumlah HK</td>
                     <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
                     <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
                     <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
                     <td colspan="8" class="header-cell section-header">PREMI</td>
                     <td rowspan="3" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
                     <td rowspan="3" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
+                    <td colspan="3" class="header-cell section-header">CARUMAN ASTEK</td>
+                    <td colspan="6" class="header-cell section-header">POTONGAN BPJS</td>
                     <td colspan="13" class="header-cell section-header">POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
                     <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
@@ -453,6 +524,18 @@
                     <td class="header-cell sub-header-premi">TABUR PUPUK</td>
                     <td class="header-cell sub-header-premi">INCENTIVE</td>
                     <td class="header-cell sub-header-premi">KOREKSI</td>
+
+                    <!-- Caruman ASTEK Headers -->
+                    <td class="header-cell sub-header-astek">PEKERJA</td>
+                    <td class="header-cell sub-header-astek">MAJIKAN</td>
+                    <td class="header-cell sub-header-astek">JUMLAH</td>
+
+                    <!-- Potongan BPJS Headers -->
+                    <td class="header-cell sub-header-bpjs">KESEHATAN</td>
+                    <td class="header-cell sub-header-bpjs">KESEHATAN</td>
+                    <td class="header-cell sub-header-bpjs">PENSIUN</td>
+                    <td class="header-cell sub-header-bpjs">PENSIUN</td>
+                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
 
                     <!-- Potongan Headers -->
                     <td class="header-cell col-potongan">PPH21</td>
@@ -501,6 +584,18 @@
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+
+                    <!-- Caruman ASTEK Units -->
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+
+                    <!-- Potongan BPJS Units -->
+                    <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
+                    <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
                 </tr>
 
                 <!-- Data Rows -->
@@ -553,8 +648,20 @@
                     <td class="number-cell col-premi" style="background-color: #34495e; color: white;">{grand_total.koreksi_total:,.0f}</td>
 
                     <!-- Summary Grand Totals -->
-                    <td class="number-cell col-total-premi" style="background-color: #34495e; color: white;">{grand_total.total_premi_total:,.0f}</td>
-                    <td class="number-cell col-jumlah-upah-kotor" style="background-color: #34495e; color: white;">{grand_total.jumlah_upah_kotor_total:,.0f}</td>
+                    <td class="number-cell col-total-premi" style="background-color: #f8d7da; color: #721c24;">{grand_total.total_premi_total:,.0f}</td>
+                    <td class="number-cell col-jumlah-upah-kotor" style="background-color: #f8d7da; color: #721c24;">{grand_total.jumlah_upah_kotor_total:,.0f}</td>
+
+                    <!-- Caruman ASTEK Grand Totals -->
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">{grand_total.caruman_pekerja_total:,.0f}</td>
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">{grand_total.caruman_majikan_total:,.0f}</td>
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">{grand_total.caruman_jumlah_total:,.0f}</td>
+
+                    <!-- BPJS Grand Totals -->
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">{grand_total.bpjs_kesehatan_pekerja_total:,.0f}</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">{grand_total.bpjs_kesehatan_majikan_total:,.0f}</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">{grand_total.bpjs_pensiun_pekerja_total:,.0f}</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">{grand_total.bpjs_pensiun_majikan_total:,.0f}</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;" colspan="2">{grand_total.bpjs_jumlah_total:,.0f}</td>
 
                     <!-- Potongan Grand Totals -->
                     <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_pph21_total:,.0f}</td>
