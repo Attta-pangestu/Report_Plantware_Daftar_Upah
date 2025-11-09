@@ -12,19 +12,14 @@
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            font-size: 8pt;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 10pt;
             margin: 0;
-            padding: 5px;
+            padding: 8px;
             background: white;
-        }
-
-        .report-wrapper {
-            max-width: 100%;
+            box-sizing: border-box;
             overflow-x: auto;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 10px;
+            overflow-y: hidden;
         }
 
         .header-info {
@@ -73,41 +68,81 @@
             border: 1px solid #d0d0d0;
         }
 
-        .table-wrapper {
-            overflow-x: auto;
-            border: 1px solid #d0d0d0;
-            background: white;
+        .main-content {
+            overflow-x: scroll;
+            overflow-y: hidden;
+            width: 100%;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
+            min-width: 3200px;
             table-layout: auto;
-            font-size: 7pt;
-            min-width: 3000px;
+            font-size: 9pt;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            box-sizing: border-box;
+            border: 1px solid #000000;
         }
 
         th, td {
-            border: 1px solid #d0d0d0;
-            padding: 3px 4px;
-            text-align: center; /* center all headers/columns by default */
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            text-align: center;
             vertical-align: middle;
-            word-wrap: break-word;
             white-space: nowrap;
+            box-sizing: border-box;
+            font-size: 9pt;
+            height: 24px;
+            font-family: 'Arial', 'Helvetica', sans-serif;
         }
 
-        /* Double bottom border for rows to create separation */
-        tr {
-            border-bottom: 3px double #333;
+        /* Excel-like header styling */
+        .header-cell {
+            background: #D3D3D3 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 9pt;
+            padding: 4px 6px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+            font-family: 'Arial', 'Helvetica', sans-serif;
         }
 
-        /* Remove border from last cell in each row to avoid border stacking */
-        td:last-child {
-            border-right: 1px solid #d0d0d0;
+        .main-header {
+            background: #A9A9A9 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 10pt;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
         }
 
-        th:last-child {
-            border-right: 1px solid #d0d0d0;
+        .section-header {
+            background: #C0C0C0 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 9pt;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Data rows styling */
+        tbody tr:nth-child(even) td {
+            background: #FFFFFF !important;
+        }
+
+        tbody tr:nth-child(odd) td {
+            background: #F5F5F5 !important;
+        }
+
+        tbody tr:hover td {
+            background: #E3F2FD !important;
         }
 
         .text-left {
@@ -364,69 +399,84 @@
             background: #ffffff !important;
         }
 
-        /* Column widths */
+        /* Excel-like column widths - more compact */
         .col-no {
-            width: 30px; max-width: 40px; min-width: 30px;
+            width: 50px; min-width: 50px;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-gender {
-            width: 25px; max-width: 30px; min-width: 25px;
+            width: 40px; min-width: 40px;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-nik {
-            width: 80px; max-width: 90px; min-width: 75px;
+            width: 90px; min-width: 90px;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-name {
-            width: 120px; max-width: 150px; min-width: 100px;
+            width: 160px; min-width: 160px;
             text-align: left !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
-        .col-upah-dasar { width: 90px; max-width: 100px; min-width: 80px; }
-        .col-hari-kerja { width: 40px; max-width: 45px; min-width: 35px; }
-        .col-upah-pokok { width: 100px; max-width: 120px; min-width: 90px; }
-            .col-cuti {
-            width: 30px; max-width: 35px; min-width: 25px;
-            background: #f8d7da;
-            color: #721c24;
-            font-weight: bold;
-            font-size: 9pt;
-            text-align: center !important;
-            border: 1px solid #d0d0d0;
+        /* Financial columns - more compact */
+        .col-upah-dasar {
+            width: 100px; min-width: 100px;
+            text-align: right;
         }
-        .col-rp { width: 70px; max-width: 80px; min-width: 60px; }
-        .col-hk { width: 35px; max-width: 40px; min-width: 30px; }
-        .col-gaji-pokok { width: 100px; max-width: 120px; min-width: 90px; }
-          .col-tunjangan {
-            width: 50px; max-width: 60px; min-width: 45px;
-            text-align: right !important;
-            font-weight: bold;
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #d0d0d0;
-            font-size: 9pt;
+        .col-hari-kerja {
+            width: 60px; min-width: 60px;
+            text-align: center;
         }
-        .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
-        .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
-        .col-astek { width: 60px; max-width: 70px; min-width: 55px; }
-        .col-bpjs { width: 60px; max-width: 70px; min-width: 55px; }
-        .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
-        .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
+        .col-upah-pokok {
+            width: 100px; min-width: 100px;
+            text-align: right;
+        }
+        .col-cuti {
+            width: 60px; min-width: 60px;
+            text-align: center;
+        }
+        .col-rp {
+            width: 60px; min-width: 60px;
+            text-align: center;
+        }
+        .col-hk {
+            width: 50px; min-width: 50px;
+            text-align: center;
+        }
+        .col-gaji-pokok {
+            width: 100px; min-width: 100px;
+            text-align: right;
+        }
+        .col-tunjangan {
+            width: 80px; min-width: 80px;
+            text-align: right;
+        }
+        .col-total-tunjangan {
+            width: 100px; min-width: 100px;
+            text-align: right;
+        }
+        .col-potongan {
+            width: 80px; min-width: 80px;
+            text-align: right;
+        }
+        .col-astek {
+            width: 80px; min-width: 80px;
+            text-align: right;
+        }
+        .col-bpjs {
+            width: 80px; min-width: 80px;
+            text-align: right;
+        }
+        .col-upah {
+            width: 100px; min-width: 100px;
+            text-align: right;
+        }
+        .col-tidak-hadir {
+            width: 50px; min-width: 50px;
+            text-align: center;
+        }
 
         /* Total Premi Column - Matching Total Tunjangan styling */
         .col-total-premi {
@@ -661,11 +711,132 @@
             z-index: 2001;
         }
 
+        /* Professional wrapper with dimension controls */
+        .pro-wrapper {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: scroll;
+            overflow-y: hidden;
+            margin: 0 auto;
+            box-sizing: border-box;
+            min-height: 600px;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pro-wrapper .payroll-table {
+            width: auto;
+            table-layout: auto;
+            border-collapse: collapse;
+            min-width: 3200px;
+        }
+
+        .pro-wrapper th,
+        .pro-wrapper td {
+            position: relative;
+            box-sizing: border-box;
+            padding: 10px 15px;
+            min-width: 100px;
+            white-space: normal;
+            word-wrap: break-word;
+            height: auto;
+            min-height: 45px;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .pro-wrapper .header-cell {
+            font-weight: bold;
+            font-size: 9pt;
+            line-height: 1.2;
+            padding: 12px 8px;
+            min-width: 120px;
+        }
+
+        .pro-wrapper .main-header {
+            min-width: 80px;
+            padding: 15px 8px;
+        }
+
+        .pro-wrapper .section-header {
+            min-width: 150px;
+            padding: 15px 12px;
+        }
+
+        /* Enhanced header styling with center alignment */
+        .pro-wrapper .header-cell {
+            text-align: center !important;
+            vertical-align: middle !important;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .pro-wrapper .main-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+            color: white !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .pro-wrapper .section-header {
+            background: linear-gradient(135deg, #546e7a 0%, #607d8b 100%) !important;
+            color: white !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Soft color schemes for primary headers */
+        .pro-wrapper .cuti-section {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%) !important;
+            color: #c62828 !important;
+        }
+
+        .pro-wrapper .tunjangan-section {
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%) !important;
+            color: #2e7d32 !important;
+        }
+
+        .pro-wrapper .premi-section {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%) !important;
+            color: #e65100 !important;
+        }
+
+        .pro-wrapper .bpjs-section {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+            color: #0d47a1 !important;
+        }
+
+        /* Enhanced striping with parent color inheritance */
+        .pro-wrapper .employee-row:nth-child(odd) td {
+            background: rgba(248, 249, 250, 0.7);
+        }
+
+        .pro-wrapper .employee-row:nth-child(even) td {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .pro-wrapper .employee-row:hover td {
+            background: rgba(227, 242, 253, 0.8) !important;
+            transition: background-color 0.2s ease;
+        }
+
         /* Responsive adjustments */
         @media print {
             body { font-size: 7pt; }
-            .table-wrapper { overflow: visible; }
-            table { min-width: 3000px; }
+            .pro-wrapper {
+                overflow: visible;
+                width: 100%;
+            }
+            .pro-wrapper .payroll-table {
+                width: 100%;
+                table-layout: auto;
+            }
+            .pro-wrapper th,
+            .pro-wrapper td {
+                white-space: nowrap;
+                overflow: visible;
+                max-width: none;
+            }
             .print-header, .print-footer {
                 position: fixed;
                 left: 0; right: 0;
@@ -677,48 +848,228 @@
             body { margin-top: 16mm; margin-bottom: 16mm; }
         }
 
-        /* Custom scrollbar */
+        /* Responsive design for various screen sizes */
+        @media screen and (max-width: 1920px) {
+            .pro-wrapper th,
+            .pro-wrapper td {
+                max-width: 160px;
+                padding: 6px 10px;
+            }
+        }
+
+        @media screen and (max-width: 1366px) {
+            .pro-wrapper th,
+            .pro-wrapper td {
+                max-width: 140px;
+                padding: 5px 8px;
+                font-size: 6.5pt;
+            }
+        }
+
+        @media screen and (max-width: 1024px) {
+            .pro-wrapper th,
+            .pro-wrapper td {
+                max-width: 120px;
+                padding: 4px 6px;
+                font-size: 6pt;
+            }
+        }
+
+        /* Enhanced text wrapping and tooltip functionality */
+        .pro-wrapper .text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .pro-wrapper .text-truncate:hover {
+            overflow: visible;
+            white-space: normal;
+            position: relative;
+            z-index: 1000;
+            background: inherit;
+            padding: 8px 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border-radius: 4px;
+            max-width: 300px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .pro-wrapper .number-cell {
+            text-align: right !important;
+            font-family: 'Courier New', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pro-wrapper .text-left {
+            text-align: left !important;
+        }
+
+        .pro-wrapper .text-center {
+            text-align: center !important;
+        }
+
+        /* Enhanced Grand Total styling */
+        .pro-wrapper .grand-total-row td {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+            color: white !important;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            border: 2px solid #1a237e !important;
+            position: relative;
+            z-index: 100;
+        }
+
+        .pro-wrapper .grand-total-row td:hover {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        /* Enhanced Custom scrollbar */
         .table-wrapper::-webkit-scrollbar {
-            height: 12px;
+            height: 16px;
+            width: 16px;
+            background: #f1f1f1;
         }
 
         .table-wrapper::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 8px;
         }
 
         .table-wrapper::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 6px;
+            background: linear-gradient(180deg, #c1c1c1, #a8a8a8);
+            border-radius: 8px;
+            border: 2px solid #f1f1f1;
+            min-height: 40px;
         }
 
         .table-wrapper::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
+            background: linear-gradient(180deg, #a8a8a8, #959595);
+            cursor: pointer;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:active {
+            background: linear-gradient(180deg, #959595, #808080);
+        }
+
+        /* Firefox scrollbar support */
+        .table-wrapper {
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+
+        .table-wrapper:hover {
+            scrollbar-width: auto;
+        }
+
+        /* Enhanced responsive column optimization */
+        @media screen and (max-width: 1400px) {
+            .col-no { width: 45px; min-width: 45px; font-size: 8pt; }
+            .col-gender { width: 40px; min-width: 40px; font-size: 8pt; }
+            .col-nik { width: 85px; min-width: 85px; font-size: 8pt; }
+            .col-name { width: 150px; min-width: 150px; font-size: 8pt; }
+            .col-upah-dasar { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-hari-kerja { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-upah-pokok { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-cuti { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-rp { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-hk { width: 55px; min-width: 55px; font-size: 8pt; }
+            .col-gaji-pokok { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-tunjangan { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-total-tunjangan { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-potongan { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-astek { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-bpjs { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-upah { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-tidak-hadir { width: 55px; min-width: 55px; font-size: 8pt; }
+        }
+
+        @media screen and (max-width: 1200px) {
+            .col-no { width: 40px; min-width: 40px; font-size: 7pt; padding: 6px 3px; }
+            .col-gender { width: 35px; min-width: 35px; font-size: 7pt; padding: 6px 3px; }
+            .col-nik { width: 75px; min-width: 75px; font-size: 7pt; padding: 6px 4px; }
+            .col-name { width: 130px; min-width: 130px; font-size: 7pt; padding: 6px 6px; }
+            .col-upah-dasar { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-hari-kerja { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-upah-pokok { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-cuti { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-rp { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-hk { width: 45px; min-width: 45px; font-size: 7pt; padding: 6px 4px; }
+            .col-gaji-pokok { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-tunjangan { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-total-tunjangan { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-potongan { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-astek { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-bpjs { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-upah { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-tidak-hadir { width: 45px; min-width: 45px; font-size: 7pt; padding: 6px 4px; }
+        }
+
+        @media screen and (max-width: 1024px) {
+            .col-no { width: 35px; min-width: 35px; font-size: 6.5pt; padding: 5px 2px; }
+            .col-gender { width: 30px; min-width: 30px; font-size: 6.5pt; padding: 5px 2px; }
+            .col-nik { width: 65px; min-width: 65px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-name { width: 110px; min-width: 110px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-upah-dasar { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-hari-kerja { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-upah-pokok { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-cuti { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-rp { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-hk { width: 40px; min-width: 40px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-gaji-pokok { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-tunjangan { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-total-tunjangan { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-potongan { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-astek { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-bpjs { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-upah { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-tidak-hadir { width: 40px; min-width: 40px; font-size: 6.5pt; padding: 5px 3px; }
+        }
+
+        /* Enhanced touch scrolling for mobile devices */
+        @media screen and (max-width: 768px) {
+            .table-wrapper {
+                -webkit-overflow-scrolling: touch;
+                overflow-x: scroll;
+                scrollbar-width: none;
+            }
+            .table-wrapper::-webkit-scrollbar {
+                display: none;
+            }
         }
     </style>
+    <!-- Modular styles (relative to generated output directory) -->
+    <link rel="stylesheet" href="column-styles.module.css">
+    <link rel="stylesheet" href="row-styles.module.css">
+    <link rel="stylesheet" href="professional-table-wrap.module.css">
 </head>
 <body>
-    <div class="report-wrapper">
-        <div class="header-info">
-            <div class="header-row">
-                <div class="header-label">PERUSAHAAN:</div>
-                <div class="header-value">{company_name}</div>
-            </div>
-            <div class="header-row">
-                <div class="header-label">PERIODE:</div>
-                <div class="header-value">{bulan} {tahun}</div>
-            </div>
-            <div class="header-row" style="justify-content: flex-end;">
-                <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
-            </div>
+    <div class="header-info">
+        <div class="header-row">
+            <div class="header-label">PERUSAHAAN:</div>
+            <div class="header-value">{company_name}</div>
         </div>
-
-        <div class="report-title">
-            DAFTAR UPAH KARYAWAN GANG {gang_code} | LocCode {loc_code}
+        <div class="header-row">
+            <div class="header-label">PERIODE:</div>
+            <div class="header-value">{bulan} {tahun}</div>
         </div>
-        <div class="gang-desc">{gang_description}</div>
+        <div class="header-row" style="justify-content: flex-end;">
+            <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
+        </div>
+    </div>
 
-        <div class="table-wrapper">
-            <table>
+    <div class="report-title">
+        DAFTAR UPAH KARYAWAN GANG {gang_code} | LocCode {loc_code}
+    </div>
+    <div class="gang-desc">{gang_description}</div>
+
+    <div class="main-content">
+            <table class="payroll-table">
                 <!-- Main Header Row -->
                 <tr>
                     <td rowspan="3" class="header-cell col-no main-header">NO</td>
@@ -728,16 +1079,16 @@
                     <td rowspan="3" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</td>
                     <td rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
                     <td rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
-                    <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
+                    <td colspan="5" class="header-cell section-header cuti-section">Cuti/Libur</td>
                     <td rowspan="3" class="header-cell col-hk main-header">Jumlah HK</td>
                     <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
-                    <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
+                    <td colspan="8" class="header-cell section-header tunjangan-section">TUNJANGAN</td>
                     <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
-                    <td colspan="8" class="header-cell section-header">PREMI</td>
+                    <td colspan="8" class="header-cell section-header premi-section">PREMI</td>
                     <td rowspan="3" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
                     <td rowspan="3" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
                     <td colspan="3" class="header-cell section-header">CARUMAN ASTEK</td>
-                    <td colspan="6" class="header-cell section-header">POTONGAN BPJS</td>
+                    <td colspan="6" class="header-cell section-header bpjs-section">POTONGAN BPJS</td>
                     <td colspan="13" class="header-cell section-header">POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
                     <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
@@ -926,27 +1277,82 @@
                     <td class="number-cell col-tidak-hadir" style="background-color: #34495e; color: white;">{grand_total.tidak_hadir_alpa_total}</td>
                 </tr>
             </table>
-        </div>
-
-        <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
-            <div style="text-align: center; width: 150px;">
-                <div>Menyetujui,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Diperiksa oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Dibuat oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-        </div>
-
-        <div class="print-footer">Dicetak tanggal: {tanggal_cetak}</div>
     </div>
+
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
+        <div style="text-align: center; width: 150px;">
+            <div>Menyetujui,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Diperiksa oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Dibuat oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+    </div>
+
+    <div class="print-footer">Dicetak tanggal: {tanggal_cetak}</div>
+    <!-- JS: Tooltip and truncation detection -->
+    <script src="table-enhancements.js"></script>
+
+    <!-- Enhanced horizontal scrolling script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mainContent = document.querySelector('.main-content');
+        const body = document.body;
+
+        if (mainContent) {
+            // Ensure scrolling works on mouse wheel
+            mainContent.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    mainContent.scrollLeft += e.deltaY * 2;
+                }
+            }, { passive: false });
+
+            // Add keyboard navigation to body
+            body.setAttribute('tabindex', '0');
+            body.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        mainContent.scrollLeft -= 100;
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        mainContent.scrollLeft += 100;
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        mainContent.scrollLeft = 0;
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        mainContent.scrollLeft = mainContent.scrollWidth;
+                        break;
+                }
+            });
+
+            // Visual feedback for scrolling
+            let isScrolling;
+            mainContent.addEventListener('scroll', function() {
+                body.style.backgroundColor = '#f0f8ff';
+                window.clearTimeout(isScrolling);
+                isScrolling = setTimeout(function() {
+                    body.style.backgroundColor = 'white';
+                }, 150);
+            });
+
+            // Auto focus for keyboard navigation
+            body.focus();
+        }
+    });
+    </script>
 </body>
 </html>

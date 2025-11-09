@@ -1,0 +1,88 @@
+:root {
+  --row-bg-even: #ffffff;
+  --row-bg-odd: #f7fbff;
+  --row-hover-bg: #e9f3ff;
+  --row-border-color: #dbe6f3;
+}
+
+/* Table base for consistent layout */
+table.payroll-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Strict zebra striping: keeps colors consistent across all columns */
+table.payroll-table tr.employee-row:nth-child(odd) > td {
+  background-color: var(--row-bg-odd) !important;
+}
+
+table.payroll-table tr.employee-row:nth-child(even) > td {
+  background-color: var(--row-bg-even) !important;
+}
+
+/* Row hover to improve readability during review */
+table.payroll-table tr.employee-row:hover > td {
+  background-color: var(--row-hover-bg) !important;
+}
+
+/* Bottom border tone for row separation */
+table.payroll-table tr.employee-row > td {
+  border-bottom-color: var(--row-border-color);
+}
+
+/* Responsive cell padding for compact screens */
+@media (max-width: 1280px) {
+  table.payroll-table tr.employee-row > td {
+    padding: 2px 3px;
+  }
+}
+
+/* Override any column-specific alternation that uses !important */
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-no,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-gender,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-nik,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-name,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-upah-dasar,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-hari-kerja,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-upah-pokok,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-cuti,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-rp,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-hk,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-gaji-pokok,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-tunjangan,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-total-tunjangan,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-premi,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-total-premi,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-jumlah-upah-kotor,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-astek,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-bpjs,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-potongan,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-upah,
+table.payroll-table tr.employee-row:nth-child(odd) > td.col-tidak-hadir {
+  background-color: var(--row-bg-odd) !important;
+}
+
+table.payroll-table tr.employee-row:nth-child(even) > td.col-no,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-gender,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-nik,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-name,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-upah-dasar,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-hari-kerja,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-upah-pokok,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-cuti,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-rp,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-hk,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-gaji-pokok,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-tunjangan,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-total-tunjangan,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-premi,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-total-premi,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-jumlah-upah-kotor,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-astek,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-bpjs,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-potongan,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-upah,
+table.payroll-table tr.employee-row:nth-child(even) > td.col-tidak-hadir {
+  background-color: var(--row-bg-even) !important;
+}

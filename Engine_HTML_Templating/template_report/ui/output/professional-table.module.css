@@ -1,0 +1,137 @@
+/* Professional table styling: overflow safety, wrapper, colors, striping, responsiveness */
+
+/* 1) Global box-sizing for accurate dimension calculations */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 2) Wrapper with consistent dimensions and scrolling */
+.pro-wrapper {
+  /* Visual container */
+  background: #f7fafc;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+
+  /* Dimension control */
+  min-width: 960px;
+  max-width: 95vw;
+  min-height: 60vh;
+  max-height: 88vh;
+  overflow: auto; /* allow internal scroll without breaking layout */
+}
+
+/* 3) Color system for professional palette */
+:root {
+  /* Primary section headers (soft tones) */
+  --cuti-primary: #6b7f99;      /* Cuti/Libur */
+  --tunjangan-primary: #5c8d75; /* Tunjangan */
+  --premi-primary: #7a6aa8;     /* Premi */
+
+  /* General table colors */
+  --table-border: #cbd5e1;
+  --table-header-bg: #e5e7eb;
+  --table-header-text: #1f2937;
+
+  /* Row striping */
+  --row-bg-odd: #f9fafb;
+  --row-bg-even: #eef2f7;
+
+  /* Grand total */
+  --grand-bg: #243b53;
+  --grand-border: #0b1c2e;
+  --grand-text: #ffffff;
+
+  /* Cells */
+  --cell-max-width: 240px; /* cap to prevent overflow */
+}
+
+/* 4) Base table styling */
+table.payroll-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: fit-content;
+  max-width: 100%;
+  table-layout: fixed; /* predictable overflow handling */
+}
+
+.payroll-table thead th {
+  background: var(--table-header-bg);
+  color: var(--table-header-text);
+  font-weight: 600;
+}
+
+.payroll-table th,
+.payroll-table td {
+  border: 1px solid var(--table-border);
+  padding: 6px 8px; /* consistent padding */
+  text-align: center; /* consistent horizontal alignment */
+  vertical-align: middle; /* consistent vertical alignment */
+
+  /* Overflow safety */
+  max-width: var(--cell-max-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Utility alignments if template already uses left/right alignment classes */
+.payroll-table .text-left { text-align: left; }
+.payroll-table .text-right { text-align: right; }
+
+/* 5) Section color bindings for body cells following their header */
+.payroll-table td.col-cuti,
+.payroll-table th.col-cuti { color: var(--cuti-primary); }
+.payroll-table td.col-tunjangan,
+.payroll-table th.col-tunjangan { color: var(--tunjangan-primary); }
+.payroll-table td.col-premi,
+.payroll-table th.col-premi { color: var(--premi-primary); }
+
+/* 6) Row striping with soft alternating backgrounds */
+.payroll-table tbody tr:nth-child(odd) { background: var(--row-bg-odd); }
+.payroll-table tbody tr:nth-child(even) { background: var(--row-bg-even); }
+
+/* 7) Grand Total row styling */
+.payroll-table tr.grand-total-row td,
+.payroll-table tr.grand-total-row th {
+  background: var(--grand-bg);
+  color: var(--grand-text);
+  font-weight: 700;
+  border-top: 2px solid var(--grand-border);
+  border-bottom: 2px solid var(--grand-border);
+}
+
+/* 8) Tooltip popover for truncated content (JS will manage positioning) */
+#cell-tooltip {
+  position: fixed;
+  z-index: 99999;
+  display: none;
+  max-width: 420px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #111827; /* near-black */
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.20);
+  pointer-events: none;
+}
+
+/* 9) Responsiveness tweaks */
+@media (max-width: 1280px) {
+  :root { --cell-max-width: 200px; }
+  .payroll-table th, .payroll-table td { padding: 5px 6px; }
+}
+
+@media (max-width: 980px) {
+  :root { --cell-max-width: 160px; }
+  .payroll-table { font-size: 12px; }
+}
+
+/* 10) Print view: ensure full width and hide tooltip */
+@media print {
+  .pro-wrapper { max-height: none; overflow: visible; box-shadow: none; }
+  #cell-tooltip { display: none !important; }
+}
+

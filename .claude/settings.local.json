@@ -6,7 +6,8 @@
       "Bash(python:*)",
       "Bash(copy:*)",
       "mcp__obsidian-mcp-tools__append_to_vault_file",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "mcp__obsidian-mcp-tools__get_server_info"
     ],
     "deny": [],
     "ask": []

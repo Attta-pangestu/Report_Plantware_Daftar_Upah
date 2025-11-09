@@ -1,0 +1,39 @@
+:root {
+  --blue-primary: #2f75b5;
+  --text-dark: #1b2a3a;
+  --border-color: #dbe6f3;
+}
+
+/* Base column styling tokens */
+table.payroll-table th,
+table.payroll-table td {
+  border-color: var(--border-color);
+  color: var(--text-dark);
+}
+
+/* Width utility classes for column cells */
+.col-compact { width: 60px; min-width: 60px; }
+.col-medium  { width: 110px; min-width: 110px; }
+.col-wide    { width: 180px; min-width: 160px; }
+
+/* Alignment utilities for reusability */
+.col-left   { text-align: left; }
+.col-center { text-align: center; }
+.col-right  { text-align: right; }
+
+/* Header accent consistent with standardized blue */
+.col-header-primary {
+  background-color: var(--blue-primary);
+  color: #ffffff;
+}
+
+/* Responsive tweaks for smaller viewports */
+@media (max-width: 1280px) {
+  table.payroll-table th,
+  table.payroll-table td { padding: 2px 3px; }
+}
+
+@media (max-width: 1024px) {
+  table.payroll-table { font-size: clamp(7pt, 1.2vw, 8pt); }
+}
+

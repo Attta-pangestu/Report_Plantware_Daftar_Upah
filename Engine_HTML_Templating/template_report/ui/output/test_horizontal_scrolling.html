@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Horizontal Scrolling</title>
+    <style>
+        .table-wrapper {
+            overflow-x: scroll;
+            overflow-y: hidden;
+            border: 2px solid #3498db;
+            background: white;
+            width: 100%;
+            max-width: 100vw;
+            min-height: 400px;
+            box-sizing: border-box;
+            position: relative;
+            margin: 20px auto;
+            padding: 0;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 30px;
+            background: linear-gradient(to right, transparent, rgba(0,0,0,0.05));
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: auto;
+            min-width: 3000px;
+            table-layout: fixed;
+            font-size: 8pt;
+            box-sizing: border-box;
+        }
+
+        th, td {
+            border: 1px solid #d0d0d0;
+            padding: 8px 12px;
+            text-align: center;
+            vertical-align: middle;
+            box-sizing: border-box;
+            min-width: 80px;
+            height: 40px;
+            white-space: nowrap;
+        }
+
+        th {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .col-no { width: 60px; background: #e8f4fd; }
+        .col-name { width: 180px; background: #fff3e0; text-align: left; }
+        .col-salary { width: 120px; background: #e8f5e8; text-align: right; }
+        .col-allowance { width: 100px; background: #fce4ec; text-align: right; }
+        .col-deduction { width: 100px; background: #f8d7da; text-align: right; }
+        .col-total { width: 120px; background: #fff8e1; text-align: right; font-weight: bold; }
+
+        .test-info {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h2>🧪 Test Horizontal Scrolling</h2>
+        <p><strong>Instruksi:</strong></p>
+        <ul>
+            <li>Gunakan <strong>mouse wheel</strong> untuk scrolling horizontal</li>
+            <li>Gunakan <strong>arrow keys</strong> (← →) untuk navigasi</li>
+            <li>Gunakan <strong>Home/End</strong> untuk跳 ke awal/akhir</li>
+            <li>Untuk <strong>touch device</strong>, swipe kanan/kiri</li>
+            <li>Click pada tabel area lalu gunakan keyboard</li>
+        </ul>
+        <p>Jika scrolling tidak berfungsi, berarti ada masalah dengan browser atau implementasi.</p>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-no">NO</th>
+                    <th class="col-name">NAMA KARYAWAN</th>
+                    <th class="col-salary">GAJI POKOK</th>
+                    <th class="col-allowance">TUNJANGAN JABATAN</th>
+                    <th class="col-allowance">TUNJANGAN MAKAN</th>
+                    <th class="col-allowance">TUNJANGAN TRANSPORT</th>
+                    <th class="col-allowance">TUNJANGAN KOMUNIKASI</th>
+                    <th class="col-allowance">TUNJANGAN KESEHATAN</th>
+                    <th class="col-allowance">TUNJANGAN LAINNYA</th>
+                    <th class="col-deduction">POTONGAN BPJS</th>
+                    <th class="col-deduction">POTONGAN PPH21</th>
+                    <th class="col-deduction">POTONGAN KOPERASI</th>
+                    <th class="col-deduction">POTONGAN KASBON</th>
+                    <th class="col-deduction">POTONGAN LAINNYA</th>
+                    <th class="col-total">TOTAL GAJI</th>
+                    <th class="col-no">CATATAN</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="col-no">1</td>
+                    <td class="col-name">AHMAD SUPRIADI</td>
+                    <td class="col-salary">5,000,000</td>
+                    <td class="col-allowance">1,000,000</td>
+                    <td class="col-allowance">500,000</td>
+                    <td class="col-allowance">300,000</td>
+                    <td class="col-allowance">200,000</td>
+                    <td class="col-allowance">400,000</td>
+                    <td class="col-allowance">150,000</td>
+                    <td class="col-deduction">(250,000)</td>
+                    <td class="col-deduction">(300,000)</td>
+                    <td class="col-deduction">(100,000)</td>
+                    <td class="col-deduction">(0)</td>
+                    <td class="col-deduction">(50,000)</td>
+                    <td class="col-total">6,850,000</td>
+                    <td class="col-no">-</td>
+                </tr>
+                <tr>
+                    <td class="col-no">2</td>
+                    <td class="col-name">SITI NURHALIZA</td>
+                    <td class="col-salary">4,500,000</td>
+                    <td class="col-allowance">800,000</td>
+                    <td class="col-allowance">500,000</td>
+                    <td class="col-allowance">300,000</td>
+                    <td class="col-allowance">200,000</td>
+                    <td class="col-allowance">400,000</td>
+                    <td class="col-allowance">150,000</td>
+                    <td class="col-deduction">(225,000)</td>
+                    <td class="col-deduction">(270,000)</td>
+                    <td class="col-deduction">(100,000)</td>
+                    <td class="col-deduction">(0)</td>
+                    <td class="col-deduction">(50,000)</td>
+                    <td class="col-total">6,155,000</td>
+                    <td class="col-no">-</td>
+                </tr>
+                <tr>
+                    <td class="col-no">3</td>
+                    <td class="col-name">BUDIMAN SUSANTO</td>
+                    <td class="col-salary">6,000,000</td>
+                    <td class="col-allowance">1,200,000</td>
+                    <td class="col-allowance">500,000</td>
+                    <td class="col-allowance">300,000</td>
+                    <td class="col-allowance">200,000</td>
+                    <td class="col-allowance">400,000</td>
+                    <td class="col-allowance">150,000</td>
+                    <td class="col-deduction">(300,000)</td>
+                    <td class="col-deduction">(360,000)</td>
+                    <td class="col-deduction">(100,000)</td>
+                    <td class="col-deduction">(200,000)</td>
+                    <td class="col-deduction">(50,000)</td>
+                    <td class="col-total">7,590,000</td>
+                    <td class="col-no">Ada pinjaman</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableWrapper = document.querySelector('.table-wrapper');
+        if (tableWrapper) {
+            // Ensure scrolling works on mouse wheel
+            tableWrapper.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    tableWrapper.scrollLeft += e.deltaY * 2;
+                }
+            }, { passive: false });
+
+            // Add keyboard navigation
+            tableWrapper.setAttribute('tabindex', '0');
+            tableWrapper.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        tableWrapper.scrollLeft -= 100;
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        tableWrapper.scrollLeft += 100;
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        tableWrapper.scrollLeft = 0;
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        tableWrapper.scrollLeft = tableWrapper.scrollWidth;
+                        break;
+                }
+            });
+
+            // Visual feedback for scrolling
+            let isScrolling;
+            tableWrapper.addEventListener('scroll', function() {
+                tableWrapper.classList.add('scrolling');
+                window.clearTimeout(isScrolling);
+                isScrolling = setTimeout(function() {
+                    tableWrapper.classList.remove('scrolling');
+                }, 150);
+            });
+
+            console.log('Table wrapper width:', tableWrapper.offsetWidth);
+            console.log('Table width:', tableWrapper.querySelector('table').offsetWidth);
+        }
+    });
+    </script>
+
+    <style>
+    .table-wrapper {
+        outline: none;
+    }
+
+    .table-wrapper:focus {
+        border-color: #2196f3 !important;
+        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2) !important;
+    }
+
+    .table-wrapper.scrolling {
+        border-color: #ff9800 !important;
+    }
+    </style>
+</body>
+</html>
