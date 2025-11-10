@@ -6,7 +6,14 @@
       "Bash(python:*)",
       "Bash(copy:*)",
       "mcp__obsidian-mcp-tools__append_to_vault_file",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "mcp__obsidian-mcp-tools__get_server_info",
+      "Bash(mkdir:*)",
+      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Modifikasi-Koreksi-Upah-Report.md\")",
+      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Penambahan-Kolom-Total-Potongan.md\")",
+      "Bash(echo:*)",
+      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Ikhtisar-Kalkulasi-Upah-Bersih.md\")",
+      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Perbaikan-Header-Alignment.md\")"
     ],
     "deny": [],
     "ask": []

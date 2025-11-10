@@ -390,6 +390,28 @@
             background: #ffffff !important;
         }
 
+        /* Koreksi Column - Special styling for negative values */
+        .col-koreksi {
+            background: #ffebee !important;
+            color: #c62828 !important;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+            border: 1px solid #d0d0d0 !important;
+        }
+
+        /* Koreksi column in alternating rows */
+        .employee-row:nth-child(odd) .col-koreksi {
+            background: #ffcdd2 !important;
+            color: #b71c1c !important;
+        }
+
+        .employee-row:nth-child(even) .col-koreksi {
+            background: #ffebee !important;
+            color: #c62828 !important;
+        }
+
         /* Column widths */
         .col-no {
             width: 30px; max-width: 40px; min-width: 30px;
@@ -474,6 +496,53 @@
             font-size: 10pt;
             color: #721c24 !important;
             border: 1px solid #d0d0d0 !important;
+        }
+
+        /* Total Potongan Column - Special styling */
+        .col-total-potongan {
+            background: #e1f5fe !important;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #0277bd !important;
+            border: 1px solid #d0d0d0 !important;
+        }
+
+        /* Alternating row styles for Total Potongan */
+        .employee-row:nth-child(odd) .col-total-potongan {
+            background: #b3e5fc !important;
+            color: #01579b !important;
+        }
+
+        .employee-row:nth-child(even) .col-total-potongan {
+            background: #e1f5fe !important;
+            color: #0277bd !important;
+        }
+
+        /* Sub-header for Total Potongan */
+        .sub-header-total-potongan {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1007;
+        }
+
+        /* Header-specific alignment overrides */
+        .header-cell.col-name {
+            text-align: center !important;
+        }
+
+        .header-cell.col-upah-dasar {
+            text-align: center !important;
+        }
+
+        .header-cell.col-upah-pokok {
+            text-align: center !important;
         }
 
         /* Alternating row colors for cuti/libur columns */
@@ -750,7 +819,7 @@
                     <td rowspan="3" class="header-cell col-no main-header">NO</td>
                     <td rowspan="3" class="header-cell col-gender main-header">L/P</td>
                     <td rowspan="3" class="header-cell col-nik main-header">NIK</td>
-                    <td rowspan="3" class="header-cell col-name main-header text-left">NAMA</td>
+                    <td rowspan="3" class="header-cell col-name main-header">NAMA</td>
                     <td rowspan="3" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</td>
                     <td rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
                     <td rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
@@ -766,9 +835,8 @@
                     <td colspan="6" class="header-cell section-header">POTONGAN BPJS</td>
                     <td colspan="2" class="header-cell section-header">IURAN SPSI</td>
                     <td colspan="2" class="header-cell section-header">PPH21</td>
-                    <td colspan="9" class="header-cell section-header">POTONGAN</td>
+                    <td rowspan="3" class="header-cell col-total-potongan main-header">TOTAL<br>POTONGAN</td>
                     <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
-                    <td colspan="2" class="header-cell col-tidak-hadir section-header">TIDAK HADIR</td>
                 </tr>
 
                 <!-- Second Header Row - Detail Types -->
@@ -794,7 +862,7 @@
                     <td class="header-cell sub-header-premi">PREMI BLOWER</td>
                     <td class="header-cell sub-header-premi">TABUR PUPUK</td>
                     <td class="header-cell sub-header-premi">INCENTIVE</td>
-                    <td class="header-cell sub-header-premi">KOREKSI</td>
+                    <td class="header-cell sub-header-premi">KOREKSI<br>(Minus)</td>
 
                     <!-- Caruman ASTEK Headers -->
                     <td class="header-cell sub-header-astek">PEKERJA</td>
@@ -811,25 +879,9 @@
 
                     <!-- PPH21 Headers -->
                     <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
+                    <td class="header-cell sub-header-total-potongan">JUMLAH<br>(Rp)</td>
 
-                    <!-- Potongan Headers -->
-                    <td class="header-cell col-potongan">PPH21</td>
-                    <td class="header-cell col-potongan">Kontan</td>
-                    <td class="header-cell col-potongan">THR</td>
-                    <td class="header-cell col-potongan">Pinjam</td>
-                    <td class="header-cell col-potongan">KL</td>
-                    <td class="header-cell col-potongan">BPJS Kes</td>
-                    <td class="header-cell col-potongan">BPJS Pek</td>
-                    <td class="header-cell col-potongan">BPJS Maj</td>
-                    <td class="header-cell col-potongan">Total</td>
-                    <td class="header-cell col-potongan">Total</td>
-                    <td class="header-cell col-potongan">Total</td>
-                    <td class="header-cell col-potongan">Total</td>
-
-                    <!-- Tidak Hadir Headers -->
-                    <td class="header-cell col-tidak-hadir">CTH</td>
-                    <td class="header-cell col-tidak-hadir">ALPA</td>
-                </tr>
+                                    </tr>
 
                 <!-- Third Header Row - Units -->
                 <tr>
@@ -877,6 +929,7 @@
 
                     <!-- PPH21 Units -->
                     <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
+                    <td class="header-cell col-total-potongan">JUMLAH<br>(Rp)</td>
                 </tr>
 
                 <!-- Data Rows -->
@@ -884,7 +937,7 @@
 
                 <!-- Grand Total Row -->
                 <tr class="grand-total-row" style="background-color: #2f75b5; color: white; font-weight: bold;">
-                    <td colspan="5" class="header-cell text-left" style="background-color: #34495e; color: white;">GRAND TOTAL</td>
+                    <td colspan="4" class="header-cell text-left" style="background-color: #34495e; color: white;">GRAND TOTAL</td>
 
                     <!-- Hari Kerja Grand Total -->
                     <td class="number-cell col-hari-kerja" style="background-color: #34495e; color: white;">{grand_total.hari_kerja_total}</td>
@@ -950,44 +1003,13 @@
                     <!-- PPH21 Grand Totals -->
                     <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;" colspan="2">{grand_total.pph21_jumlah_total:,.0f}</td>
 
-                    <!-- Potongan Grand Totals -->
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_pph21_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_kontan_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_thr_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_pinjam_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_kl_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_bpjs_kes_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_bpjs_pek_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_bpjs_maj_total:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_total1:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_total2:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_total3:,.0f}</td>
-                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">{grand_total.potongan_total4:,.0f}</td>
+                    <!-- Total Potongan Grand Total -->
+                    <td class="number-cell col-total-potongan" style="background-color: #e1f5fe; color: #0277bd;">{grand_total.total_potongan_total:,.0f}</td>
 
                     <!-- Final Grand Totals -->
                     <td class="number-cell col-upah" style="background-color: #34495e; color: white;">{grand_total.upah_bersih_total:,.0f}</td>
-                    <td class="number-cell col-tidak-hadir" style="background-color: #34495e; color: white;">{grand_total.tidak_hadir_cth_total}</td>
-                    <td class="number-cell col-tidak-hadir" style="background-color: #34495e; color: white;">{grand_total.tidak_hadir_alpa_total}</td>
                 </tr>
             </table>
-        </div>
-
-        <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
-            <div style="text-align: center; width: 150px;">
-                <div>Menyetujui,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Diperiksa oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Dibuat oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
         </div>
 
         <div class="print-footer">Dicetak tanggal: {tanggal_cetak}</div>

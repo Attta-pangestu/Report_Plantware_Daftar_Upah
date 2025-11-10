@@ -852,7 +852,8 @@ class DaftarUpahEngineRealFixed:
                                 continue
                     total_amount += amount
 
-            return total_amount
+            # Koreksi harus ditampilkan sebagai nilai negatif (pengurangan)
+            return -abs(total_amount)
 
         except Exception as e:
             print(f"[ERROR] Failed to get Koreksi amount for {emp_code}: {e}")
@@ -1239,6 +1240,13 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(spsi_amount, ',.0f')}</td>
                     <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(pph21_amount, ',.0f')}</td>"""
 
+            # Calculate Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21
+            total_potongan = bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja + spsi_amount + pph21_amount
+
+            # Add Total Potongan column
+            employee_rows += f"""
+                    <td class="number-cell col-total-potongan center-cell">{self.format_value(total_potongan, ',.0f')}</td>"""
+
             # Add Potongan columns
             potongan_values = [
                 emp['potongan_pph'],
@@ -1257,8 +1265,11 @@ class DaftarUpahEngineRealFixed:
                 employee_rows += f"""
                     <td class="number-cell col-potongan center-cell">{formatted_pot}</td>"""
 
+            # Calculate Upah Bersih = Jumlah Upah Kotor - Total Potongan
+            upah_bersih = jumlah_upah_kotor - total_potongan
+
             # Add final columns
-            upah_formatted = self.format_value(emp['upah_bersih'], ",.0f")
+            upah_formatted = self.format_value(upah_bersih, ",.0f")
             cth_formatted = self.format_value(emp.get('tidak_hadir_cth', 0))
             alpa_formatted = self.format_value(emp.get('tidak_hadir_alpa', 0))
 
@@ -1748,6 +1759,9 @@ class DaftarUpahEngineRealFixed:
                     'spsi_jumlah_total': grand_total_spsi,
                     'pph21_jumlah_total': grand_total_pph21,
 
+                    # Total Potongan Grand Total (BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + SPSI + PPH21)
+                    'total_potongan_total': bpjs_kesehatan_pekerja_total + bpjs_pensiun_pekerja_total + grand_total_spsi + grand_total_pph21,
+
                     # Potongan Grand Totals
                     'potongan_pph21_total': grand_total_pph21_legacy,
                     'potongan_kontan_total': grand_total_kontan,
@@ -1764,8 +1778,8 @@ class DaftarUpahEngineRealFixed:
                     'potongan_total3': 0,
                     'potongan_total4': 0,
 
-                    # Final Grand Totals
-                    'upah_bersih_total': grand_total_upah_bersih,
+                    # Final Grand Totals - Recalculate Upah Bersih using new formula
+                    'upah_bersih_total': grand_total_jumlah_upah_kotor - (bpjs_kesehatan_pekerja_total + bpjs_pensiun_pekerja_total + grand_total_spsi + grand_total_pph21),
                     'tidak_hadir_cth_total': grand_total_cth,
                     'tidak_hadir_alpa_total': grand_total_alpa
                 },
