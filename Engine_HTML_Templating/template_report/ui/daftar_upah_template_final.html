@@ -811,82 +811,39 @@
             <table>
                 <!-- Main Header Row -->
                 <tr>
-                    <td rowspan="3" class="header-cell col-no main-header">NO</td>
-                    <td rowspan="3" class="header-cell col-gender main-header">L/P</td>
-                    <td rowspan="3" class="header-cell col-nik main-header">NIK</td>
+                    <td rowspan="2" class="header-cell col-no main-header">NO</td>
+                    <td rowspan="2" class="header-cell col-gender main-header">L/P</td>
+                    <td rowspan="2" class="header-cell col-nik main-header">NIK</td>
                     <td rowspan="2" class="header-cell col-name main-header text-left">NAMA</td>
                     <td rowspan="2" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</td>
                     <td rowspan="2" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
                     <td rowspan="2" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
-                    <td colspan="4" class="header-cell header-h1">Cuti/Libur</td>
-                    <td rowspan="3" class="header-cell col-hk main-header">Jumlah HK</td>
-                    <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
+                    <td colspan="5" class="header-cell header-h1">Cuti/Libur</td>
+                    <td rowspan="2" class="header-cell col-hk main-header">Jumlah HK</td>
+                    <td rowspan="2" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
                     <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
-                    <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
+                    <td rowspan="2" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
                     <td colspan="8" class="header-cell section-header">PREMI</td>
-                    <td rowspan="3" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
-                    <td rowspan="3" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
+                    <td rowspan="2" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
+                    <td rowspan="2" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
                     <td colspan="3" class="header-cell section-header">CARUMAN ASTEK</td>
                     <td colspan="6" class="header-cell section-header">POTONGAN BPJS</td>
                     <td colspan="2" class="header-cell section-header">IURAN SPSI</td>
                     <td colspan="2" class="header-cell section-header">PPH21</td>
                     <td colspan="1" class="header-cell section-header">POTONGAN</td>
-                    <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
+                    <td rowspan="2" class="header-cell col-upah main-header">UPAH BERSIH</td>
                 </tr>
 
-                <!-- Second Header Row - Detail Types -->
+                <!-- Second Header Row - Combined All Sub-Headers -->
                 <tr>
-                    <!-- Rate under Upah Dasar -->
-                    <td class="header-cell col-upah-dasar header-h2">Rate<br>(Rp)</td>
-
-                    <!-- Cuti/Libur Headers (merged with row 3) -->
-                    <td rowspan="2" class="header-cell col-cuti header-h2">TAHUNAN<br>(Izin)<br>H</td>
-                    <td rowspan="2" class="header-cell col-cuti header-h2">SAKIT +<br>HAID<br>H</td>
-                    <td rowspan="2" class="header-cell col-cuti header-h2">MINGGU<br>H</td>
-                    <td rowspan="2" class="header-cell col-cuti header-h2">NASIONAL<br>H</td>
+                    <!-- Cuti/Libur Headers -->
+                    <td class="header-cell col-cuti header-h2">TAHUNAN<br>(Izin)<br>H</td>
+                    <td class="header-cell col-cuti header-h2">SAKIT +<br>HAID<br>H</td>
+                    <td class="header-cell col-cuti header-h2">MINGGU<br>H</td>
+                    <td class="header-cell col-cuti header-h2">NASIONAL<br>H</td>
+                    <td class="header-cell col-upah-pokok header-h2">Rate<br>(Rp)</td>
 
                     <!-- Tunjangan Sub-Headers -->
-                    <td colspan="2" class="header-cell sub-header-tunjangan">BERAS</td>
-                    <td colspan="2" class="header-cell sub-header-tunjangan">JABATAN</td>
-                    <td colspan="2" class="header-cell sub-header-tunjangan">MASA KERJA</td>
-                    <td colspan="2" class="header-cell sub-header-tunjangan">LEMBUR</td>
-
-                    <!-- Premi Sub-Headers -->
-                    <td class="header-cell sub-header-premi">BRONDOL</td>
-                    <td class="header-cell sub-header-premi">PRUNING</td>
-                    <td class="header-cell sub-header-premi">PANEN</td>
-                    <td class="header-cell sub-header-premi">CUCI UNIT</td>
-                    <td class="header-cell sub-header-premi">PREMI BLOWER</td>
-                    <td class="header-cell sub-header-premi">TABUR PUPUK</td>
-                    <td class="header-cell sub-header-premi">INCENTIVE</td>
-                    <td class="header-cell sub-header-premi">KOREKSI (-)</td>
-
-                    <!-- Caruman ASTEK Headers -->
-                    <td class="header-cell sub-header-astek">PEKERJA</td>
-                    <td class="header-cell sub-header-astek">MAJIKAN</td>
-                    <td class="header-cell sub-header-astek">JUMLAH</td>
-
-                    <!-- Potongan BPJS Headers -->
-                    <td class="header-cell sub-header-bpjs" colspan="2">KESEHATAN</td>
-                    <td class="header-cell sub-header-bpjs" colspan="2">PENSIUN</td>
-                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
-
-                    <!-- Iuran SPSI Headers -->
-                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
-
-                    <!-- PPH21 Headers -->
-                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
-
-                    <!-- Potongan Headers -->
-                    <td class="header-cell col-potongan">PPH21</td>
-                </tr>
-
-                    <!-- Row 3: Rate/Jumlah/Units Headers -->
-                    <tr>
-                        <!-- Empty cells for first 6 columns (No, Nama, Jenis Kelamin, Upah Dasar, Rate, Hari Kerja, Upah Pokok) -->
-                        <td class="header-cell" colspan="6"></td>
-
-                    <!-- Tunjangan Rate & Jumlah Headers -->
                     <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
                     <td class="header-cell col-tunjangan">Jumlah</td>
                     <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
@@ -896,7 +853,7 @@
                     <td class="header-cell col-tunjangan">Jam</td>
                     <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
 
-                    <!-- Premi Units -->
+                    <!-- Premi Sub-Headers -->
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
@@ -906,22 +863,22 @@
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
 
-                    <!-- Caruman ASTEK Units -->
+                    <!-- Caruman ASTEK Headers -->
                     <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
                     <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
 
-                    <!-- Potongan BPJS Units -->
+                    <!-- Potongan BPJS Headers -->
                     <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
                     <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
                     <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
                     <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
                     <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
 
-                    <!-- Iuran SPSI Units -->
+                    <!-- Iuran SPSI Headers -->
                     <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
 
-                    <!-- PPH21 Units -->
+                    <!-- PPH21 Headers -->
                     <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
                 </tr>
 
