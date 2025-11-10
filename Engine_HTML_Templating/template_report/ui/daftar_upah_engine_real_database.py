@@ -858,11 +858,149 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get Koreksi amount for {emp_code}: {e}")
             return 0
 
+    def get_employee_spsi_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee SPSI deduction amount using potongan_spsi.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "potongan" / "potongan_spsi.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year:04d}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1:04d}-01-01"
+            else:
+                end_date = f"{year:04d}-{month+1:02d}-01"
+
+            # Replace hardcoded values with parameterized query
+            query = query.replace("t.EmpCode = 'H0033'", "t.EmpCode = ?")
+            query = query.replace("t.DocDate >= '2025-05-01'", "t.DocDate >= ?")
+            query = query.replace("t.DocDate <  '2025-06-01'", "t.DocDate < ?")
+
+            # Trim employee code to remove extra spaces
+            emp_code_clean = emp_code.strip()
+
+            cursor.execute(query, emp_code_clean, start_date, end_date)
+            results = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            # Sum all Amount values from the results (Amount is typically the last column)
+            total_amount = 0
+            for row in results:
+                if row and len(row) >= 1:
+                    # Try to get the Amount column (usually last column)
+                    amount = 0
+                    for col_idx in [len(row)-1, len(row)-2, 7, 8]:  # Try different possible positions
+                        if col_idx >= 0 and col_idx < len(row):
+                            try:
+                                amount_val = row[col_idx]
+                                if amount_val is not None:
+                                    amount = float(amount_val)
+                                    break
+                            except (ValueError, TypeError):
+                                continue
+                    total_amount += amount
+
+            return total_amount
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get SPSI amount for {emp_code}: {e}")
+            return 0
+
+    def get_employee_pph21_amount(self, emp_code: str, month: int, year: int) -> float:
+        """Get employee PPH21 deduction amount using potong_pph21.sql"""
+        try:
+            import pyodbc
+
+            # Load database config
+            with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
+                config = json.load(f)
+
+            # Access nested database config
+            db_config = config['database']
+
+            # Create connection string
+            conn_str = f"DRIVER={{{db_config['driver']}}};SERVER={db_config['server']};PORT={db_config['port']};DATABASE={db_config['database_name']};UID={db_config['username']};PWD={db_config['password']}"
+            conn = pyodbc.connect(conn_str)
+            cursor = conn.cursor()
+
+            # Load query from file
+            query_file = Path(__file__).parent.parent / "query" / "potongan" / "potong_pph21.sql"
+            with open(query_file, 'r', encoding='utf-8') as f:
+                query = f.read()
+
+            # Calculate date range for the specified month and year
+            start_date = f"{year:04d}-{month:02d}-01"
+            if month == 12:
+                end_date = f"{year+1:04d}-01-01"
+            else:
+                end_date = f"{year:04d}-{month+1:02d}-01"
+
+            # Replace hardcoded values with parameterized query
+            query = query.replace("t.EmpCode = 'H0033'", "t.EmpCode = ?")
+            query = query.replace("t.DocDate >= '2025-05-01'", "t.DocDate >= ?")
+            query = query.replace("t.DocDate <  '2025-06-01'", "t.DocDate < ?")
+
+            # Trim employee code to remove extra spaces
+            emp_code_clean = emp_code.strip()
+
+            cursor.execute(query, emp_code_clean, start_date, end_date)
+            results = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            # Sum all Amount values from the results (Amount is typically the last column)
+            total_amount = 0
+            for row in results:
+                if row and len(row) >= 1:
+                    # Try to get the Amount column (usually last column)
+                    amount = 0
+                    for col_idx in [len(row)-1, len(row)-2, 7, 8]:  # Try different possible positions
+                        if col_idx >= 0 and col_idx < len(row):
+                            try:
+                                amount_val = row[col_idx]
+                                if amount_val is not None:
+                                    amount = float(amount_val)
+                                    break
+                            except (ValueError, TypeError):
+                                continue
+                    total_amount += amount
+
+            return total_amount
+
+        except Exception as e:
+            print(f"[ERROR] Failed to get PPH21 amount for {emp_code}: {e}")
+            return 0
+
     def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
         """Generate employee rows for final template with correct layout"""
         def clean_nik(nik):
             """Clean NIK by removing extra spaces and dots"""
             return nik.strip().replace('.', '').replace(' ', '')
+
+        def trim_employee_name(nama):
+            """Trim employee name to remove content after parentheses"""
+            if '(' in nama:
+                return nama.split('(')[0].strip()
+            return nama.strip()
 
         employee_rows = ""
         for i, emp in enumerate(merged_employees, 1):
@@ -902,7 +1040,7 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-no center-cell">{i}</td>
                     <td class="text-cell col-gender center-cell">{emp['jenis_kelamin']}</td>
                     <td class="nik-cell col-nik center-cell">{clean_emp_nik}</td>
-                    <td class="text-cell col-name text-left center-cell">{emp['nama']}</td>
+                    <td class="text-cell col-name text-left center-cell">{trim_employee_name(emp['nama'])}</td>
                     <td class="number-cell col-upah-dasar center-cell">{self.format_value(payrate, ',.0f')}</td>
                     <td class="number-cell col-hari-kerja center-cell">{self.format_value(hari_kerja)}</td>"""
 
@@ -1039,9 +1177,8 @@ class DaftarUpahEngineRealFixed:
             # Calculate Total Premi = sum of all Premi values (including Koreksi)
             total_premi = sum(premi_values)
 
-            # Calculate Jumlah Upah Kotor = Gaji Pokok + Tunjangan (Beras, Jabatan, Masa Kerja, Lembur) + Total Premi
-            gaji_pokok = emp['gaji_pokok']
-            jumlah_upah_kotor = gaji_pokok + total_tunjangan + total_premi
+            # Calculate Jumlah Upah Kotor = Gaji Pokok (JML HK × Upah Dasar) + Total Tunjangan + Total Premi
+            jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
 
             for premi_val in premi_values:
                 formatted_premi = self.format_value(premi_val, ',.0f')
@@ -1092,6 +1229,15 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_pensiun_pekerja, ',.0f')}</td>
                     <td class="number-cell col-bpjs center-cell">{self.format_value(bpjs_pensiun_majikan, ',.0f')}</td>
                     <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(bpjs_jumlah, ',.0f')}</td>"""
+
+            # Get SPSI and PPH21 amounts
+            spsi_amount = self.get_employee_spsi_amount(emp['nik'], 5, 2025)  # May 2025
+            pph21_amount = self.get_employee_pph21_amount(emp['nik'], 5, 2025)  # May 2025
+
+            # Add Iuran SPSI and PPH21 columns
+            employee_rows += f"""
+                    <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(spsi_amount, ',.0f')}</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(pph21_amount, ',.0f')}</td>"""
 
             # Add Potongan columns
             potongan_values = [
@@ -1311,7 +1457,7 @@ class DaftarUpahEngineRealFixed:
             grand_total_total_premi = (grand_total_brondol + grand_total_pruning +
                                       sum(grand_total_premi_dynamic) + grand_total_koreksi)
 
-            # Calculate Grand Total Jumlah Upah Kotor = Gaji Pokok + Total Tunjangan + Total Premi
+            # Calculate Grand Total Jumlah Upah Kotor = Gaji Pokok (JML HK × Upah Dasar) + Total Tunjangan + Total Premi
             grand_total_jumlah_upah_kotor = (grand_total_gaji_pokok + grand_total_tunjangan +
                                             grand_total_total_premi)
 
@@ -1350,8 +1496,14 @@ class DaftarUpahEngineRealFixed:
 
             bpjs_jumlah_total = bpjs_kesehatan_pekerja_total + bpjs_kesehatan_majikan_total + bpjs_pensiun_pekerja_total + bpjs_pensiun_majikan_total
 
+            # Calculate Grand Total SPSI
+            grand_total_spsi = sum(self.get_employee_spsi_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
+            # Calculate Grand Total PPH21
+            grand_total_pph21 = sum(self.get_employee_pph21_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+
             # Grand totals for potongan
-            grand_total_pph21 = sum(emp['potongan_pph'] for emp in merged_employees)
+            grand_total_pph21_legacy = sum(emp['potongan_pph'] for emp in merged_employees)
             grand_total_kontan = 0
             grand_total_thr = 0
             grand_total_pinjam = sum(emp['potongan_pinjaman_uang'] for emp in merged_employees)
@@ -1386,7 +1538,7 @@ class DaftarUpahEngineRealFixed:
                         <td class="number-cell col-no">{i}</td>
                         <td class="text-cell col-gender">{emp['jenis_kelamin']}</td>
                         <td class="nik-cell col-nik">{clean_emp_nik}</td>
-                        <td class="text-cell col-name text-left">{emp['nama']}</td>
+                        <td class="text-cell col-name text-left">{trim_employee_name(emp['nama'])}</td>
                         <td class="number-cell col-cuti">0</td>
                         <td class="number-cell col-cuti">0</td>
                         <td class="number-cell col-cuti">0</td>
@@ -1592,8 +1744,12 @@ class DaftarUpahEngineRealFixed:
                     'bpjs_pensiun_majikan_total': bpjs_pensiun_majikan_total,
                     'bpjs_jumlah_total': bpjs_jumlah_total,
 
+                    # Iuran SPSI and PPH21 Grand Totals
+                    'spsi_jumlah_total': grand_total_spsi,
+                    'pph21_jumlah_total': grand_total_pph21,
+
                     # Potongan Grand Totals
-                    'potongan_pph21_total': grand_total_pph21,
+                    'potongan_pph21_total': grand_total_pph21_legacy,
                     'potongan_kontan_total': grand_total_kontan,
                     'potongan_thr_total': grand_total_thr,
                     'potongan_pinjam_total': grand_total_pinjam,
@@ -1720,6 +1876,10 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.bpjs_pensiun_pekerja_total:,.0f}', f"{grand_total['bpjs_pensiun_pekerja_total']:,.0f}")
             html_content = html_content.replace('{grand_total.bpjs_pensiun_majikan_total:,.0f}', f"{grand_total['bpjs_pensiun_majikan_total']:,.0f}")
             html_content = html_content.replace('{grand_total.bpjs_jumlah_total:,.0f}', f"{grand_total['bpjs_jumlah_total']:,.0f}")
+
+            # Iuran SPSI and PPH21 Grand Totals
+            html_content = html_content.replace('{grand_total.spsi_jumlah_total:,.0f}', f"{grand_total['spsi_jumlah_total']:,.0f}")
+            html_content = html_content.replace('{grand_total.pph21_jumlah_total:,.0f}', f"{grand_total['pph21_jumlah_total']:,.0f}")
 
             html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
             html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")
