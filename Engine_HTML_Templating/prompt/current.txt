@@ -1,3 +1,2 @@
-formula dan calculasi yang digunakan untuk kolom dengan heasdder Potongan BPJS untuk kolom Kesehatan Pekerja dan Pensiun Pekerja didapatkan dari kalkulasi nilai  "potongan_bpjs": {
-        "gaji_pokok_min": 3876600
-      } + masa kerja nya ditamabah dulu semua itu, kemudian dikali 1% , sedangkan majikan adalah 4 kali dari pekerja itu 
+urutan kolomnya dan sub headernya adlah NO, L/P, Nama, Upah Dasar, Hari Kerja, Upah Pokok, terus ada Cuti/Libur (Sub header : Tahunan + izin, Sakit + Haid, Minggu, Nasional), Jumlah, Gaji Pokok, Tunjangan (Sub header : Beras, Jabatan, Masa Kerja, Lembur, tiap sub header iru ada ada 2 sub header yaitu : Rate dan Jumlah),Total   
+  Tunjangan , Premi (Sub header: (sesuaikan dengan dynamic header, terdapat sub header( Jumlah Rp), Totsl Premi, Total Upah Kotor, Caruma Astek,, Potongan BPJJS, , dan lain-lain  yang ini sterusnya sudah benar, saya ingin mseperrti ini struktur headernya, jadi kalo ga ada sub heasder nya, lakukan merger 3 baris , kayak excel gitu ,

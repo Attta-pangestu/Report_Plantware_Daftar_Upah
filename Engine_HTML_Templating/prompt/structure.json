@@ -1,0 +1,38 @@
+{
+  "struktur_header": [
+    "NO",
+    "L/P",
+    "NIK",
+    "NAMA",
+    "UPAH DASAR",
+    "HARI KERJA",
+    "UPAH POKOK",
+    "Cuti / Libur" :  [
+        "TAHUNAN (Izin) H",
+        "SAKIT + HAID H",
+        "MINGGU H",
+        "NASIONAL H",
+        "IZIN H"
+    ],
+    "Jumlah HK",
+    "GAJI POKOK",
+    "Tunjangan" : [
+        "Beras" : ["Rate", "Jumlah"],
+        "Jabatan" : ["Rate", "Jumlah"],
+        "Masa Kerja" : ["Lama", "Jumlah"],
+        "Lembur" : ["Jam", "Jumlah"]
+    ],
+   "Total Tunjangan", 
+   "Premi" : [
+    "Brondol", 
+    "Pruning", 
+    {Dynamic Header}
+   ],
+   "Total Premi",
+   "Jumlah Upah Kotor (Rp)"  
+    "CARUMAN ASTEK" : ["Pekerja /n Jumlah (Rp)", "Majikan /n Jumlah (Rp)", "Jumlah" ] , 
+    "Potongan BPJS" : ["Kesehatan" : ["Pekerja (Rp)", "Majikan (Rp)"], "Pensiun" : ["Pekerja (Rp)", "Majikan (Rp)"]], 
+    "Iuran SPSI", 
+    "PPH21"
+  ]
+}
