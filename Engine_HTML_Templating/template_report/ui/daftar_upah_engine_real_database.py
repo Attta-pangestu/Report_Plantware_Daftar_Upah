@@ -1030,8 +1030,7 @@ class DaftarUpahEngineRealFixed:
                 ('cuti_tahunan_hari', emp.get('cuti_tahunan_hari', 0)),  # Tahunan (Izin)
                 ('cuti_sakit_hari', emp.get('cuti_sakit_hari', 0)),  # Sakit + Haid (gabungan)
                 ('cuti_minggu_hari', emp.get('cuti_minggu_hari', 0)),  # Minggu
-                ('cuti_nasional_hari', emp.get('cuti_nasional_hari', 0)),  # Nasional
-                ('cuti_izin_hari', emp.get('cuti_izin_hari', 0))  # Izin (biasa)
+                ('cuti_nasional_hari', emp.get('cuti_nasional_hari', 0))  # Nasional
             ]
 
             # Start building the row
@@ -1167,8 +1166,8 @@ class DaftarUpahEngineRealFixed:
             # Get Koreksi amount from get_koreksi_emp.sql
             koreksi_amount = self.get_employee_koreksi_amount(emp['nik'], 5, 2025)  # May 2025
 
-            # Add Koreksi as the 8th Premi column
-            premi_values.append(koreksi_amount)
+            # Add Koreksi as negative value (subtract from Total Premi)
+            premi_values.append(-koreksi_amount)
 
             # Pad with zeros if we don't have enough values
             while len(premi_values) < 8:
@@ -1180,8 +1179,12 @@ class DaftarUpahEngineRealFixed:
             # Calculate Jumlah Upah Kotor = Gaji Pokok (JML HK × Upah Dasar) + Total Tunjangan + Total Premi
             jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
 
-            for premi_val in premi_values:
-                formatted_premi = self.format_value(premi_val, ',.0f')
+            for i, premi_val in enumerate(premi_values):
+                # For koreksi (last item), display as positive but use negative in calculation
+                if i == len(premi_values) - 1 and len(premi_values) > 0:  # Last item (koreksi)
+                    formatted_premi = self.format_value(abs(premi_val), ',.0f')
+                else:
+                    formatted_premi = self.format_value(premi_val, ',.0f')
                 employee_rows += f"""
                     <td class="number-cell col-premi center-cell">{formatted_premi}</td>"""
 
@@ -1239,17 +1242,9 @@ class DaftarUpahEngineRealFixed:
                     <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(spsi_amount, ',.0f')}</td>
                     <td class="number-cell col-bpjs center-cell" colspan="2">{self.format_value(pph21_amount, ',.0f')}</td>"""
 
-            # Add Potongan columns
+            # Add Potongan columns (only PPH21)
             potongan_values = [
-                emp['potongan_pph'],
-                emp.get('potongan_premi_kontan', 0),
-                emp.get('potongan_leg_pajak_thr', 0),
-                emp['potongan_pinjaman_uang'],
-                emp.get('potongan_lain', 0),
-                emp['potongan_bpjs'],
-                0, 0,
-                emp['potongan_bpjs'],
-                0, 0, 0, 0, 0
+                emp['potongan_pph']
             ]
 
             for pot_value in potongan_values:
@@ -1257,15 +1252,11 @@ class DaftarUpahEngineRealFixed:
                 employee_rows += f"""
                     <td class="number-cell col-potongan center-cell">{formatted_pot}</td>"""
 
-            # Add final columns
+            # Add final column
             upah_formatted = self.format_value(emp['upah_bersih'], ",.0f")
-            cth_formatted = self.format_value(emp.get('tidak_hadir_cth', 0))
-            alpa_formatted = self.format_value(emp.get('tidak_hadir_alpa', 0))
 
             employee_rows += f"""
                     <td class="number-cell col-upah center-cell">{upah_formatted}</td>
-                    <td class="number-cell col-tidak-hadir center-cell">{cth_formatted}</td>
-                    <td class="number-cell col-tidak-hadir center-cell">{alpa_formatted}</td>
                 </tr>"""
 
         return employee_rows
@@ -1453,9 +1444,9 @@ class DaftarUpahEngineRealFixed:
             # Calculate Grand Total Koreksi
             grand_total_koreksi = sum(self.get_employee_koreksi_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
 
-            # Calculate Grand Total Total Premi = sum of all premi grand totals + koreksi
+            # Calculate Grand Total Total Premi = sum of all premi grand totals - koreksi
             grand_total_total_premi = (grand_total_brondol + grand_total_pruning +
-                                      sum(grand_total_premi_dynamic) + grand_total_koreksi)
+                                      sum(grand_total_premi_dynamic) - grand_total_koreksi)
 
             # Calculate Grand Total Jumlah Upah Kotor = Gaji Pokok (JML HK × Upah Dasar) + Total Tunjangan + Total Premi
             grand_total_jumlah_upah_kotor = (grand_total_gaji_pokok + grand_total_tunjangan +
@@ -1502,15 +1493,8 @@ class DaftarUpahEngineRealFixed:
             # Calculate Grand Total PPH21
             grand_total_pph21 = sum(self.get_employee_pph21_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
 
-            # Grand totals for potongan
+            # Grand totals for potongan (only PPH21)
             grand_total_pph21_legacy = sum(emp['potongan_pph'] for emp in merged_employees)
-            grand_total_kontan = 0
-            grand_total_thr = 0
-            grand_total_pinjam = sum(emp['potongan_pinjaman_uang'] for emp in merged_employees)
-            grand_total_kl = 0
-            grand_total_bpjs_kes = 0
-            grand_total_bpjs_pek = sum(emp['potongan_bpjs'] for emp in merged_employees)
-            grand_total_bpjs_maj = 0
 
             # Grand totals for final columns
             grand_total_upah_bersih = total_upah_bersih
@@ -1748,21 +1732,8 @@ class DaftarUpahEngineRealFixed:
                     'spsi_jumlah_total': grand_total_spsi,
                     'pph21_jumlah_total': grand_total_pph21,
 
-                    # Potongan Grand Totals
+                    # Potongan Grand Totals (only PPH21)
                     'potongan_pph21_total': grand_total_pph21_legacy,
-                    'potongan_kontan_total': grand_total_kontan,
-                    'potongan_thr_total': grand_total_thr,
-                    'potongan_pinjam_total': grand_total_pinjam,
-                    'potongan_kl_total': grand_total_kl,
-                    'potongan_bpjs_kes_total': grand_total_bpjs_kes,
-                    'potongan_bpjs_pek_total': grand_total_bpjs_pek,
-                    'potongan_bpjs_maj_total': grand_total_bpjs_maj,
-
-                    # Additional potongan grand totals
-                    'potongan_total1': 0,
-                    'potongan_total2': 0,
-                    'potongan_total3': 0,
-                    'potongan_total4': 0,
 
                     # Final Grand Totals
                     'upah_bersih_total': grand_total_upah_bersih,
@@ -1882,17 +1853,6 @@ class DaftarUpahEngineRealFixed:
             html_content = html_content.replace('{grand_total.pph21_jumlah_total:,.0f}', f"{grand_total['pph21_jumlah_total']:,.0f}")
 
             html_content = html_content.replace('{grand_total.potongan_pph21_total:,.0f}', f"{grand_total['potongan_pph21_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_kontan_total:,.0f}', f"{grand_total['potongan_kontan_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_thr_total:,.0f}', f"{grand_total['potongan_thr_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_pinjam_total:,.0f}', f"{grand_total['potongan_pinjam_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_kl_total:,.0f}', f"{grand_total['potongan_kl_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_bpjs_kes_total:,.0f}', f"{grand_total['potongan_bpjs_kes_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_bpjs_pek_total:,.0f}', f"{grand_total['potongan_bpjs_pek_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_bpjs_maj_total:,.0f}', f"{grand_total['potongan_bpjs_maj_total']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_total1:,.0f}', f"{grand_total['potongan_total1']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_total2:,.0f}', f"{grand_total['potongan_total2']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_total3:,.0f}', f"{grand_total['potongan_total3']:,.0f}")
-            html_content = html_content.replace('{grand_total.potongan_total4:,.0f}', f"{grand_total['potongan_total4']:,.0f}")
             html_content = html_content.replace('{grand_total.upah_bersih_total:,.0f}', f"{grand_total['upah_bersih_total']:,.0f}")
             html_content = html_content.replace('{grand_total.tidak_hadir_cth_total}', f"{int(grand_total['tidak_hadir_cth_total'])}")
             html_content = html_content.replace('{grand_total.tidak_hadir_alpa_total}', f"{int(grand_total['tidak_hadir_alpa_total'])}")
