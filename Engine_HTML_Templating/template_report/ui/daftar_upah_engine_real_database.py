@@ -1076,11 +1076,12 @@ class DaftarUpahEngineRealFixed:
 
             # Pekerja calculations (1% of base)
             bpjs_kesehatan_pekerja = bpjs_base * 0.01
-            bpjs_pensiun_pekerja = bpjs_base * 0.01
+            # Pension calculation: employee = gaji_pokok_min * 1%, employer = gaji_pokok_min * 2%
+            bpjs_pensiun_pekerja = gaji_pokok_min * 0.01
+            bpjs_pensiun_majikan = gaji_pokok_min * 0.02
 
-            # Majikan calculations (4 × pekerja amount)
+            # Majikan calculations (4 × pekerja amount for health)
             bpjs_kesehatan_majikan = bpjs_kesehatan_pekerja * 4
-            bpjs_pensiun_majikan = bpjs_pensiun_pekerja * 4
 
             # Total BPJS
             bpjs_jumlah = bpjs_kesehatan_pekerja + bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan
@@ -1332,13 +1333,14 @@ class DaftarUpahEngineRealFixed:
                 masa_kerja_jumlah = emp.get('masa_kerja_jumlah', 0)  # Get masa_kerja Jumlah (Rp)
                 bpjs_base = gaji_pokok_min + masa_kerja_jumlah
 
-                # Pekerja calculations (1% of base)
+                # Pekerja calculations (1% of base for health)
                 emp_bpjs_kesehatan_pekerja = bpjs_base * 0.01
-                emp_bpjs_pensiun_pekerja = bpjs_base * 0.01
+                # Pension calculation: employee = gaji_pokok_min * 1%, employer = gaji_pokok_min * 2%
+                emp_bpjs_pensiun_pekerja = gaji_pokok_min * 0.01
+                emp_bpjs_pensiun_majikan = gaji_pokok_min * 0.02
 
-                # Majikan calculations (4 × pekerja amount)
+                # Majikan calculations (4 × pekerja amount for health)
                 emp_bpjs_kesehatan_majikan = emp_bpjs_kesehatan_pekerja * 4
-                emp_bpjs_pensiun_majikan = emp_bpjs_pensiun_pekerja * 4
 
                 # Add to totals
                 bpjs_kesehatan_pekerja_total += emp_bpjs_kesehatan_pekerja
