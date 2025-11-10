@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAFTAR UPAH - Mei 2025</title>
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
         @page {
             /* F4 landscape with minimum 1cm margins */
             size: 330mm 210mm;
@@ -12,24 +13,14 @@
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            font-size: 8pt;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 12px;
             margin: 0;
-            padding: 5px;
-            background: white;
-            box-sizing: border-box;
-        }
-
-        .report-wrapper {
-            max-width: 100%;
-            width: fit-content;
-            min-width: 100%;
-            overflow: hidden;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
             padding: 10px;
+            background: white;
             box-sizing: border-box;
-            margin: 0 auto;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
         .header-info {
@@ -78,50 +69,83 @@
             border: 1px solid #d0d0d0;
         }
 
-        .table-wrapper {
-            overflow: hidden;
-            border: 1px solid #d0d0d0;
-            background: white;
-            width: fit-content;
-            min-width: 100%;
+        .main-content {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
             box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
         }
 
         table {
             border-collapse: collapse;
-            width: fit-content;
+            width: max-content; /* fit to defined column widths */
             table-layout: fixed;
-            font-size: 7pt;
-            min-width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
+            font-size: 12px;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            border: 1px solid #000000;
         }
 
         th, td {
-            border: 1px solid #d0d0d0;
+            border: 1px solid #000000;
             padding: 6px 8px;
             text-align: center;
             vertical-align: middle;
-            word-wrap: break-word;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
             box-sizing: border-box;
-            max-width: 200px;
+            font-size: 12px;
+            height: 28px; /* fixed height to prevent elongation */
+            line-height: 26px;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            min-width: 40px;
         }
 
-        /* Double bottom border for rows to create separation */
-        tr {
-            border-bottom: 3px double #333;
+        /* Excel-like header styling */
+        .header-cell {
+            background: #D3D3D3 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 4px 6px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+            font-family: 'Arial', 'Helvetica', sans-serif;
         }
 
-        /* Remove border from last cell in each row to avoid border stacking */
-        td:last-child {
-            border-right: 1px solid #d0d0d0;
+        .main-header {
+            background: #A9A9A9 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
         }
 
-        th:last-child {
-            border-right: 1px solid #d0d0d0;
+        .section-header {
+            background: #C0C0C0 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Data rows styling */
+        tbody tr:nth-child(even) td {
+            background: #FFFFFF !important;
+        }
+
+        tbody tr:nth-child(odd) td {
+            background: #F5F5F5 !important;
+        }
+
+        tbody tr:hover td {
+            background: #E3F2FD !important;
         }
 
         .text-left {
@@ -141,7 +165,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 7pt;
+            font-size: 11px;
             padding: 3px;
             border: 1px solid #d0d0d0;
             position: relative;
@@ -152,7 +176,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 8pt;
+            font-size: 12px;
             border: 1px solid #d0d0d0;
             padding: 4px;
             position: relative;
@@ -163,7 +187,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             padding: 3px;
             position: relative;
@@ -378,69 +402,120 @@
             background: #ffffff !important;
         }
 
-        /* Column widths */
+        /* Excel-like column widths - zoom protected */
         .col-no {
-            width: 30px; max-width: 40px; min-width: 30px;
+            width: 50px !important;
+            min-width: 50px !important;
+            max-width: 60px !important;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-gender {
-            width: 25px; max-width: 30px; min-width: 25px;
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 50px !important;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-nik {
-            width: 80px; max-width: 90px; min-width: 75px;
+            width: 90px !important;
+            min-width: 80px !important;
+            max-width: 100px !important;
             text-align: center !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
         .col-name {
-            width: 120px; max-width: 150px; min-width: 100px;
+            width: 160px !important;
+            min-width: 140px !important;
+            max-width: 180px !important;
             text-align: left !important;
-            font-weight: bold;
-            font-size: 9pt;
-            color: #2c3e50;
-            border: 1px solid #d0d0d0;
+            font-weight: normal;
         }
-        .col-upah-dasar { width: 90px; max-width: 100px; min-width: 80px; }
-        .col-hari-kerja { width: 40px; max-width: 45px; min-width: 35px; }
-        .col-upah-pokok { width: 100px; max-width: 120px; min-width: 90px; }
-            .col-cuti {
-            width: 30px; max-width: 35px; min-width: 25px;
-            background: #f8d7da;
-            color: #721c24;
-            font-weight: bold;
-            font-size: 9pt;
-            text-align: center !important;
-            border: 1px solid #d0d0d0;
+        /* Financial columns - zoom protected */
+        .col-upah-dasar {
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
+            text-align: right;
         }
-        .col-rp { width: 70px; max-width: 80px; min-width: 60px; }
-        .col-hk { width: 35px; max-width: 40px; min-width: 30px; }
-        .col-gaji-pokok { width: 100px; max-width: 120px; min-width: 90px; }
-          .col-tunjangan {
-            width: 50px; max-width: 60px; min-width: 45px;
-            text-align: right !important;
-            font-weight: bold;
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #d0d0d0;
-            font-size: 9pt;
+        .col-hari-kerja {
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
+            text-align: center;
         }
-        .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
-        .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
-        .col-astek { width: 60px; max-width: 70px; min-width: 55px; }
-        .col-bpjs { width: 60px; max-width: 70px; min-width: 55px; }
-        .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
-        .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
+        .col-upah-pokok {
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
+            text-align: right;
+        }
+        .col-cuti {
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
+            text-align: center;
+        }
+        .col-rp {
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
+            text-align: center;
+        }
+        .col-hk {
+            width: 50px !important;
+            min-width: 40px !important;
+            max-width: 60px !important;
+            text-align: center;
+        }
+        .col-gaji-pokok {
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
+            text-align: right;
+        }
+        .col-tunjangan {
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
+            text-align: right;
+        }
+        .col-total-tunjangan {
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
+            text-align: right;
+        }
+        .col-potongan {
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
+            text-align: right;
+        }
+        .col-astek {
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
+            text-align: right;
+        }
+        .col-bpjs {
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
+            text-align: right;
+        }
+        .col-upah {
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
+            text-align: right;
+        }
+        .col-tidak-hadir {
+            width: 50px !important;
+            min-width: 40px !important;
+            max-width: 60px !important;
+            text-align: center;
+        }
 
         /* Total Premi Column - Matching Total Tunjangan styling */
         .col-total-premi {
@@ -448,7 +523,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             color: #721c24 !important;
             border: 1px solid #d0d0d0 !important;
         }
@@ -459,7 +534,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #721c24 !important;
             border: 1px solid #d0d0d0 !important;
         }
@@ -478,7 +553,7 @@
             background: #e8f5e8;
             color: #2e7d32;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Caruman ASTEK column styling */
@@ -488,7 +563,7 @@
             background: #e8f5e8;
             color: #2e7d32;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Potongan BPJS column styling */
@@ -498,7 +573,7 @@
             background: #fff3e0;
             color: #e65100;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Premi sub-headers styling */
@@ -507,7 +582,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1004;
@@ -519,7 +594,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1005;
@@ -531,7 +606,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1006;
@@ -562,7 +637,7 @@
             background: #e3f2fd;
             color: #0c5460;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         .col-hk {
@@ -571,7 +646,7 @@
             background: #e3f2fd;
             color: #0c5460;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Gaji Pokok styling */
@@ -579,7 +654,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             background: #d4edda;
             color: #155724;
             border: 1px solid #d0d0d0;
@@ -590,7 +665,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             background: #e8f5e8;
             color: #388e3c;
             border: 1px solid #d0d0d0;
@@ -602,7 +677,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 8pt;
+            font-size: 12px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1003;
@@ -613,7 +688,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #721c24;
             border: 1px solid #d0d0d0;
         }
@@ -644,7 +719,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #856404;
             border: 1px solid #d0d0d0;
         }
@@ -677,40 +752,54 @@
 
         /* Professional wrapper with dimension controls */
         .pro-wrapper {
-            width: fit-content;
-            min-width: 100%;
-            max-width: 100%;
-            overflow: hidden;
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: scroll;
+            overflow-y: hidden;
             margin: 0 auto;
             box-sizing: border-box;
+            min-height: 600px;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
         }
 
         .pro-wrapper .payroll-table {
-            width: fit-content;
-            table-layout: fixed;
+            width: auto;
+            table-layout: auto;
             border-collapse: collapse;
+            min-width: 3200px;
         }
 
         .pro-wrapper th,
         .pro-wrapper td {
             position: relative;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
             box-sizing: border-box;
-            padding: 8px 12px;
-            min-width: 60px;
-            max-width: 180px;
+            padding: 10px 15px;
+            min-width: 100px;
+            white-space: normal;
+            word-wrap: break-word;
+            height: auto;
+            min-height: 45px;
+            vertical-align: middle;
+            text-align: center;
         }
 
-        .pro-wrapper th:hover,
-        .pro-wrapper td:hover {
-            position: relative;
-            z-index: 10;
-            overflow: visible;
-            white-space: normal;
-            background: inherit;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        .pro-wrapper .header-cell {
+            font-weight: bold;
+            font-size: 9pt;
+            line-height: 1.2;
+            padding: 12px 8px;
+            min-width: 120px;
+        }
+
+        .pro-wrapper .main-header {
+            min-width: 80px;
+            padding: 15px 8px;
+        }
+
+        .pro-wrapper .section-header {
+            min-width: 150px;
+            padding: 15px 12px;
         }
 
         /* Enhanced header styling with center alignment */
@@ -879,62 +968,170 @@
             transition: all 0.3s ease;
         }
 
-        /* Custom scrollbar */
+        /* Enhanced Custom scrollbar */
         .table-wrapper::-webkit-scrollbar {
-            height: 12px;
+            height: 16px;
+            width: 16px;
+            background: #f1f1f1;
         }
 
         .table-wrapper::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 8px;
         }
 
         .table-wrapper::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 6px;
+            background: linear-gradient(180deg, #c1c1c1, #a8a8a8);
+            border-radius: 8px;
+            border: 2px solid #f1f1f1;
+            min-height: 40px;
         }
 
         .table-wrapper::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-    </style>
-    <!-- Zoom-stabilizer overrides: enforce px units and fixed cell heights -->
-    <style>
-        /* Ensure consistent box model */
-        *, *::before, *::after { box-sizing: border-box; }
-
-        /* Stabilize table cell sizing using px to avoid pt/DPI rounding */
-        th, td {
-            height: 28px !important;
-            line-height: 1.2 !important;
-            font-size: 12px !important;
-            padding: 6px 8px !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
+            background: linear-gradient(180deg, #a8a8a8, #959595);
+            cursor: pointer;
         }
 
-        /* Header cells with multi-line labels need a minimum height */
-        .header-cell, .main-header, .section-header {
-            min-height: 36px !important;
-            line-height: 1.15 !important;
-            padding: 4px 6px !important;
+        .table-wrapper::-webkit-scrollbar-thumb:active {
+            background: linear-gradient(180deg, #959595, #808080);
         }
 
-        /* Keep fixed layout; avoid vertical expansion by preserving nowrap */
-        table { table-layout: fixed !important; }
+        /* Firefox scrollbar support */
+        .table-wrapper {
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
 
-        /* Device pixel ratio adjustments to maintain visual consistency at zoom */
-        @media (min-resolution: 1.25dppx) {
-            th, td { font-size: 11px !important; padding: 5px 7px !important; height: 28px !important; }
-            .header-cell, .main-header, .section-header { min-height: 34px !important; }
+        .table-wrapper:hover {
+            scrollbar-width: auto;
         }
-        @media (min-resolution: 1.5dppx) {
-            th, td { font-size: 10px !important; padding: 4px 6px !important; height: 28px !important; }
-            .header-cell, .main-header, .section-header { min-height: 32px !important; }
+
+        /* Enhanced responsive column optimization */
+        @media screen and (max-width: 1400px) {
+            .col-no { width: 45px; min-width: 45px; font-size: 8pt; }
+            .col-gender { width: 40px; min-width: 40px; font-size: 8pt; }
+            .col-nik { width: 85px; min-width: 85px; font-size: 8pt; }
+            .col-name { width: 150px; min-width: 150px; font-size: 8pt; }
+            .col-upah-dasar { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-hari-kerja { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-upah-pokok { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-cuti { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-rp { width: 65px; min-width: 65px; font-size: 8pt; }
+            .col-hk { width: 55px; min-width: 55px; font-size: 8pt; }
+            .col-gaji-pokok { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-tunjangan { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-total-tunjangan { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-potongan { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-astek { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-bpjs { width: 80px; min-width: 80px; font-size: 8pt; }
+            .col-upah { width: 100px; min-width: 100px; font-size: 8pt; }
+            .col-tidak-hadir { width: 55px; min-width: 55px; font-size: 8pt; }
         }
-        @media (min-resolution: 2dppx) {
-            th, td { font-size: 9px !important; padding: 3px 5px !important; height: 28px !important; }
-            .header-cell, .main-header, .section-header { min-height: 30px !important; }
+
+        @media screen and (max-width: 1200px) {
+            .col-no { width: 40px; min-width: 40px; font-size: 7pt; padding: 6px 3px; }
+            .col-gender { width: 35px; min-width: 35px; font-size: 7pt; padding: 6px 3px; }
+            .col-nik { width: 75px; min-width: 75px; font-size: 7pt; padding: 6px 4px; }
+            .col-name { width: 130px; min-width: 130px; font-size: 7pt; padding: 6px 6px; }
+            .col-upah-dasar { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-hari-kerja { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-upah-pokok { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-cuti { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-rp { width: 55px; min-width: 55px; font-size: 7pt; padding: 6px 4px; }
+            .col-hk { width: 45px; min-width: 45px; font-size: 7pt; padding: 6px 4px; }
+            .col-gaji-pokok { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-tunjangan { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-total-tunjangan { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-potongan { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-astek { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-bpjs { width: 70px; min-width: 70px; font-size: 7pt; padding: 6px 6px; }
+            .col-upah { width: 85px; min-width: 85px; font-size: 7pt; padding: 6px 6px; }
+            .col-tidak-hadir { width: 45px; min-width: 45px; font-size: 7pt; padding: 6px 4px; }
+        }
+
+        @media screen and (max-width: 1024px) {
+            .col-no { width: 35px; min-width: 35px; font-size: 6.5pt; padding: 5px 2px; }
+            .col-gender { width: 30px; min-width: 30px; font-size: 6.5pt; padding: 5px 2px; }
+            .col-nik { width: 65px; min-width: 65px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-name { width: 110px; min-width: 110px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-upah-dasar { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-hari-kerja { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-upah-pokok { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-cuti { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-rp { width: 50px; min-width: 50px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-hk { width: 40px; min-width: 40px; font-size: 6.5pt; padding: 5px 3px; }
+            .col-gaji-pokok { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-tunjangan { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-total-tunjangan { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-potongan { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-astek { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-bpjs { width: 60px; min-width: 60px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-upah { width: 75px; min-width: 75px; font-size: 6.5pt; padding: 5px 5px; }
+            .col-tidak-hadir { width: 40px; min-width: 40px; font-size: 6.5pt; padding: 5px 3px; }
+        }
+
+        /* Zoom protection - prevent vertical layout on zoom */
+        @media screen and (max-resolution: 119dpi) {
+            table {
+                min-width: 2800px !important;
+                table-layout: fixed !important;
+            }
+        }
+
+        @media screen and (max-resolution: 99dpi) {
+            table {
+                min-width: 2600px !important;
+            }
+            th, td {
+                padding: 4px 6px !important;
+                font-size: 8pt !important;
+            }
+        }
+
+        /* Zoom level specific protections */
+        @media screen and (min-resolution: 144dpi) {
+            /* High DPI/zoomed in - maintain layout */
+            body {
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                font-size: 8pt !important;
+            }
+
+            table {
+                min-width: 3200px !important;
+                table-layout: fixed !important;
+            }
+
+            th, td {
+                padding: 3px 5px !important;
+                font-size: 7pt !important;
+                min-width: 35px !important;
+            }
+        }
+
+        /* Enhanced touch scrolling for mobile devices */
+        @media screen and (max-width: 768px) {
+            .main-content {
+                -webkit-overflow-scrolling: touch;
+                overflow-x: scroll;
+                scrollbar-width: none;
+            }
+            .main-content::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        /* Prevent layout break on extreme zoom */
+        @media screen and (max-width: 1024px) {
+            body {
+                overflow-x: scroll !important;
+                overflow-y: hidden !important;
+            }
+
+            table {
+                min-width: 2500px !important;
+                table-layout: fixed !important;
+            }
         }
     </style>
     <!-- Modular styles (relative to generated output directory) -->
@@ -943,27 +1140,26 @@
     <link rel="stylesheet" href="professional-table-wrap.module.css">
 </head>
 <body>
-    <div class="report-wrapper pro-wrapper">
-        <div class="header-info">
-            <div class="header-row">
-                <div class="header-label">PERUSAHAAN:</div>
-                <div class="header-value">{company_name}</div>
-            </div>
-            <div class="header-row">
-                <div class="header-label">PERIODE:</div>
-                <div class="header-value">Mei 2025</div>
-            </div>
-            <div class="header-row" style="justify-content: flex-end;">
-                <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
-            </div>
+    <div class="header-info">
+        <div class="header-row">
+            <div class="header-label">PERUSAHAAN:</div>
+            <div class="header-value">{company_name}</div>
         </div>
-
-        <div class="report-title">
-            DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
+        <div class="header-row">
+            <div class="header-label">PERIODE:</div>
+            <div class="header-value">Mei 2025</div>
         </div>
-        <div class="gang-desc">PT. Rebinmas Jaya | HARVESTING AIK BANGEK H1H</div>
+        <div class="header-row" style="justify-content: flex-end;">
+            <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
+        </div>
+    </div>
 
-        <div class="table-wrapper pro-wrapper">
+    <div class="report-title">
+        DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
+    </div>
+    <div class="gang-desc">PT. Rebinmas Jaya | HARVESTING AIK BANGEK H1H</div>
+
+    <div class="main-content">
             <table class="payroll-table">
                 <!-- Main Header Row -->
                 <tr>
@@ -2972,29 +3168,125 @@
                     <td class="number-cell col-tidak-hadir" style="background-color: #34495e; color: white;">0</td>
                 </tr>
             </table>
-        </div>
-
-        <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
-            <div style="text-align: center; width: 150px;">
-                <div>Menyetujui,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Diperiksa oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-            <div style="text-align: center; width: 150px;">
-                <div>Dibuat oleh,</div>
-                <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
-                <div>(.........................)</div>
-            </div>
-        </div>
-
-        <div class="print-footer">Dicetak tanggal: 09-11-2025</div>
     </div>
+
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; font-size: 9pt;">
+        <div style="text-align: center; width: 150px;">
+            <div>Menyetujui,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Diperiksa oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+        <div style="text-align: center; width: 150px;">
+            <div>Dibuat oleh,</div>
+            <div style="border-top: 1px solid black; margin: 20px 0 5px 0;">&nbsp;</div>
+            <div>(.........................)</div>
+        </div>
+    </div>
+
+    <div class="print-footer">Dicetak tanggal: 10-11-2025</div>
     <!-- JS: Tooltip and truncation detection -->
     <script src="table-enhancements.js"></script>
+
+    <!-- Enhanced horizontal scrolling script with zoom protection -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mainContent = document.querySelector('.main-content');
+        const body = document.body;
+        const table = document.querySelector('table');
+
+        if (mainContent && table) {
+            // Zoom detection and protection
+            function checkZoomLevel() {
+                const zoomLevel = window.devicePixelRatio || 1;
+                const tableWidth = table.offsetWidth;
+
+                // Force minimum table width on zoom
+                if (zoomLevel > 1.2 || window.innerWidth < 1200) {
+                    table.style.minWidth = '3000px';
+                    table.style.tableLayout = 'fixed';
+
+                    // Adjust font sizes for high zoom
+                    const cells = table.querySelectorAll('th, td');
+                    cells.forEach(cell => {
+                        if (zoomLevel > 1.5) {
+                            cell.style.fontSize = '7pt';
+                            cell.style.padding = '3px 4px';
+                        } else if (zoomLevel > 1.2) {
+                            cell.style.fontSize = '8pt';
+                            cell.style.padding = '4px 6px';
+                        }
+                    });
+                } else {
+                    table.style.minWidth = '2500px';
+                }
+            }
+
+            // Initial zoom check
+            checkZoomLevel();
+
+            // Check zoom on window resize
+            window.addEventListener('resize', function() {
+                checkZoomLevel();
+            });
+
+            // Mouse wheel scrolling with zoom protection
+            mainContent.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    mainContent.scrollLeft += e.deltaY * 2;
+
+                    // Re-check zoom during scroll
+                    checkZoomLevel();
+                }
+            }, { passive: false });
+
+            // Add keyboard navigation to body
+            body.setAttribute('tabindex', '0');
+            body.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        mainContent.scrollLeft -= 100;
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        mainContent.scrollLeft += 100;
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        mainContent.scrollLeft = 0;
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        mainContent.scrollLeft = mainContent.scrollWidth;
+                        break;
+                }
+            });
+
+            // Visual feedback for scrolling
+            let isScrolling;
+            mainContent.addEventListener('scroll', function() {
+                body.style.backgroundColor = '#f0f8ff';
+                window.clearTimeout(isScrolling);
+                isScrolling = setTimeout(function() {
+                    body.style.backgroundColor = 'white';
+                }, 150);
+            });
+
+            // Auto focus for keyboard navigation
+            body.focus();
+
+            // Force table layout on load
+            setTimeout(function() {
+                checkZoomLevel();
+            }, 100);
+        }
+    });
+    </script>
 </body>
 </html>

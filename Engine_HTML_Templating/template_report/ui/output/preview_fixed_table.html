@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview Fixed-Width Payroll Table</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; background: #34495e; color: #fff; font-size: 14px;
+    }
+    .note { color: #ecf0f1; font-size: 12px; }
+    .frame-wrap { height: calc(100vh - 48px); }
+    iframe { width: 100%; height: 100%; border: none; background: #fff; }
+    .hint-list { margin: 6px 0 0 0; padding-left: 18px; }
+    .hint-list li { line-height: 1.4; }
+  </style>
+  <link rel="stylesheet" href="professional-table.module.css" />
+  <link rel="stylesheet" href="professional-table-wrap.module.css" />
+  <link rel="stylesheet" href="row-styles.module.css" />
+  <link rel="stylesheet" href="column-styles.module.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      Preview: Fixed px sizing and row heights
+      <ul class="hint-list">
+        <li>Use Ctrl + Mouse Wheel to zoom in/out.</li>
+        <li>Verify rows stay at consistent height and table scrolls horizontally.</li>
+        <li>If columns clip, check updated template CSS in the parent folder.</li>
+      </ul>
+    </div>
+    <div class="note">Source: ../daftar_upah_template_final.html</div>
+  </div>
+  <div class="frame-wrap">
+    <iframe src="../daftar_upah_template_final.html" title="Daftar Upah Template Preview"></iframe>
+  </div>
+</body>
+</html>

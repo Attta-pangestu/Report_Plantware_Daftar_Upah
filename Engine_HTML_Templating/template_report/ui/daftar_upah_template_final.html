@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAFTAR UPAH - {bulan} {tahun}</title>
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
         @page {
             /* F4 landscape with minimum 1cm margins */
             size: 330mm 210mm;
@@ -13,9 +14,9 @@
 
         body {
             font-family: 'Arial', 'Helvetica', sans-serif;
-            font-size: 10pt;
+            font-size: 12px;
             margin: 0;
-            padding: 8px;
+            padding: 10px;
             background: white;
             box-sizing: border-box;
             overflow-x: auto;
@@ -69,7 +70,7 @@
         }
 
         .main-content {
-            overflow-x: scroll;
+            overflow-x: auto;
             overflow-y: hidden;
             width: 100%;
             box-sizing: border-box;
@@ -78,12 +79,10 @@
 
         table {
             border-collapse: collapse;
-            width: auto;
-            min-width: 3200px;
-            table-layout: auto;
-            font-size: 9pt;
+            width: max-content; /* fit to defined column widths */
+            table-layout: fixed;
+            font-size: 12px;
             font-family: 'Arial', 'Helvetica', sans-serif;
-            box-sizing: border-box;
             border: 1px solid #000000;
         }
 
@@ -93,10 +92,14 @@
             text-align: center;
             vertical-align: middle;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             box-sizing: border-box;
-            font-size: 9pt;
-            height: 24px;
+            font-size: 12px;
+            height: 28px; /* fixed height to prevent elongation */
+            line-height: 26px;
             font-family: 'Arial', 'Helvetica', sans-serif;
+            min-width: 40px;
         }
 
         /* Excel-like header styling */
@@ -104,7 +107,7 @@
             background: #D3D3D3 !important;
             color: #000000 !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             padding: 4px 6px;
             border: 1px solid #000000 !important;
             text-align: center;
@@ -116,7 +119,7 @@
             background: #A9A9A9 !important;
             color: #000000 !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             border: 1px solid #000000 !important;
             text-align: center;
             vertical-align: middle;
@@ -126,7 +129,7 @@
             background: #C0C0C0 !important;
             color: #000000 !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             border: 1px solid #000000 !important;
             text-align: center;
             vertical-align: middle;
@@ -162,7 +165,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 7pt;
+            font-size: 11px;
             padding: 3px;
             border: 1px solid #d0d0d0;
             position: relative;
@@ -173,7 +176,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 8pt;
+            font-size: 12px;
             border: 1px solid #d0d0d0;
             padding: 4px;
             position: relative;
@@ -184,7 +187,7 @@
             background: #34495e !important;
             color: white !important;
             font-weight: bold;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             padding: 3px;
             position: relative;
@@ -399,82 +402,118 @@
             background: #ffffff !important;
         }
 
-        /* Excel-like column widths - more compact */
+        /* Excel-like column widths - zoom protected */
         .col-no {
-            width: 50px; min-width: 50px;
+            width: 50px !important;
+            min-width: 50px !important;
+            max-width: 60px !important;
             text-align: center !important;
             font-weight: normal;
         }
         .col-gender {
-            width: 40px; min-width: 40px;
+            width: 40px !important;
+            min-width: 40px !important;
+            max-width: 50px !important;
             text-align: center !important;
             font-weight: normal;
         }
         .col-nik {
-            width: 90px; min-width: 90px;
+            width: 90px !important;
+            min-width: 80px !important;
+            max-width: 100px !important;
             text-align: center !important;
             font-weight: normal;
         }
         .col-name {
-            width: 160px; min-width: 160px;
+            width: 160px !important;
+            min-width: 140px !important;
+            max-width: 180px !important;
             text-align: left !important;
             font-weight: normal;
         }
-        /* Financial columns - more compact */
+        /* Financial columns - zoom protected */
         .col-upah-dasar {
-            width: 100px; min-width: 100px;
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
             text-align: right;
         }
         .col-hari-kerja {
-            width: 60px; min-width: 60px;
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
             text-align: center;
         }
         .col-upah-pokok {
-            width: 100px; min-width: 100px;
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
             text-align: right;
         }
         .col-cuti {
-            width: 60px; min-width: 60px;
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
             text-align: center;
         }
         .col-rp {
-            width: 60px; min-width: 60px;
+            width: 60px !important;
+            min-width: 50px !important;
+            max-width: 70px !important;
             text-align: center;
         }
         .col-hk {
-            width: 50px; min-width: 50px;
+            width: 50px !important;
+            min-width: 40px !important;
+            max-width: 60px !important;
             text-align: center;
         }
         .col-gaji-pokok {
-            width: 100px; min-width: 100px;
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
             text-align: right;
         }
         .col-tunjangan {
-            width: 80px; min-width: 80px;
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
             text-align: right;
         }
         .col-total-tunjangan {
-            width: 100px; min-width: 100px;
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
             text-align: right;
         }
         .col-potongan {
-            width: 80px; min-width: 80px;
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
             text-align: right;
         }
         .col-astek {
-            width: 80px; min-width: 80px;
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
             text-align: right;
         }
         .col-bpjs {
-            width: 80px; min-width: 80px;
+            width: 80px !important;
+            min-width: 70px !important;
+            max-width: 90px !important;
             text-align: right;
         }
         .col-upah {
-            width: 100px; min-width: 100px;
+            width: 100px !important;
+            min-width: 80px !important;
+            max-width: 120px !important;
             text-align: right;
         }
         .col-tidak-hadir {
-            width: 50px; min-width: 50px;
+            width: 50px !important;
+            min-width: 40px !important;
+            max-width: 60px !important;
             text-align: center;
         }
 
@@ -484,7 +523,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             color: #721c24 !important;
             border: 1px solid #d0d0d0 !important;
         }
@@ -495,7 +534,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #721c24 !important;
             border: 1px solid #d0d0d0 !important;
         }
@@ -514,7 +553,7 @@
             background: #e8f5e8;
             color: #2e7d32;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Caruman ASTEK column styling */
@@ -524,7 +563,7 @@
             background: #e8f5e8;
             color: #2e7d32;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Potongan BPJS column styling */
@@ -534,7 +573,7 @@
             background: #fff3e0;
             color: #e65100;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Premi sub-headers styling */
@@ -543,7 +582,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1004;
@@ -555,7 +594,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1005;
@@ -567,7 +606,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 7pt;
+            font-size: 11px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1006;
@@ -598,7 +637,7 @@
             background: #e3f2fd;
             color: #0c5460;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         .col-hk {
@@ -607,7 +646,7 @@
             background: #e3f2fd;
             color: #0c5460;
             border: 1px solid #d0d0d0;
-            font-size: 9pt;
+            font-size: 12px;
         }
 
         /* Gaji Pokok styling */
@@ -615,7 +654,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             background: #d4edda;
             color: #155724;
             border: 1px solid #d0d0d0;
@@ -626,7 +665,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 9pt;
+            font-size: 12px;
             background: #e8f5e8;
             color: #388e3c;
             border: 1px solid #d0d0d0;
@@ -638,7 +677,7 @@
             color: white !important;
             font-weight: bold;
             text-align: center;
-            font-size: 8pt;
+            font-size: 12px;
             border: 1px solid #d0d0d0;
             position: relative;
             z-index: 1003;
@@ -649,7 +688,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #721c24;
             border: 1px solid #d0d0d0;
         }
@@ -680,7 +719,7 @@
             text-align: right !important;
             padding-right: 5px !important;
             font-weight: bold;
-            font-size: 10pt;
+            font-size: 13px;
             color: #856404;
             border: 1px solid #d0d0d0;
         }
@@ -1031,15 +1070,67 @@
             .col-tidak-hadir { width: 40px; min-width: 40px; font-size: 6.5pt; padding: 5px 3px; }
         }
 
+        /* Zoom protection - prevent vertical layout on zoom */
+        @media screen and (max-resolution: 119dpi) {
+            table {
+                min-width: 2800px !important;
+                table-layout: fixed !important;
+            }
+        }
+
+        @media screen and (max-resolution: 99dpi) {
+            table {
+                min-width: 2600px !important;
+            }
+            th, td {
+                padding: 4px 6px !important;
+                font-size: 8pt !important;
+            }
+        }
+
+        /* Zoom level specific protections */
+        @media screen and (min-resolution: 144dpi) {
+            /* High DPI/zoomed in - maintain layout */
+            body {
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                font-size: 8pt !important;
+            }
+
+            table {
+                min-width: 3200px !important;
+                table-layout: fixed !important;
+            }
+
+            th, td {
+                padding: 3px 5px !important;
+                font-size: 7pt !important;
+                min-width: 35px !important;
+            }
+        }
+
         /* Enhanced touch scrolling for mobile devices */
         @media screen and (max-width: 768px) {
-            .table-wrapper {
+            .main-content {
                 -webkit-overflow-scrolling: touch;
                 overflow-x: scroll;
                 scrollbar-width: none;
             }
-            .table-wrapper::-webkit-scrollbar {
+            .main-content::-webkit-scrollbar {
                 display: none;
+            }
+        }
+
+        /* Prevent layout break on extreme zoom */
+        @media screen and (max-width: 1024px) {
+            body {
+                overflow-x: scroll !important;
+                overflow-y: hidden !important;
+            }
+
+            table {
+                min-width: 2500px !important;
+                table-layout: fixed !important;
             }
         }
     </style>
@@ -1301,18 +1392,56 @@
     <!-- JS: Tooltip and truncation detection -->
     <script src="table-enhancements.js"></script>
 
-    <!-- Enhanced horizontal scrolling script -->
+    <!-- Enhanced horizontal scrolling script with zoom protection -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const mainContent = document.querySelector('.main-content');
         const body = document.body;
+        const table = document.querySelector('table');
 
-        if (mainContent) {
-            // Ensure scrolling works on mouse wheel
+        if (mainContent && table) {
+            // Zoom detection and protection
+            function checkZoomLevel() {
+                const zoomLevel = window.devicePixelRatio || 1;
+                const tableWidth = table.offsetWidth;
+
+                // Force minimum table width on zoom
+                if (zoomLevel > 1.2 || window.innerWidth < 1200) {
+                    table.style.minWidth = '3000px';
+                    table.style.tableLayout = 'fixed';
+
+                    // Adjust font sizes for high zoom
+                    const cells = table.querySelectorAll('th, td');
+                    cells.forEach(cell => {
+                        if (zoomLevel > 1.5) {
+                            cell.style.fontSize = '7pt';
+                            cell.style.padding = '3px 4px';
+                        } else if (zoomLevel > 1.2) {
+                            cell.style.fontSize = '8pt';
+                            cell.style.padding = '4px 6px';
+                        }
+                    });
+                } else {
+                    table.style.minWidth = '2500px';
+                }
+            }
+
+            // Initial zoom check
+            checkZoomLevel();
+
+            // Check zoom on window resize
+            window.addEventListener('resize', function() {
+                checkZoomLevel();
+            });
+
+            // Mouse wheel scrolling with zoom protection
             mainContent.addEventListener('wheel', function(e) {
                 if (e.deltaY !== 0) {
                     e.preventDefault();
                     mainContent.scrollLeft += e.deltaY * 2;
+
+                    // Re-check zoom during scroll
+                    checkZoomLevel();
                 }
             }, { passive: false });
 
@@ -1351,6 +1480,11 @@
 
             // Auto focus for keyboard navigation
             body.focus();
+
+            // Force table layout on load
+            setTimeout(function() {
+                checkZoomLevel();
+            }, 100);
         }
     });
     </script>

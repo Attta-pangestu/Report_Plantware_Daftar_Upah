@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom Protection Test - Daftar Upah</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            font-size: 13px;
+            margin: 0;
+            padding: 8px;
+            background: white;
+            box-sizing: border-box;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .main-content {
+            overflow-x: scroll;
+            overflow-y: hidden;
+            width: 100%;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: auto;
+            min-width: 3000px;
+            table-layout: fixed;
+            font-size: 12px;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            box-sizing: border-box;
+            border: 1px solid #000000;
+        }
+
+        th, td {
+            border: 1px solid #000000;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            font-size: 12px;
+            height: 28px;
+            line-height: 1.2;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            min-width: 40px;
+        }
+
+        /* Excel-like header styling */
+        .header-cell {
+            background: #D3D3D3 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 4px 6px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+            min-height: 40px;
+        }
+
+        .main-header {
+            background: #A9A9A9 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 13px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+            min-height: 40px;
+        }
+
+        .section-header {
+            background: #C0C0C0 !important;
+            color: #000000 !important;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid #000000 !important;
+            text-align: center;
+            vertical-align: middle;
+            min-height: 40px;
+        }
+
+        /* Data rows styling */
+        tbody tr:nth-child(even) td {
+            background: #FFFFFF !important;
+        }
+
+        tbody tr:nth-child(odd) td {
+            background: #F5F5F5 !important;
+        }
+
+        tbody tr:hover td {
+            background: #E3F2FD !important;
+        }
+
+        /* Zoom protected column widths */
+        .col-no { width: 50px !important; min-width: 50px !important; max-width: 60px !important; text-align: center; }
+        .col-gender { width: 40px !important; min-width: 40px !important; max-width: 50px !important; text-align: center; }
+        .col-nik { width: 90px !important; min-width: 80px !important; max-width: 100px !important; text-align: center; }
+        .col-name { width: 160px !important; min-width: 140px !important; max-width: 180px !important; text-align: left; }
+        .col-upah-dasar { width: 100px !important; min-width: 80px !important; max-width: 120px !important; text-align: right; }
+        .col-hari-kerja { width: 60px !important; min-width: 50px !important; max-width: 70px !important; text-align: center; }
+        .col-upah-pokok { width: 100px !important; min-width: 80px !important; max-width: 120px !important; text-align: right; }
+        .col-cuti { width: 60px !important; min-width: 50px !important; max-width: 70px !important; text-align: center; }
+        .col-hk { width: 50px !important; min-width: 40px !important; max-width: 60px !important; text-align: center; }
+        .col-gaji-pokok { width: 100px !important; min-width: 80px !important; max-width: 120px !important; text-align: right; }
+        .col-tunjangan { width: 80px !important; min-width: 70px !important; max-width: 90px !important; text-align: right; }
+        .col-total-tunjangan { width: 100px !important; min-width: 80px !important; max-width: 120px !important; text-align: right; font-weight: bold; }
+        .col-potongan { width: 80px !important; min-width: 70px !important; max-width: 90px !important; text-align: right; }
+        .col-upah { width: 100px !important; min-width: 80px !important; max-width: 120px !important; text-align: right; font-weight: bold; }
+
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .number-cell { text-align: right; font-family: 'Arial', 'Helvetica', sans-serif; }
+
+        .title {
+            text-align: center;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 10px 0;
+            color: #000000;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 10pt;
+            margin: 5px 0;
+            color: #333333;
+        }
+
+        .zoom-info {
+            background: #fff3cd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            font-size: 9pt;
+        }
+
+        /* Zoom protection CSS */
+        @media (min-resolution: 1.25dppx) {
+            th, td { font-size: 11px !important; padding: 5px 7px !important; height: 28px !important; }
+            .header-cell, .main-header, .section-header { min-height: 38px !important; }
+        }
+        @media (min-resolution: 1.5dppx) {
+            th, td { font-size: 10px !important; padding: 4px 6px !important; height: 28px !important; }
+            .header-cell, .main-header, .section-header { min-height: 36px !important; }
+        }
+        @media (min-resolution: 2dppx) {
+            th, td { font-size: 9px !important; padding: 3px 5px !important; height: 28px !important; }
+            .header-cell, .main-header, .section-header { min-height: 34px !important; }
+        }
+        @media (max-width: 1024px) {
+            table { min-width: 2500px !important; table-layout: fixed !important; }
+        }
+    </style>
+    <link rel="stylesheet" href="zoom-protection.module.css">
+</head>
+<body>
+    <div class="title">ZOOM PROTECTION TEST - Daftar Upah</div>
+    <div class="subtitle">Coba zoom in/out (Ctrl +/-) untuk testing layout stability</div>
+
+    <div class="zoom-info">
+        💡 <strong>Test Instructions:</strong>
+        <ul>
+            <li>Zoom in: Ctrl + Plus (or Cmd + Plus)</li>
+            <li>Zoom out: Ctrl + Minus (or Cmd + Minus)</li>
+            <li>Reset: Ctrl + 0 (or Cmd + 0)</li>
+            <li>Table seharusnya TIDAK menjadi vertikal pada zoom apapun</li>
+            <li>Column width seharusnya maintained</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="3" class="header-cell col-no main-header">NO</th>
+                    <th rowspan="3" class="header-cell col-gender main-header">L/P</th>
+                    <th rowspan="3" class="header-cell col-nik main-header">NIK</th>
+                    <th rowspan="3" class="header-cell col-name main-header text-left">NAMA KARYAWAN</th>
+                    <th rowspan="3" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</th>
+                    <th rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</th>
+                    <th rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</th>
+                    <th colspan="2" class="header-cell section-header">Cuti/Libur</th>
+                    <th rowspan="3" class="header-cell col-hk main-header">JML<br>HK</th>
+                    <th rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI<br>POKOK</th>
+                    <th colspan="3" class="header-cell section-header">TUNJANGAN</th>
+                    <th rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</th>
+                    <th colspan="2" class="header-cell section-header">POTONGAN</th>
+                    <th rowspan="3" class="header-cell col-upah main-header">UPAH<br>BERSIH</th>
+                </tr>
+                <tr>
+                    <th class="header-cell col-cuti">SAKIT</th>
+                    <th class="header-cell col-cuti">IZIN</th>
+                    <th class="header-cell col-tunjangan">BERAS</th>
+                    <th class="header-cell col-tunjangan">TRANSPORT</th>
+                    <th class="header-cell col-tunjangan">KESEHATAN</th>
+                    <th class="header-cell col-potongan">BPJS</th>
+                    <th class="header-cell col-potongan">KASBON</th>
+                </tr>
+                <tr>
+                    <th class="header-cell col-cuti">H</th>
+                    <th class="header-cell col-cuti">H</th>
+                    <th class="header-cell col-tunjangan">Rp</th>
+                    <th class="header-cell col-tunjangan">Rp</th>
+                    <th class="header-cell col-tunjangan">Rp</th>
+                    <th class="header-cell col-potongan">Rp</th>
+                    <th class="header-cell col-potongan">Rp</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="col-no">1</td>
+                    <td class="col-gender">L</td>
+                    <td class="col-nik">1234567890</td>
+                    <td class="col-name text-left">AHMAD SUPRIADI KURNIAWAN</td>
+                    <td class="col-upah-dasar number-cell">150,000</td>
+                    <td class="col-hari-kerja">25</td>
+                    <td class="col-upah-pokok number-cell">3,750,000</td>
+                    <td class="col-cuti">0</td>
+                    <td class="col-cuti">1</td>
+                    <td class="col-hk">24</td>
+                    <td class="col-gaji-pokok number-cell">3,600,000</td>
+                    <td class="col-tunjangan number-cell">300,000</td>
+                    <td class="col-tunjangan number-cell">500,000</td>
+                    <td class="col-tunjangan number-cell">200,000</td>
+                    <td class="col-total-tunjangan number-cell">1,000,000</td>
+                    <td class="col-potongan number-cell">(200,000)</td>
+                    <td class="col-potongan number-cell">(100,000)</td>
+                    <td class="col-upah number-cell">4,300,000</td>
+                </tr>
+                <tr>
+                    <td class="col-no">2</td>
+                    <td class="col-gender">P</td>
+                    <td class="col-nik">2345678901</td>
+                    <td class="col-name text-left">SITI NURHALIZA RAHMAWATI</td>
+                    <td class="col-upah-dasar number-cell">140,000</td>
+                    <td class="col-hari-kerja">26</td>
+                    <td class="col-upah-pokok number-cell">3,640,000</td>
+                    <td class="col-cuti">2</td>
+                    <td class="col-cuti">0</td>
+                    <td class="col-hk">24</td>
+                    <td class="col-gaji-pokok number-cell">3,360,000</td>
+                    <td class="col-tunjangan number-cell">300,000</td>
+                    <td class="col-tunjangan number-cell">400,000</td>
+                    <td class="col-tunjangan number-cell">150,000</td>
+                    <td class="col-total-tunjangan number-cell">850,000</td>
+                    <td class="col-potongan number-cell">(180,000)</td>
+                    <td class="col-potongan number-cell">(50,000)</td>
+                    <td class="col-upah number-cell">4,010,000</td>
+                </tr>
+                <tr>
+                    <td class="col-no">3</td>
+                    <td class="col-gender">L</td>
+                    <td class="col-nik">3456789012</td>
+                    <td class="col-name text-left">BUDIMAN SUSANTO WIJAYA</td>
+                    <td class="col-upah-dasar number-cell">160,000</td>
+                    <td class="col-hari-kerja">27</td>
+                    <td class="col-upah-pokok number-cell">4,320,000</td>
+                    <td class="col-cuti">0</td>
+                    <td class="col-cuti">0</td>
+                    <td class="col-hk">27</td>
+                    <td class="col-gaji-pokok number-cell">4,320,000</td>
+                    <td class="col-tunjangan number-cell">350,000</td>
+                    <td class="col-tunjangan number-cell">600,000</td>
+                    <td class="col-tunjangan number-cell">250,000</td>
+                    <td class="col-total-tunjangan number-cell">1,200,000</td>
+                    <td class="col-potongan number-cell">(220,000)</td>
+                    <td class="col-potongan number-cell">(0)</td>
+                    <td class="col-upah number-cell">5,300,000</td>
+                </tr>
+                <tr>
+                    <td class="col-no">4</td>
+                    <td class="col-gender">L</td>
+                    <td class="col-nik">4567890123</td>
+                    <td class="col-name text-left">RUDI HARTONO KUSUMA</td>
+                    <td class="col-upah-dasar number-cell">130,000</td>
+                    <td class="col-hari-kerja">24</td>
+                    <td class="col-upah-pokok number-cell">3,120,000</td>
+                    <td class="col-cuti">1</td>
+                    <td class="col-cuti">2</td>
+                    <td class="col-hk">21</td>
+                    <td class="col-gaji-pokok number-cell">2,730,000</td>
+                    <td class="col-tunjangan number-cell">250,000</td>
+                    <td class="col-tunjangan number-cell">400,000</td>
+                    <td class="col-tunjangan number-cell">180,000</td>
+                    <td class="col-total-tunjangan number-cell">830,000</td>
+                    <td class="col-potongan number-cell">(150,000)</td>
+                    <td class="col-potongan number-cell">(200,000)</td>
+                    <td class="col-upah number-cell">2,980,000</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="background: #A9A9A9; font-weight: bold;">
+                    <td colspan="4" class="header-cell text-left">GRAND TOTAL</td>
+                    <td class="number-cell">-</td>
+                    <td class="number-cell">102</td>
+                    <td class="number-cell">14,830,000</td>
+                    <td class="number-cell">3</td>
+                    <td class="number-cell">3</td>
+                    <td class="number-cell">96</td>
+                    <td class="number-cell">14,010,000</td>
+                    <td class="number-cell">1,200,000</td>
+                    <td class="number-cell">1,900,000</td>
+                    <td class="number-cell">780,000</td>
+                    <td class="number-cell">3,880,000</td>
+                    <td class="number-cell">(750,000)</td>
+                    <td class="number-cell">(350,000)</td>
+                    <td class="number-cell">16,290,000</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const mainContent = document.querySelector('.main-content');
+        const body = document.body;
+        const table = document.querySelector('table');
+
+        if (mainContent && table) {
+            // Zoom detection and protection
+            function checkZoomLevel() {
+                const zoomLevel = window.devicePixelRatio || 1;
+                const tableWidth = table.offsetWidth;
+
+                console.log('Zoom level:', zoomLevel, 'Table width:', tableWidth, 'Window width:', window.innerWidth);
+
+                // Force minimum table width on zoom
+                if (zoomLevel > 1.2 || window.innerWidth < 1200) {
+                    table.style.minWidth = '3000px';
+                    table.style.tableLayout = 'fixed';
+
+                    // Adjust font sizes for high zoom
+                    const cells = table.querySelectorAll('th, td');
+                    cells.forEach(cell => {
+                        if (zoomLevel > 1.5) {
+                            cell.style.fontSize = '10px';
+                            cell.style.padding = '4px 6px';
+                        } else if (zoomLevel > 1.2) {
+                            cell.style.fontSize = '11px';
+                            cell.style.padding = '5px 7px';
+                        } else {
+                            cell.style.fontSize = '12px';
+                            cell.style.padding = '6px 8px';
+                        }
+                        cell.style.height = '28px';
+                        cell.style.lineHeight = '1.2';
+                    });
+                } else {
+                    table.style.minWidth = '2500px';
+                }
+            }
+
+            // Initial zoom check
+            checkZoomLevel();
+
+            // Check zoom on window resize
+            window.addEventListener('resize', function() {
+                checkZoomLevel();
+            });
+
+            // Mouse wheel scrolling with zoom protection
+            mainContent.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    mainContent.scrollLeft += e.deltaY * 2;
+                    checkZoomLevel();
+                }
+            }, { passive: false });
+
+            // Keyboard navigation
+            body.setAttribute('tabindex', '0');
+            body.addEventListener('keydown', function(e) {
+                switch(e.key) {
+                    case 'ArrowLeft': e.preventDefault(); mainContent.scrollLeft -= 100; break;
+                    case 'ArrowRight': e.preventDefault(); mainContent.scrollLeft += 100; break;
+                    case 'Home': e.preventDefault(); mainContent.scrollLeft = 0; break;
+                    case 'End': e.preventDefault(); mainContent.scrollLeft = mainContent.scrollWidth; break;
+                }
+            });
+
+            // Visual feedback
+            let isScrolling;
+            mainContent.addEventListener('scroll', function() {
+                body.style.backgroundColor = '#f0f8ff';
+                window.clearTimeout(isScrolling);
+                isScrolling = setTimeout(function() {
+                    body.style.backgroundColor = 'white';
+                }, 150);
+            });
+
+            body.focus();
+
+            // Force table layout on load
+            setTimeout(function() {
+                checkZoomLevel();
+            }, 100);
+        }
+    });
+    </script>
+</body>
+</html>
