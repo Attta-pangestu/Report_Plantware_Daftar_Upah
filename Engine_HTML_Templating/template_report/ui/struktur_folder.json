@@ -1,0 +1,475 @@
+{
+  "laporan_daftar_upah": {
+    "deskripsi": "Struktur lengkap tabel Laporan Daftar Upah Karyawan Gang dengan 3 level header",
+    "versi_template": "Final - November 2025",
+    "total_kolom": 66,
+    "struktur_header": {
+      "level_1": {
+        "kolom_1": {
+          "rowspan": 3,
+          "text": "NO",
+          "class": "header-cell col-no main-header",
+          "tipe": "single_row"
+        },
+        "kolom_2": {
+          "rowspan": 3,
+          "text": "L/P",
+          "class": "header-cell col-gender main-header",
+          "tipe": "single_row"
+        },
+        "kolom_3": {
+          "rowspan": 3,
+          "text": "NIK",
+          "class": "header-cell col-nik main-header",
+          "tipe": "single_row"
+        },
+        "kolom_4": {
+          "rowspan": 3,
+          "text": "NAMA",
+          "class": "header-cell col-name main-header",
+          "tipe": "single_row"
+        },
+        "kolom_5": {
+          "rowspan": 3,
+          "text": "UPAH DASAR",
+          "class": "header-cell col-upah-dasar main-header",
+          "tipe": "single_row"
+        },
+        "kolom_6": {
+          "rowspan": 3,
+          "text": "HARI KERJA",
+          "class": "header-cell col-hari-kerja main-header",
+          "tipe": "single_row"
+        },
+        "kolom_7": {
+          "rowspan": 3,
+          "text": "UPAH POKOK",
+          "class": "header-cell col-upah-pokok main-header",
+          "tipe": "single_row"
+        },
+        "kolom_8_12": {
+          "colspan": 5,
+          "text": "Cuti/Libur",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_13": {
+          "rowspan": 3,
+          "text": "Jumlah HK",
+          "class": "header-cell col-hk main-header",
+          "tipe": "single_row"
+        },
+        "kolom_14": {
+          "rowspan": 3,
+          "text": "GAJI POKOK",
+          "class": "header-cell col-gaji-pokok main-header",
+          "tipe": "single_row"
+        },
+        "kolom_15_22": {
+          "colspan": 8,
+          "text": "TUNJANGAN",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_23": {
+          "rowspan": 3,
+          "text": "TOTAL TUNJANGAN",
+          "class": "header-cell col-total-tunjangan main-header",
+          "tipe": "single_row"
+        },
+        "kolom_24_31": {
+          "colspan": 8,
+          "text": "PREMI",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_32": {
+          "rowspan": 3,
+          "text": "TOTAL PREMI",
+          "class": "header-cell col-total-premi main-header",
+          "tipe": "single_row"
+        },
+        "kolom_33": {
+          "rowspan": 3,
+          "text": "JUMLAH UPAH KOTOR (Rp)",
+          "class": "header-cell col-jumlah-upah-kotor main-header",
+          "tipe": "single_row"
+        },
+        "kolom_34_36": {
+          "colspan": 3,
+          "text": "CARUMAN ASTEK",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_37_42": {
+          "colspan": 6,
+          "text": "POTONGAN BPJS",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_43_44": {
+          "colspan": 2,
+          "text": "IURAN SPSI",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_45_46": {
+          "colspan": 2,
+          "text": "PPH21",
+          "class": "header-cell section-header",
+          "tipe": "multi_column"
+        },
+        "kolom_47": {
+          "rowspan": 3,
+          "text": "TOTAL POTONGAN",
+          "class": "header-cell col-total-potongan main-header",
+          "tipe": "single_row"
+        },
+        "kolom_48": {
+          "rowspan": 3,
+          "text": "UPAH BERSIH",
+          "class": "header-cell col-upah main-header",
+          "tipe": "single_row"
+        }
+      },
+      "level_2": {
+        "kolom_cuti_1": {
+          "text": "TAHUNAN (Izin)",
+          "class": "header-cell col-cuti",
+          "tipe": "sub_header"
+        },
+        "kolom_cuti_2": {
+          "text": "SAKIT + HAID",
+          "class": "header-cell col-cuti",
+          "tipe": "sub_header"
+        },
+        "kolom_cuti_3": {
+          "text": "MINGGU",
+          "class": "header-cell col-cuti",
+          "tipe": "sub_header"
+        },
+        "kolom_cuti_4": {
+          "text": "NASIONAL",
+          "class": "header-cell col-cuti",
+          "tipe": "sub_header"
+        },
+        "kolom_cuti_5": {
+          "text": "IZIN",
+          "class": "header-cell col-cuti",
+          "tipe": "sub_header"
+        },
+        "kolom_tunjangan_beras": {
+          "colspan": 2,
+          "text": "BERAS",
+          "class": "header-cell sub-header-tunjangan",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_tunjangan_jabatan": {
+          "colspan": 2,
+          "text": "JABATAN",
+          "class": "header-cell sub-header-tunjangan",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_tunjangan_masa_kerja": {
+          "colspan": 2,
+          "text": "MASA KERJA",
+          "class": "header-cell sub-header-tunjangan",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_tunjangan_lembur": {
+          "colspan": 2,
+          "text": "LEMBUR",
+          "class": "header-cell sub-header-tunjangan",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_premi_brondol": {
+          "text": "BRONDOL",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_pruning": {
+          "text": "PRUNING",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_panen": {
+          "text": "PANEN",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_cuci_unit": {
+          "text": "CUCI UNIT",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_blower": {
+          "text": "PREMI BLOWER",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_tabur_pupuk": {
+          "text": "TABUR PUPUK",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_incentive": {
+          "text": "INCENTIVE",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_premi_koreksi": {
+          "text": "KOREKSI (Minus)",
+          "class": "header-cell sub-header-premi",
+          "tipe": "sub_header"
+        },
+        "kolom_astek_pekerja": {
+          "text": "PEKERJA",
+          "class": "header-cell sub-header-astek",
+          "tipe": "sub_header"
+        },
+        "kolom_astek_majikan": {
+          "text": "MAJIKAN",
+          "class": "header-cell sub-header-astek",
+          "tipe": "sub_header"
+        },
+        "kolom_astek_jumlah": {
+          "text": "JUMLAH",
+          "class": "header-cell sub-header-astek",
+          "tipe": "sub_header"
+        },
+        "kolom_bpjs_kesehatan": {
+          "colspan": 2,
+          "text": "KESEHATAN",
+          "class": "header-cell sub-header-bpjs",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_bpjs_pensiun": {
+          "colspan": 2,
+          "text": "PENSIUN",
+          "class": "header-cell sub-header-bpjs",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_bpjs_jumlah": {
+          "colspan": 2,
+          "text": "JUMLAH",
+          "class": "header-cell sub-header-bpjs",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_spsi_jumlah": {
+          "colspan": 2,
+          "text": "JUMLAH",
+          "class": "header-cell sub-header-bpjs",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_pph21_jumlah": {
+          "colspan": 2,
+          "text": "JUMLAH",
+          "class": "header-cell sub-header-bpjs",
+          "tipe": "sub_header_multi"
+        },
+        "kolom_total_potongan": {
+          "text": "JUMLAH (Rp)",
+          "class": "header-cell sub-header-total-potongan",
+          "tipe": "sub_header"
+        }
+      },
+      "level_3": {
+        "kolom_cuti_unit_1": {
+          "text": "H",
+          "class": "header-cell col-cuti",
+          "tipe": "unit"
+        },
+        "kolom_cuti_unit_2": {
+          "text": "H",
+          "class": "header-cell col-cuti",
+          "tipe": "unit"
+        },
+        "kolom_cuti_unit_3": {
+          "text": "H",
+          "class": "header-cell col-cuti",
+          "tipe": "unit"
+        },
+        "kolom_cuti_unit_4": {
+          "text": "H",
+          "class": "header-cell col-cuti",
+          "tipe": "unit"
+        },
+        "kolom_cuti_unit_5": {
+          "text": "H",
+          "class": "header-cell col-cuti",
+          "tipe": "unit"
+        },
+        "kolom_beras_rate": {
+          "text": "Rate (Rp)",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_beras_jumlah": {
+          "text": "Jumlah",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_jabatan_rate": {
+          "text": "Rate (Rp)",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_jabatan_jumlah": {
+          "text": "Jumlah",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_masa_kerja_lama": {
+          "text": "Lama (Thn)",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_masa_kerja_jumlah": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_lembur_jam": {
+          "text": "Jam",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_lembur_jumlah": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-tunjangan",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_1": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_2": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_3": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_4": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_5": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_6": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_7": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_premi_unit_8": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-premi",
+          "tipe": "unit"
+        },
+        "kolom_astek_pekerja_jumlah": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-astek",
+          "tipe": "unit"
+        },
+        "kolom_astek_majikan_jumlah": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-astek",
+          "tipe": "unit"
+        },
+        "kolom_astek_jumlah_total": {
+          "text": "Jumlah (Rp)",
+          "class": "header-cell col-astek",
+          "tipe": "unit"
+        },
+        "kolom_bpjs_kesehatan_pekerja": {
+          "text": "PEKERJA (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_bpjs_kesehatan_majikan": {
+          "text": "MAJIKAN (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_bpjs_pensiun_pekerja": {
+          "text": "PEKERJA (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_bpjs_pensiun_majikan": {
+          "text": "MAJIKAN (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_bpjs_jumlah_total": {
+          "text": "JUMLAH (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_spsi_jumlah_rp": {
+          "text": "JUMLAH (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_pph21_jumlah_rp": {
+          "text": "JUMLAH (Rp)",
+          "class": "header-cell col-bpjs",
+          "tipe": "unit"
+        },
+        "kolom_total_potongan_jumlah": {
+          "text": "JUMLAH (Rp)",
+          "class": "header-cell col-total-potongan",
+          "tipe": "unit"
+        }
+      }
+    },
+    "data_rows": {
+      "format": {
+        "class": "employee-row",
+        "alternating_colors": true,
+        "highlight_hover": true
+      }
+    },
+    "grand_total_row": {
+      "format": {
+        "class": "grand-total-row",
+        "background_color": "#2f75b5",
+        "text_color": "white",
+        "font_weight": "bold"
+      },
+      "total_label": "GRAND TOTAL"
+    },
+    "kalkulasi_kunci": {
+      "upah_pokok": "Hari Kerja × Upah Dasar",
+      "gaji_pokok": "Jumlah HK × Upah Dasar",
+      "total_tunjangan": "Beras + Jabatan + Masa Kerja + Lembur",
+      "total_premi": "Brondol + Pruning + Panen + Cuci Unit + Premi Blower + Tabur Pupuk + Incentive + Koreksi(-)",
+      "jumlah_upah_kotor": "Gaji Pokok + Total Tunjangan + Total Premi",
+      "total_potongan": "BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPh21",
+      "upah_bersih": "Jumlah Upah Kotor - Total Potongan"
+    },
+    "styling_kategori": {
+      "informasi_karyawan": ["NO", "L/P", "NIK", "NAMA"],
+      "komponen_upah": ["UPAH DASAR", "HARI KERJA", "UPAH POKOK", "Jumlah HK", "GAJI POKOK"],
+      "cuti_libur": ["TAHUNAN", "SAKIT+HAID", "MINGGU", "NASIONAL", "IZIN"],
+      "tunjangan": ["BERAS", "JABATAN", "MASA KERJA", "LEMBUR", "TOTAL TUNJANGAN"],
+      "premi": ["BRONDOL", "PRUNING", "PANEN", "CUCI UNIT", "PREMI BLOWER", "TABUR PUPUK", "INCENTIVE", "KOREKSI", "TOTAL PREMI"],
+      "upah_kotor": ["JUMLAH UPAH KOTOR"],
+      "potongan": ["CARUMAN ASTEK", "POTONGAN BPJS", "IURAN SPSI", "PPH21", "TOTAL POTONGAN"],
+      "final": ["UPAH BERSIH"]
+    }
+  }
+}
