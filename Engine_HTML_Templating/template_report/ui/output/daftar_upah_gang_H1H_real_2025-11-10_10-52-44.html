@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAFTAR UPAH - Mei 2025</title>
+    <style>
+        @page {
+            /* F4 landscape with minimum 1cm margins */
+            size: 330mm 210mm;
+            margin: 10mm;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 8pt;
+            margin: 0;
+            padding: 5px;
+            background: white;
+        }
+
+        .report-wrapper {
+            max-width: 100%;
+            overflow-x: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 10px;
+        }
+
+        .header-info {
+            margin-bottom: 12px;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+
+        .header-row {
+            display: flex;
+            margin-bottom: 3px;
+            align-items: center;
+        }
+
+        .header-label {
+            font-weight: bold;
+            width: 120px;
+            flex-shrink: 0;
+        }
+
+        .header-value {
+            flex: 1;
+            font-weight: normal;
+        }
+
+        .report-title {
+            text-align: center;
+            font-size: 16pt;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding: 12px;
+            border: 2px solid #2c3e50;
+            background: #34495e;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        .gang-desc {
+            text-align: center;
+            font-size: 10pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: -10px 0 15px 0;
+            padding: 6px;
+            background: #ecf0f1;
+            border: 1px solid #d0d0d0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #d0d0d0;
+            background: white;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: auto;
+            font-size: 7pt;
+            min-width: 3000px;
+        }
+
+        th, td {
+            border: 1px solid #d0d0d0;
+            padding: 3px 4px;
+            text-align: center; /* center all headers/columns by default */
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: nowrap;
+        }
+
+        /* Double bottom border for rows to create separation */
+        tr {
+            border-bottom: 3px double #333;
+        }
+
+        /* Remove border from last cell in each row to avoid border stacking */
+        td:last-child {
+            border-right: 1px solid #d0d0d0;
+        }
+
+        th:last-child {
+            border-right: 1px solid #d0d0d0;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .header-cell {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 7pt;
+            padding: 3px;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1000;
+        }
+
+        .main-header {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 8pt;
+            border: 1px solid #d0d0d0;
+            padding: 4px;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .section-header {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            padding: 3px;
+            position: relative;
+            z-index: 1002;
+        }
+
+        .total-row {
+            background: #fff3cd;
+            font-weight: bold;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Alternating column styles for better readability */
+        .employee-row:hover {
+            background: #e3f2fd !important;
+        }
+
+        /* Row-level alternating */
+        .employee-row:nth-child(odd) {
+            background: #f8f9fa;
+        }
+
+        .employee-row:nth-child(even) {
+            background: #ffffff;
+        }
+
+        /* Column-specific alternating patterns */
+        .employee-row:nth-child(odd) .col-no {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(even) .col-no {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-gender {
+            background: #fff8e1 !important;
+        }
+
+        .employee-row:nth-child(even) .col-gender {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(odd) .col-nik {
+            background: #e8f5e8 !important;
+        }
+
+        .employee-row:nth-child(even) .col-nik {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-name {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-name {
+            background: #f3e5f5 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-upah-dasar {
+            background: #fff3e0 !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah-dasar {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-hari-kerja {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(even) .col-hari-kerja {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-upah-pokok {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah-pokok {
+            background: #fff8e1 !important;
+        }
+
+        .employee-row:nth-child(odd) .col-cuti {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(even) .col-cuti {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-rp {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-rp {
+            background: #e8f4fd !important;
+        }
+
+        .employee-row:nth-child(odd) .col-hk {
+            background: #fff3e0 !important;
+        }
+
+        .employee-row:nth-child(even) .col-hk {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(odd) .col-gaji-pokok {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-gaji-pokok {
+            background: #e8f5e8 !important;
+        }
+
+        /* Tunjangan columns alternating styles */
+        .employee-row:nth-child(odd) .col-tunjangan {
+            background: #fff3e0 !important;
+            color: #e65100 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(even) .col-tunjangan {
+            background: #ffffff !important;
+            color: #e65100 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(odd) .col-total-tunjangan {
+            background: #fff3e0 !important;
+            color: #e65100 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(even) .col-total-tunjangan {
+            background: #ffffff !important;
+            color: #e65100 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        /* Premi columns alternating styles */
+        .employee-row:nth-child(odd) .col-premi {
+            background: #fff3cd !important;
+            color: #856404 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(even) .col-premi {
+            background: #ffffff !important;
+            color: #856404 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(odd) .col-total-premi {
+            background: #fff3cd !important;
+            color: #856404 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(even) .col-total-premi {
+            background: #ffffff !important;
+            color: #856404 !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            font-size: 9pt !important;
+        }
+
+        .employee-row:nth-child(odd) .col-jumlah-upah-kotor {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+
+        .employee-row:nth-child(even) .col-jumlah-upah-kotor {
+            background: #ffffff !important;
+            color: #721c24 !important;
+        }
+
+        /* Caruman ASTEK alternating styles */
+        .employee-row:nth-child(odd) .col-astek {
+            background: #e8f5e8 !important;
+            color: #2e7d32 !important;
+        }
+
+        .employee-row:nth-child(even) .col-astek {
+            background: #ffffff !important;
+            color: #2e7d32 !important;
+        }
+
+        /* BPJS alternating styles */
+        .employee-row:nth-child(odd) .col-bpjs {
+            background: #fff3e0 !important;
+            color: #e65100 !important;
+        }
+
+        .employee-row:nth-child(even) .col-bpjs {
+            background: #ffffff !important;
+            color: #e65100 !important;
+        }
+
+        /* Potongan columns alternating styles */
+        .employee-row:nth-child(odd) .col-potongan {
+            background: #fce4ec !important;
+        }
+
+        .employee-row:nth-child(even) .col-potongan {
+            background: #ffffff !important;
+        }
+
+        /* Upah columns alternating styles */
+        .employee-row:nth-child(odd) .col-upah {
+            background: #ffffff !important;
+        }
+
+        .employee-row:nth-child(even) .col-upah {
+            background: #fff8e1 !important;
+        }
+
+        /* Tidak Hadir columns alternating styles */
+        .employee-row:nth-child(odd) .col-tidak-hadir {
+            background: #ffebee !important;
+        }
+
+        .employee-row:nth-child(even) .col-tidak-hadir {
+            background: #ffffff !important;
+        }
+
+        /* Column widths */
+        .col-no {
+            width: 30px; max-width: 40px; min-width: 30px;
+            text-align: center !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #2c3e50;
+            border: 1px solid #d0d0d0;
+        }
+        .col-gender {
+            width: 25px; max-width: 30px; min-width: 25px;
+            text-align: center !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #2c3e50;
+            border: 1px solid #d0d0d0;
+        }
+        .col-nik {
+            width: 80px; max-width: 90px; min-width: 75px;
+            text-align: center !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #2c3e50;
+            border: 1px solid #d0d0d0;
+        }
+        .col-name {
+            width: 120px; max-width: 150px; min-width: 100px;
+            text-align: left !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #2c3e50;
+            border: 1px solid #d0d0d0;
+        }
+        .col-upah-dasar { width: 90px; max-width: 100px; min-width: 80px; }
+        .col-hari-kerja { width: 40px; max-width: 45px; min-width: 35px; }
+        .col-upah-pokok { width: 100px; max-width: 120px; min-width: 90px; }
+            .col-cuti {
+            width: 30px; max-width: 35px; min-width: 25px;
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+            font-size: 9pt;
+            text-align: center !important;
+            border: 1px solid #d0d0d0;
+        }
+        .col-rp { width: 70px; max-width: 80px; min-width: 60px; }
+        .col-hk { width: 35px; max-width: 40px; min-width: 30px; }
+        .col-gaji-pokok { width: 100px; max-width: 120px; min-width: 90px; }
+          .col-tunjangan {
+            width: 50px; max-width: 60px; min-width: 45px;
+            text-align: right !important;
+            font-weight: bold;
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+        .col-total-tunjangan { width: 80px; max-width: 100px; min-width: 70px; }
+        .col-potongan { width: 55px; max-width: 65px; min-width: 50px; }
+        .col-astek { width: 60px; max-width: 70px; min-width: 55px; }
+        .col-bpjs { width: 60px; max-width: 70px; min-width: 55px; }
+        .col-upah { width: 90px; max-width: 100px; min-width: 80px; }
+        .col-tidak-hadir { width: 30px; max-width: 35px; min-width: 25px; }
+
+        /* Total Premi Column - Matching Total Tunjangan styling */
+        .col-total-premi {
+            background: #f8d7da !important;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            color: #721c24 !important;
+            border: 1px solid #d0d0d0 !important;
+        }
+
+        /* Jumlah Upah Kotor Column - Matching Total Tunjangan styling */
+        .col-jumlah-upah-kotor {
+            background: #f8d7da !important;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #721c24 !important;
+            border: 1px solid #d0d0d0 !important;
+        }
+
+        /* Alternating row colors for cuti/libur columns */
+        .cuti-col-odd { background-color: #f5f5f5; }
+        .cuti-col-even { background-color: #ffffff; }
+
+        /* Red text for cuti/libur values */
+        .cuti-libur-text { color: #dc3545; font-weight: bold; }
+
+        /* Tunjangan column styling - matching Caruman ASTEK */
+        .col-tunjangan {
+            text-align: right !important;
+            font-weight: bold;
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        /* Caruman ASTEK column styling */
+        .col-astek {
+            text-align: right !important;
+            font-weight: bold;
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        /* Potongan BPJS column styling */
+        .col-bpjs {
+            text-align: right !important;
+            font-weight: bold;
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        /* Premi sub-headers styling */
+        .sub-header-premi {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1004;
+        }
+
+        /* Caruman ASTEK sub-headers styling */
+        .sub-header-astek {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1005;
+        }
+
+        /* Potongan BPJS sub-headers styling */
+        .sub-header-bpjs {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 7pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1006;
+        }
+
+        /* Better centering */
+        .center-cell {
+            text-align: center !important;
+            vertical-align: middle !important;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Upah Dasar and Hari Kerja styling */
+        .col-upah-dasar {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            background: #fff8e1;
+            color: #856404;
+            border: 1px solid #d0d0d0;
+        }
+
+        .col-hari-kerja {
+            text-align: center !important;
+            font-weight: bold;
+            background: #e3f2fd;
+            color: #0c5460;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        .col-hk {
+            text-align: center !important;
+            font-weight: bold;
+            background: #e3f2fd;
+            color: #0c5460;
+            border: 1px solid #d0d0d0;
+            font-size: 9pt;
+        }
+
+        /* Gaji Pokok styling */
+        .col-gaji-pokok {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Upah Pokok styling */
+        .col-upah-pokok {
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 9pt;
+            background: #e8f5e8;
+            color: #388e3c;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Tunjangan styling */
+        .sub-header-tunjangan {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            text-align: center;
+            font-size: 8pt;
+            border: 1px solid #d0d0d0;
+            position: relative;
+            z-index: 1003;
+        }
+
+        .col-total-tunjangan {
+            background: #f8d7da;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #721c24;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Special formatting for NIK */
+        .nik-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: 0.5px;
+            background: #e3f2fd;
+            color: #0c5460;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Potongan styling */
+        .col-potongan {
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: bold;
+            text-align: right;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Upah Bersih styling */
+        .col-upah {
+            background: #fff3cd;
+            text-align: right !important;
+            padding-right: 5px !important;
+            font-weight: bold;
+            font-size: 10pt;
+            color: #856404;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Cuti columns styling */
+        .col-cuti {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid #d0d0d0;
+        }
+
+        /* Grand Total Row - Highest Priority */
+        .grand-total-row {
+            background: #34495e !important;
+            color: white !important;
+            font-weight: bold;
+            position: relative;
+            z-index: 2000;
+        }
+
+        .grand-total-row td {
+            background: #34495e !important;
+            color: white !important;
+            border: 1px solid #d0d0d0 !important;
+            position: relative;
+            z-index: 2001;
+        }
+
+        /* Responsive adjustments */
+        @media print {
+            body { font-size: 7pt; }
+            .table-wrapper { overflow: visible; }
+            table { min-width: 3000px; }
+            .print-header, .print-footer {
+                position: fixed;
+                left: 0; right: 0;
+                color: #555;
+                font-size: 8pt;
+            }
+            .print-header { top: 0; text-align: center; }
+            .print-footer { bottom: 0; text-align: center; }
+            body { margin-top: 16mm; margin-bottom: 16mm; }
+        }
+
+        /* Custom scrollbar */
+        .table-wrapper::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-wrapper">
+        <div class="header-info">
+            <div class="header-row">
+                <div class="header-label">PERUSAHAAN:</div>
+                <div class="header-value">{company_name}</div>
+            </div>
+            <div class="header-row">
+                <div class="header-label">PERIODE:</div>
+                <div class="header-value">Mei 2025</div>
+            </div>
+            <div class="header-row" style="justify-content: flex-end;">
+                <img src="{company_logo_url}" alt="Logo" style="height:32px;" onerror="this.style.display='none'"/>
+            </div>
+        </div>
+
+        <div class="report-title">
+            DAFTAR UPAH KARYAWAN GANG H1H | LocCode AB2     
+        </div>
+        <div class="gang-desc">PT. Rebinmas Jaya | HARVESTING AIK BANGEK H1H</div>
+
+        <div class="table-wrapper">
+            <table>
+                <!-- Main Header Row -->
+                <tr>
+                    <td rowspan="3" class="header-cell col-no main-header">NO</td>
+                    <td rowspan="3" class="header-cell col-gender main-header">L/P</td>
+                    <td rowspan="3" class="header-cell col-nik main-header">NIK</td>
+                    <td rowspan="3" class="header-cell col-name main-header text-left">NAMA</td>
+                    <td rowspan="3" class="header-cell col-upah-dasar main-header">UPAH<br>DASAR</td>
+                    <td rowspan="3" class="header-cell col-hari-kerja main-header">HARI<br>KERJA</td>
+                    <td rowspan="3" class="header-cell col-upah-pokok main-header">UPAH<br>POKOK</td>
+                    <td colspan="5" class="header-cell section-header">Cuti/Libur</td>
+                    <td rowspan="3" class="header-cell col-hk main-header">Jumlah HK</td>
+                    <td rowspan="3" class="header-cell col-gaji-pokok main-header">GAJI POKOK</td>
+                    <td colspan="8" class="header-cell section-header">TUNJANGAN</td>
+                    <td rowspan="3" class="header-cell col-total-tunjangan main-header">TOTAL<br>TUNJANGAN</td>
+                    <td colspan="8" class="header-cell section-header">PREMI</td>
+                    <td rowspan="3" class="header-cell col-total-premi main-header">TOTAL PREMI</td>
+                    <td rowspan="3" class="header-cell col-jumlah-upah-kotor main-header">JUMLAH UPAH KOTOR<br>(Rp)</td>
+                    <td colspan="3" class="header-cell section-header">CARUMAN ASTEK</td>
+                    <td colspan="6" class="header-cell section-header">POTONGAN BPJS</td>
+                    <td colspan="2" class="header-cell section-header">IURAN SPSI</td>
+                    <td colspan="2" class="header-cell section-header">PPH21</td>
+                    <td colspan="7" class="header-cell section-header">POTONGAN</td>
+                    <td rowspan="3" class="header-cell col-upah main-header">UPAH BERSIH</td>
+                </tr>
+
+                <!-- Second Header Row - Detail Types -->
+                <tr>
+                    <!-- Cuti/Libur Headers -->
+                    <td class="header-cell col-cuti">TAHUNAN<br>(Izin)</td>
+                    <td class="header-cell col-cuti">SAKIT +<br>HAID</td>
+                    <td class="header-cell col-cuti">MINGGU</td>
+                    <td class="header-cell col-cuti">NASIONAL</td>
+                    <td class="header-cell col-cuti">IZIN</td>
+
+                    <!-- Tunjangan Sub-Headers -->
+                    <td colspan="2" class="header-cell sub-header-tunjangan">BERAS</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">JABATAN</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">MASA KERJA</td>
+                    <td colspan="2" class="header-cell sub-header-tunjangan">LEMBUR</td>
+
+                    <!-- Premi Sub-Headers -->
+                    <td class="header-cell sub-header-premi">BRONDOL</td>
+                    <td class="header-cell sub-header-premi">PRUNING</td>
+                    <td class="header-cell sub-header-premi">PREMI ANGKUT MATERIAL</td>
+                    <td class="header-cell sub-header-premi">PREMI ANGKUT TBS</td>
+                    <td class="header-cell sub-header-premi">PREMI HARVESTING</td>
+                    <td class="header-cell sub-header-premi">PREMI HARVESTING +INVCENTIVE  PANEN</td>
+                    <td class="header-cell sub-header-premi">PREMI PUPUK</td>
+                    <td class="header-cell sub-header-premi">KOREKSI (-)</td>
+
+                    <!-- Caruman ASTEK Headers -->
+                    <td class="header-cell sub-header-astek">PEKERJA</td>
+                    <td class="header-cell sub-header-astek">MAJIKAN</td>
+                    <td class="header-cell sub-header-astek">JUMLAH</td>
+
+                    <!-- Potongan BPJS Headers -->
+                    <td class="header-cell sub-header-bpjs" colspan="2">KESEHATAN</td>
+                    <td class="header-cell sub-header-bpjs" colspan="2">PENSIUN</td>
+                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
+
+                    <!-- Iuran SPSI Headers -->
+                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
+
+                    <!-- PPH21 Headers -->
+                    <td class="header-cell sub-header-bpjs" colspan="2">JUMLAH</td>
+
+                    <!-- Potongan Headers -->
+                    <td class="header-cell col-potongan">PPH21</td>
+                    <td class="header-cell col-potongan">Kontan</td>
+                    <td class="header-cell col-potongan">THR</td>
+                    <td class="header-cell col-potongan">Pinjam</td>
+                    <td class="header-cell col-potongan">KL</td>
+                    <td class="header-cell col-potongan">BPJS Kes</td>
+                    <td class="header-cell col-potongan">BPJS Pek</td>
+                    <td class="header-cell col-potongan">BPJS Maj</td>
+                    <td class="header-cell col-potongan">Total</td>
+                    <td class="header-cell col-potongan">Total</td>
+
+                                  </tr>
+
+                <!-- Third Header Row - Units -->
+                <tr>
+                    <!-- Cuti/Libur Units -->
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+                    <td class="header-cell col-cuti">H</td>
+
+                    <!-- Tunjangan Rate & Jumlah Headers -->
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Rate<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jumlah</td>
+                    <td class="header-cell col-tunjangan">Lama<br>(Thn)</td>
+                    <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-tunjangan">Jam</td>
+                    <td class="header-cell col-tunjangan">Jumlah<br>(Rp)</td>
+
+                    <!-- Premi Units -->
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-premi">Jumlah<br>(Rp)</td>
+
+                    <!-- Caruman ASTEK Units -->
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+                    <td class="header-cell col-astek">Jumlah<br>(Rp)</td>
+
+                    <!-- Potongan BPJS Units -->
+                    <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">PEKERJA<br>(Rp)</td>
+                    <td class="header-cell col-bpjs">MAJIKAN<br>(Rp)</td>
+                    <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
+
+                    <!-- Iuran SPSI Units -->
+                    <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
+
+                    <!-- PPH21 Units -->
+                    <td class="header-cell col-bpjs" colspan="2">JUMLAH<br>(Rp)</td>
+                </tr>
+
+                <!-- Data Rows -->
+                
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">1</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0330</td>
+                    <td class="text-cell col-name text-left center-cell">AFRIWANTONI</td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">17</td>
+                    <td class="number-cell col-upah-pokok center-cell">2,196,740</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell">3,700</td>
+                    <td class="number-cell col-tunjangan center-cell">114,700</td>
+                    <td class="number-cell col-tunjangan center-cell">3,500</td>
+                    <td class="number-cell col-tunjangan center-cell">59,500</td>
+                    <td class="number-cell col-tunjangan center-cell">3</td>
+                    <td class="number-cell col-tunjangan center-cell">7,500</td>
+                    <td class="number-cell col-tunjangan center-cell">26</td>
+                    <td class="number-cell col-tunjangan center-cell">1,041,974</td>
+                    <td class="number-cell col-total-tunjangan center-cell">1,223,674</td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-total-premi center-cell"></td>
+                    <td class="number-cell col-jumlah-upah-kotor center-cell">5,229,494</td>
+                    <td class="number-cell col-astek center-cell">77,532</td>
+                    <td class="number-cell col-astek center-cell">175,998</td>
+                    <td class="number-cell col-astek center-cell">253,530</td>
+                    <td class="number-cell col-bpjs center-cell">38,841</td>
+                    <td class="number-cell col-bpjs center-cell">155,364</td>
+                    <td class="number-cell col-bpjs center-cell">38,766</td>
+                    <td class="number-cell col-bpjs center-cell">77,532</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">310,503</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">4,000</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">63,174</td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">2</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0510</td>
+                    <td class="text-cell col-name text-left center-cell">AGUS SATRIAWAN</td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">24</td>
+                    <td class="number-cell col-upah-pokok center-cell">3,101,280</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-total-tunjangan center-cell"></td>
+                    <td class="number-cell col-premi center-cell">243,250</td>
+                    <td class="number-cell col-premi center-cell">380,150</td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell">63,176</td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell">78,212</td>
+                    <td class="number-cell col-total-premi center-cell">608,364</td>
+                    <td class="number-cell col-jumlah-upah-kotor center-cell">4,614,184</td>
+                    <td class="number-cell col-astek center-cell">77,532</td>
+                    <td class="number-cell col-astek center-cell">175,998</td>
+                    <td class="number-cell col-astek center-cell">253,530</td>
+                    <td class="number-cell col-bpjs center-cell">38,766</td>
+                    <td class="number-cell col-bpjs center-cell">155,064</td>
+                    <td class="number-cell col-bpjs center-cell">38,766</td>
+                    <td class="number-cell col-bpjs center-cell">77,532</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">310,128</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2"></td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2"></td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                </tr>
+                <tr class="employee-row">
+                    <td class="number-cell col-no center-cell">3</td>
+                    <td class="text-cell col-gender center-cell">L</td>
+                    <td class="nik-cell col-nik center-cell">H0476</td>
+                    <td class="text-cell col-name text-left center-cell">AGUS SURYADI</td>
+                    <td class="number-cell col-upah-dasar center-cell">129,220</td>
+                    <td class="number-cell col-hari-kerja center-cell">24</td>
+                    <td class="number-cell col-upah-pokok center-cell">3,101,280</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even "></td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd cuti-libur-text">4</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-even cuti-libur-text">3</td>
+                    <td class="number-cell col-cuti center-cell cuti-col-odd "></td>
+                    <td class="number-cell col-hk center-cell">31</td>
+                    <td class="number-cell col-gaji-pokok center-cell">4,005,820</td>
+                    <td class="number-cell col-tunjangan center-cell">4,650</td>
+                    <td class="number-cell col-tunjangan center-cell">144,150</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell">1</td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-tunjangan center-cell"></td>
+                    <td class="number-cell col-total-tunjangan center-cell">144,150</td>
+                    <td class="number-cell col-premi center-cell">231,000</td>
+                    <td class="number-cell col-premi center-cell">416,500</td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell">253,166</td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-premi center-cell"></td>
+                    <td class="number-cell col-total-premi center-cell">900,666</td>
+                    <td class="number-cell col-jumlah-upah-kotor center-cell">5,050,636</td>
+                    <td class="number-cell col-astek center-cell">77,532</td>
+                    <td class="number-cell col-astek center-cell">175,998</td>
+                    <td class="number-cell col-astek center-cell">253,530</td>
+                    <td class="number-cell col-bpjs center-cell">38,766</td>
+                    <td class="number-cell col-bpjs center-cell">155,064</td>
+                    <td class="number-cell col-bpjs center-cell">38,766</td>
+                    <td class="number-cell col-bpjs center-cell">77,532</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">310,128</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2">4,000</td>
+                    <td class="number-cell col-bpjs center-cell" colspan="2"></td>
+                    <td class="number-cell col-potongan center-cell">150,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell">200,000</td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-potongan center-cell"></td>
+                    <td class="number-cell col-upah center-cell">4,250,000</td>
+                </tr>
+
+                <!-- Grand Total Row -->
+                <tr class="grand-total-row" style="background-color: #2f75b5; color: white; font-weight: bold;">
+                    <td colspan="5" class="header-cell text-left" style="background-color: #34495e; color: white;">GRAND TOTAL</td>
+
+                    <!-- Hari Kerja Grand Total -->
+                    <td class="number-cell col-hari-kerja" style="background-color: #34495e; color: white;">65</td>
+
+                    <!-- Upah Pokok Grand Total (Hari Kerja × Upah Dasar) -->
+                    <td class="number-cell col-upah-pokok" style="background-color: #34495e; color: white;">8,399,300</td>
+
+                    <!-- Cuti Hari Grand Totals -->
+                    <td class="number-cell col-cuti" style="background-color: #34495e; color: white;">3</td>
+                    <td class="number-cell col-cuti" style="background-color: #34495e; color: white;">4</td>
+                    <td class="number-cell col-cuti" style="background-color: #34495e; color: white;">12</td>
+                    <td class="number-cell col-cuti" style="background-color: #34495e; color: white;">9</td>
+                    <td class="number-cell col-cuti" style="background-color: #34495e; color: white;">0</td>
+
+                    <!-- HK Grand Total (JML HK) -->
+                    <td class="number-cell col-hk" style="background-color: #34495e; color: white;">93</td>
+
+                    <!-- Gaji Pokok Grand Total (JML HK × Upah Dasar) placed next to HK -->
+                    <td class="number-cell col-gaji-pokok" style="background-color: #34495e; color: white;">12,017,460</td>
+
+                    <!-- Tunjangan Category Grand Totals -->
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">8,350</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">258,850</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">3,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">59,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">4</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">7,500</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">26</td>
+                    <td class="number-cell col-tunjangan" style="background-color: #34495e; color: white;">1,041,974</td>
+
+                    <!-- Total Tunjangan Grand Total -->
+                    <td class="number-cell col-total-tunjangan" style="background-color: #34495e; color: white;">1,367,824</td>
+
+                    <!-- Premi Grand Totals -->
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">316,342</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-premi" style="background-color: #34495e; color: white;">78,212</td>
+
+                    <!-- Summary Grand Totals -->
+                    <td class="number-cell col-total-premi" style="background-color: #f8d7da; color: #721c24;">1,509,030</td>
+                    <td class="number-cell col-jumlah-upah-kotor" style="background-color: #f8d7da; color: #721c24;">14,894,314</td>
+
+                    <!-- Caruman ASTEK Grand Totals -->
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">232,596</td>
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">527,994</td>
+                    <td class="number-cell col-astek" style="background-color: #e8f5e8; color: #2e7d24;">760,590</td>
+
+                    <!-- BPJS Grand Totals -->
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">116,298</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">465,192</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">116,298</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;">232,596</td>
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;" colspan="2">930,384</td>
+
+                    <!-- Iuran SPSI Grand Totals -->
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;" colspan="2">8,000</td>
+
+                    <!-- PPH21 Grand Totals -->
+                    <td class="number-cell col-bpjs" style="background-color: #fff3e0; color: #e65100;" colspan="2">63,174</td>
+
+                    <!-- Potongan Grand Totals -->
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">450,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">600,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">600,000</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+                    <td class="number-cell col-potongan" style="background-color: #34495e; color: white;">0</td>
+
+                    <!-- Final Grand Totals -->
+                    <td class="number-cell col-upah" style="background-color: #34495e; color: white;">12,750,000</td>
+                                    </tr>
+            </table>
+        </div>
+
+        <div class="print-footer">Dicetak tanggal: 10-11-2025</div>
+    </div>
+</body>
+</html>
