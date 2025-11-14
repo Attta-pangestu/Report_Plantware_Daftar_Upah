@@ -215,7 +215,7 @@ class DaftarUpahEngineRealFixed:
             # Query to get HK count
             query = """
             SELECT COUNT(*) as hk_count
-            FROM "PR_EMP_ATTN"
+            FROM "PR_EMP_ATTN_ARC"
             WHERE EmpCode = ?
               AND AttnDate >= ?
               AND AttnDate < DATEADD(month, 1, ?)

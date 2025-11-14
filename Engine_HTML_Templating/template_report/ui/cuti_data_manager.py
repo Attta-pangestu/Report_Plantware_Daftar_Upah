@@ -161,6 +161,7 @@ class CutiDataManager:
             # Replace hardcoded dates with dynamic date range
             query = query.replace("AND tr.CreatedDate >= '2025-05-01'", f"AND tr.CreatedDate >= '{date_range['start']}'")
             query = query.replace("AND tr.CreatedDate < '2025-06-01'", f"AND tr.CreatedDate < '{date_range['end']}'")
+            query = self._apply_table_mode_to_query(query, date_range['start'], date_range['end'])
 
             result = self.db.execute_query(query, [])
             if result:
@@ -189,6 +190,7 @@ class CutiDataManager:
             # Replace hardcoded dates with dynamic date range
             query = query.replace("AND tr.CreatedDate >= '2025-05-01'", f"AND tr.CreatedDate >= '{date_range['start']}'")
             query = query.replace("AND tr.CreatedDate < '2025-06-01'", f"AND tr.CreatedDate < '{date_range['end']}'")
+            query = self._apply_table_mode_to_query(query, date_range['start'], date_range['end'])
 
             result = self.db.execute_query(query, [])
             if result:
@@ -217,6 +219,7 @@ class CutiDataManager:
             # Replace hardcoded dates with dynamic date range
             query = query.replace("AND AttnDate >= '2025-05-01'", f"AND AttnDate >= '{date_range['start']}'")
             query = query.replace("AND AttnDate < '2025-06-01'", f"AND AttnDate < '{date_range['end']}'")
+            query = self._apply_table_mode_to_query(query, date_range['start'], date_range['end'])
 
             result = self.db.execute_query(query, [])
             if result:
@@ -245,6 +248,7 @@ class CutiDataManager:
             # Replace hardcoded dates with dynamic date range
             query = query.replace("AND AttnDate >= '2025-05-01'", f"AND AttnDate >= '{date_range['start']}'")
             query = query.replace("AND AttnDate < '2025-06-01'", f"AND AttnDate < '{date_range['end']}'")
+            query = self._apply_table_mode_to_query(query, date_range['start'], date_range['end'])
 
             result = self.db.execute_query(query, [])
             if result:
@@ -279,6 +283,37 @@ class CutiDataManager:
             'start': start_date,
             'end': end_date
         }
+
+    def _apply_table_mode_to_query(self, query_text: str, start_date: str, end_date: str) -> str:
+        """Detect archive mode for the date range and adjust table names accordingly"""
+        try:
+            import pyodbc
+            with open(self.config_path, 'r') as f:
+                cfg = json.load(f)['database']
+            conn = pyodbc.connect(
+                f"DRIVER={{{cfg['driver']}}};SERVER={cfg['server']},{cfg['port']};DATABASE={cfg['database_name']};UID={cfg['username']};PWD={cfg['password']}"
+            )
+            cur = conn.cursor()
+            # HK table
+            cur.execute("SELECT COUNT(*) FROM PR_EMP_ATTN_ARC WHERE AttnDate >= ? AND AttnDate < ?", start_date, end_date)
+            hk_cnt = cur.fetchone()[0] if cur.description else 0
+            # Task registration (for cuti tahunan/sakit)
+            try:
+                cur.execute("SELECT COUNT(*) FROM PR_TASKREG_ARC WHERE DocDate >= ? AND DocDate < ?", start_date, end_date)
+                task_cnt = cur.fetchone()[0] if cur.description else 0
+            except Exception:
+                task_cnt = 0
+            cur.close(); conn.close()
+
+            q = query_text
+            if (hk_cnt or 0) == 0:
+                q = q.replace('PR_EMP_ATTN_ARC', 'PR_EMP_ATTN')
+            if (task_cnt or 0) == 0:
+                q = q.replace('PR_TASKREGLN_ARC', 'PR_TASKREGLN')
+                q = q.replace('PR_TASKREG_ARC', 'PR_TASKREG')
+            return q
+        except Exception:
+            return query_text
 
     def cleanup(self):
         """Cleanup database connection"""

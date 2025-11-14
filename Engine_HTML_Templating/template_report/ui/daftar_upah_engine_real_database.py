@@ -36,9 +36,19 @@ class PayrollData:
 
 
 class DaftarUpahEngineRealFixed:
-    """Template engine with real database integration - Fixed Version"""
+    """Template engine with real database integration - Fixed Version
 
-    def __init__(self):
+    Changes:
+    - Renamed legacy tables to archived tables (*_ARC):
+      PR_LOOSEFRUIT → PR_LOOSEFRUIT_ARC, PR_LOOSEFRUITLN → PR_LOOSEFRUITLN_ARC,
+      PR_TASKREG → PR_TASKREG_ARC, PR_TASKREGLN → PR_TASKREGLN_ARC,
+      PR_ADTRANS → PR_ADTRANS_ARC, PR_ADTRANSLN → PR_ADTRANSLN_ARC,
+      PR_EMP_ATTN → PR_EMP_ATTN_ARC
+    - Added month/year parameters for report generation with validation (MM, 01-12)
+    - Default test case uses month 04 (April) and year 2025
+    """
+
+    def __init__(self, month: str = "04", year: str = "2025"):
         self.template_dir = Path(__file__).parent
         self.output_dir = self.template_dir / "output"
         self.output_dir.mkdir(exist_ok=True)
@@ -55,12 +65,132 @@ class DaftarUpahEngineRealFixed:
         self.config_file = config_file
         self.constants = self.load_constants()
 
+        # Validate and store month/year
+        self.month = self._validate_and_parse_month(month)
+        self.year = self._validate_and_parse_year(year)
+        self.month_name = self._month_name(self.month)
+        self.date_start, self.date_end = self._compute_date_range(self.month, self.year)
+        self.archive_mode = self._detect_archive_mode()
+        self.table_modes = self._detect_table_modes()
+
         self.stats = {
             'reports_generated': 0,
             'total_employees_processed': 0,
             'database_queries_executed': 0,
             'processing_times': []
         }
+
+    def _validate_and_parse_month(self, month_str: str) -> int:
+        """Validate month input (MM) and return integer month"""
+        if not isinstance(month_str, str):
+            raise ValueError("Month must be a string in MM format")
+        if len(month_str) != 2 or not month_str.isdigit():
+            raise ValueError("Month must be in MM format (01-12)")
+        month_int = int(month_str)
+        if month_int < 1 or month_int > 12:
+            raise ValueError("Month must be between 01 and 12")
+        return month_int
+
+    def _validate_and_parse_year(self, year_str: str) -> int:
+        """Validate year input (YYYY) and return integer year"""
+        if not isinstance(year_str, str) or not year_str.isdigit() or len(year_str) != 4:
+            raise ValueError("Year must be a 4-digit string")
+        return int(year_str)
+
+    def _month_name(self, month_int: int) -> str:
+        """Map month integer to Indonesian month name"""
+        names = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ]
+        return names[month_int - 1]
+
+    def _compute_date_range(self, month_int: int, year_int: int) -> tuple:
+        start = f"{year_int:04d}-{month_int:02d}-01"
+        if month_int == 12:
+            end = f"{year_int+1:04d}-01-01"
+        else:
+            end = f"{year_int:04d}-{month_int+1:02d}-01"
+        return start, end
+
+    def _detect_archive_mode(self) -> str:
+        try:
+            import pyodbc, json
+            with open(self.config_file, 'r') as f:
+                cfg = json.load(f)['database']
+            conn_str = (
+                f"DRIVER={{{cfg['driver']}}};SERVER={cfg['server']},{cfg['port']};"
+                f"DATABASE={cfg['database_name']};UID={cfg['username']};PWD={cfg['password']}"
+            )
+            conn = pyodbc.connect(conn_str)
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM PR_EMP_ATTN_ARC WHERE AttnDate >= ? AND AttnDate < ?", self.date_start, self.date_end)
+            cnt = cur.fetchone()[0] if cur.description else 0
+            cur.close(); conn.close()
+            return 'ARC' if (cnt or 0) > 0 else 'BASE'
+        except Exception:
+            return 'ARC'
+
+    def _detect_table_modes(self) -> Dict[str, str]:
+        modes = {}
+        try:
+            import pyodbc, json
+            with open(self.config_file, 'r') as f:
+                cfg = json.load(f)['database']
+            conn_str = (
+                f"DRIVER={{{cfg['driver']}}};SERVER={cfg['server']},{cfg['port']};"
+                f"DATABASE={cfg['database_name']};UID={cfg['username']};PWD={cfg['password']}"
+            )
+            conn = pyodbc.connect(conn_str)
+            cur = conn.cursor()
+
+            def check(table: str, date_col: str) -> str:
+                try:
+                    cur.execute(f"SELECT COUNT(*) FROM {table} WHERE {date_col} >= ? AND {date_col} < ?", self.date_start, self.date_end)
+                    cnt = cur.fetchone()[0] if cur.description else 0
+                    return 'ARC' if (cnt or 0) > 0 else 'BASE'
+                except Exception:
+                    return 'BASE'
+
+            modes['PR_EMP_ATTN_ARC'] = check('PR_EMP_ATTN_ARC', 'AttnDate')
+            modes['PR_ADTRANS_ARC'] = check('PR_ADTRANS_ARC', 'DocDate')
+            modes['PR_TASKREG_ARC'] = check('PR_TASKREG_ARC', 'DocDate')
+            modes['PR_LOOSEFRUIT_ARC'] = check('PR_LOOSEFRUIT_ARC', 'DocDate')
+            # Line tables follow master tables
+            modes['PR_ADTRANSLN_ARC'] = modes['PR_ADTRANS_ARC']
+            modes['PR_TASKREGLN_ARC'] = modes['PR_TASKREG_ARC']
+            modes['PR_LOOSEFRUITLN_ARC'] = modes['PR_LOOSEFRUIT_ARC']
+
+            cur.close(); conn.close()
+        except Exception:
+            # Default to BASE if detection fails to minimize zero data risk
+            modes = {
+                'PR_EMP_ATTN_ARC': 'BASE',
+                'PR_ADTRANS_ARC': 'BASE',
+                'PR_ADTRANSLN_ARC': 'BASE',
+                'PR_TASKREG_ARC': 'BASE',
+                'PR_TASKREGLN_ARC': 'BASE',
+                'PR_LOOSEFRUIT_ARC': 'BASE',
+                'PR_LOOSEFRUITLN_ARC': 'BASE',
+            }
+        print(f"[TABLE MODES] {modes}")
+        return modes
+
+    def _apply_table_mode(self, query: str) -> str:
+        replacements = {
+            'PR_EMP_ATTN_ARC': 'PR_EMP_ATTN',
+            'PR_ADTRANS_ARC': 'PR_ADTRANS',
+            'PR_ADTRANSLN_ARC': 'PR_ADTRANSLN',
+            'PR_TASKREG_ARC': 'PR_TASKREG',
+            'PR_TASKREGLN_ARC': 'PR_TASKREGLN',
+            'PR_LOOSEFRUIT_ARC': 'PR_LOOSEFRUIT',
+            'PR_LOOSEFRUITLN_ARC': 'PR_LOOSEFRUITLN'
+        }
+        for arc, base in replacements.items():
+            mode = self.table_modes.get(arc, 'ARC')
+            if mode == 'BASE':
+                query = query.replace(arc, base)
+        return query
 
     def load_constants(self) -> Dict[str, Any]:
         """Load constants from config file"""
@@ -212,7 +342,7 @@ class DaftarUpahEngineRealFixed:
         print(f"[OK] Successfully merged cuti data for {len(merged_employees)} employees")
         return merged_employees
 
-    def get_employee_hk_count(self, emp_code: str, bulan: str, tahun: str) -> int:
+    def get_employee_hk_count(self, emp_code: str, bulan: int, tahun: int) -> int:
         """Get HK count for employee from database"""
         try:
             import pyodbc
@@ -231,9 +361,10 @@ class DaftarUpahEngineRealFixed:
             cursor = conn.cursor()
 
             # Query to get HK count
-            query = """
+            base_table = 'PR_EMP_ATTN_ARC' if self.table_modes.get('PR_EMP_ATTN_ARC', 'ARC') == 'ARC' else 'PR_EMP_ATTN'
+            query = f"""
             SELECT COUNT(*) as hk_count
-            FROM "PR_EMP_ATTN"
+            FROM "{base_table}"
             WHERE EmpCode = ?
               AND AttnDate >= ?
               AND AttnDate < DATEADD(month, 1, ?)
@@ -323,6 +454,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Payrate_Beras.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             cursor.execute(query, emp_code.strip())
             result = cursor.fetchone()
@@ -359,6 +491,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Gett_Amount_Tunjangan_Jabatan.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Calculate date range for the specified month and year
             start_date = f"{year}-{month:02d}-01"
@@ -408,6 +541,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "Payrate_Jabatan.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Calculate date range for the specified month and year
             start_date = f"{year}-{month:02d}-01"
@@ -456,6 +590,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_amount_lembur.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Calculate date range for the specified month and year
             start_date = f"{year}-{month:02d}-01"
@@ -507,6 +642,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "count_masa_kerja.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Replace hardcoded EmpCode with parameter
             query = query.replace("'H0093'", "?")
@@ -547,6 +683,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_amount_masa_kerja.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Calculate date range for the specified month and year
             start_date = f"{year}-{month:02d}-01"
@@ -642,6 +779,8 @@ class DaftarUpahEngineRealFixed:
                         dynamic_headers.append(header)
 
             # Limit to maximum 7 headers for Premi section
+            if not dynamic_headers:
+                return ['PANEN', 'BRONDOL', 'PRUNING', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
             return dynamic_headers[:7]
 
         except Exception as e:
@@ -1009,7 +1148,7 @@ class DaftarUpahEngineRealFixed:
             clean_emp_nik = clean_nik(emp['nik'])
 
             # Get real HK count from database
-            hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+            hk_count = self.get_employee_hk_count(emp['nik'], self.month, self.year) if isinstance(emp['nik'], str) else 25
 
             # Get employee payrate from database
             payrate = self.get_employee_payrate(emp['nik'])
@@ -1081,13 +1220,13 @@ class DaftarUpahEngineRealFixed:
             beras_payrate = self.get_employee_beras_payrate(emp['nik'])
 
             # Get tunjangan jabatan amount directly from database
-            jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], 5, 2025)  # May 2025
+            jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], self.month, self.year)
             # Calculate jabatan rate as amount ÷ hari kerja
             jabatan_rate = jabatan_amount / hari_kerja if hari_kerja > 0 and jabatan_amount > 0 else 0
 
             # Get masa kerja data from database using the two queries
             masa_kerja_years = self.get_employee_masa_kerja_years(emp['nik'])
-            masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], 5, 2025)  # May 2025
+            masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], self.month, self.year)
 
             # Prepare tunjangan data with new structure
             tunjangan_data = {
@@ -1109,7 +1248,7 @@ class DaftarUpahEngineRealFixed:
             }
 
             # Fetch lembur hours and amount from DB
-            lembur_hours, lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], 5, 2025)
+            lembur_hours, lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], self.month, self.year)
             tunjangan_data['lembur_jam'] = lembur_hours
             tunjangan_data['lembur_jumlah'] = lembur_amount
 
@@ -1147,13 +1286,13 @@ class DaftarUpahEngineRealFixed:
 
             # Add Premi columns (BRONDOL, PRUNING, and dynamic Premi headers)
             # Get BRONDOL amount from get_brondol_amount.sql
-            brondol_amount = self.get_employee_brondol_amount(emp['nik'], 5, 2025)  # May 2025
+            brondol_amount = self.get_employee_brondol_amount(emp['nik'], self.month, self.year)
 
             # Get PRUNING amount from DocDesc 'PRUNING'
-            pruning_amount = self.get_employee_pruning_amount(emp['nik'], 5, 2025)  # May 2025
+            pruning_amount = self.get_employee_pruning_amount(emp['nik'], self.month, self.year)
 
             # Get dynamic Premi headers and their amounts
-            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
 
             # Fixed Premi values (BRONDOL and PRUNING are always first two)
             premi_values = [brondol_amount, pruning_amount]
@@ -1162,11 +1301,11 @@ class DaftarUpahEngineRealFixed:
             for header in dynamic_premi_headers:
                 if len(premi_values) < 7:  # Only take first 5 dynamic headers to match template
                     # Try to get amount using the header as DocDesc
-                    amount = self.get_employee_premi_amount_by_docdesc(emp['nik'], header, 5, 2025)
+                    amount = self.get_employee_premi_amount_by_docdesc(emp['nik'], header, self.month, self.year)
                     premi_values.append(amount)
 
             # Get Koreksi amount from get_koreksi_emp.sql
-            koreksi_amount = self.get_employee_koreksi_amount(emp['nik'], 5, 2025)  # May 2025
+            koreksi_amount = self.get_employee_koreksi_amount(emp['nik'], self.month, self.year)
 
             # Add Koreksi as the 8th Premi column
             premi_values.append(koreksi_amount)
@@ -1321,7 +1460,7 @@ class DaftarUpahEngineRealFixed:
 
             # Merge employee data with real cuti data
             print(f"\n[3] Merging data with real cuti information...")
-            merged_employees = self.merge_employee_with_cuti_data(employees, "Mei", "2025")
+            merged_employees = self.merge_employee_with_cuti_data(employees, self.month_name, str(self.year))
 
             # Calculate tunjangan totals for new structure
             total_tunjangan = 0
@@ -1337,7 +1476,7 @@ class DaftarUpahEngineRealFixed:
 
             for emp in merged_employees:
                 # Get employee data for calculations
-                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                hk_count = self.get_employee_hk_count(emp['nik'], self.month, self.year) if isinstance(emp['nik'], str) else 25
                 payrate = self.get_employee_payrate(emp['nik'])
                 hari_kerja = self.calculate_hari_kerja(
                     hk_count,
@@ -1351,20 +1490,20 @@ class DaftarUpahEngineRealFixed:
                 emp_beras_rate = self.get_employee_beras_payrate(emp['nik'])
 
                 # Get tunjangan jabatan amount directly from database
-                emp_jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], 5, 2025)  # May 2025
+                emp_jabatan_amount = self.get_employee_jabatan_amount(emp['nik'], self.month, self.year)
                 # Calculate jabatan rate as amount ÷ hari kerja
                 emp_jabatan_rate = emp_jabatan_amount / hari_kerja if hari_kerja > 0 and emp_jabatan_amount > 0 else 0
 
                 # Get masa kerja data from database using the two queries
                 emp_masa_kerja_years = self.get_employee_masa_kerja_years(emp['nik'])
-                emp_masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], 5, 2025)  # May 2025
+                emp_masa_kerja_amount = self.get_employee_masa_kerja_amount(emp['nik'], self.month, self.year)
 
                 # Calculate for this employee using database payrates
                 emp_beras_jumlah = hk_count * emp_beras_rate if emp_beras_rate > 0 else 0
                 emp_jabatan_jumlah = emp_jabatan_amount  # Direct amount from query
                 emp_masa_kerja_rate = emp_masa_kerja_years  # Lama (Thn)
                 emp_masa_kerja_jumlah = emp_masa_kerja_amount  # Jumlah (Rp)
-                emp_lembur_hours, emp_lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], 5, 2025)
+                emp_lembur_hours, emp_lembur_amount = self.get_employee_lembur_hours_and_amount(emp['nik'], self.month, self.year)
 
                 # Add to totals
                 total_beras_rate += emp_beras_rate
@@ -1398,12 +1537,12 @@ class DaftarUpahEngineRealFixed:
             grand_total_cuti_nasional = sum(emp.get('cuti_nasional_hari', 0) for emp in merged_employees)
             grand_total_cuti_izin = sum(emp.get('cuti_izin_hari', 0) for emp in merged_employees)
 
-            grand_total_hk = sum(self.get_employee_hk_count(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            grand_total_hk = sum(self.get_employee_hk_count(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Calculate grand total Upah Pokok as sum of (Hari Kerja × Upah Dasar) for all employees
             grand_total_upah_pokok = 0
             for emp in merged_employees:
-                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                hk_count = self.get_employee_hk_count(emp['nik'], self.month, self.year) if isinstance(emp['nik'], str) else 25
                 payrate = self.get_employee_payrate(emp['nik'])
                 upah_pokok = self.calculate_gaji_pokok(hk_count, payrate,
                                                      emp.get('cuti_tahunan_hari', 0),
@@ -1415,7 +1554,7 @@ class DaftarUpahEngineRealFixed:
             # Calculate grand total Gaji Pokok as sum of (JML HK × Upah Dasar) for all employees
             grand_total_gaji_pokok = 0
             for emp in merged_employees:
-                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                hk_count = self.get_employee_hk_count(emp['nik'], self.month, self.year) if isinstance(emp['nik'], str) else 25
                 payrate = self.get_employee_payrate(emp['nik'])
                 gaji_pokok_val = (hk_count * float(payrate)) if payrate else 0
                 grand_total_gaji_pokok += gaji_pokok_val
@@ -1433,19 +1572,19 @@ class DaftarUpahEngineRealFixed:
 
             # Grand totals for Premi (BRONDOL, PRUNING, and dynamic Premi headers)
             # Calculate BRONDOL grand total
-            grand_total_brondol = sum(self.get_employee_brondol_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            grand_total_brondol = sum(self.get_employee_brondol_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Calculate PRUNING grand total from DocDesc 'PRUNING'
-            grand_total_pruning = sum(self.get_employee_pruning_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            grand_total_pruning = sum(self.get_employee_pruning_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Calculate dynamic Premi grand totals using DocDesc matching
-            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
 
             # Initialize list for dynamic grand totals
             grand_total_premi_dynamic = []
             for header in dynamic_premi_headers:
                 if len(grand_total_premi_dynamic) < 5:  # Only take first 5 dynamic headers
-                    amount = sum(self.get_employee_premi_amount_by_docdesc(emp['nik'], header, 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+                    amount = sum(self.get_employee_premi_amount_by_docdesc(emp['nik'], header, self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
                     grand_total_premi_dynamic.append(amount)
 
             # Pad with zeros if we don't have enough values
@@ -1462,7 +1601,7 @@ class DaftarUpahEngineRealFixed:
             grand_total_angkut_bibit = 0
 
             # Calculate Grand Total Koreksi
-            grand_total_koreksi = sum(self.get_employee_koreksi_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            grand_total_koreksi = sum(self.get_employee_koreksi_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Calculate Grand Total Total Premi = sum of all premi grand totals + koreksi
             grand_total_total_premi = (grand_total_brondol + grand_total_pruning +
@@ -1598,13 +1737,13 @@ class DaftarUpahEngineRealFixed:
             unique_locs = list(set(emp['loc_code'] for emp in merged_employees))
 
             # Get dynamic Premi headers first
-            dynamic_premi_headers = self.get_dynamic_premi_headers(5, 2025)  # May 2025
+            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
             print(f"[OK] Found {len(dynamic_premi_headers)} dynamic Premi headers: {', '.join(dynamic_premi_headers)}")
 
             # Prepare comprehensive data for template
             report_data = {
-                'bulan': 'Mei',
-                'tahun': '2025',
+                'bulan': self.month_name,
+                'tahun': str(self.year),
                 'gang_code': ', '.join(unique_gangs),
                 'loc_code': ', '.join(unique_locs),
                 'tanggal_cetak': datetime.now().strftime('%d-%m-%Y'),
@@ -1990,7 +2129,7 @@ class DaftarUpahEngineRealFixed:
 
             # Accumulate per-employee values consistent with row computation
             for emp in merged_employees:
-                hk_count = self.get_employee_hk_count(emp['nik'], 5, 2025) if isinstance(emp['nik'], str) else 25
+                hk_count = self.get_employee_hk_count(emp['nik'], self.month, self.year) if isinstance(emp['nik'], str) else 25
                 payrate = self.get_employee_payrate(emp['nik'])
                 hari_kerja = self.calculate_hari_kerja(
                     hk_count,
@@ -2071,12 +2210,14 @@ def main():
     parser.add_argument('--limit', type=int, default=100, help='Maximum employees (default: 100)')
     parser.add_argument('--template', default='daftar_upah_template_final.html', help='Template file')
     parser.add_argument('--output', help='Output file name')
+    parser.add_argument('--month', default='04', help='Month in MM format (01-12), default: 04')
+    parser.add_argument('--year', default='2025', help='Year in YYYY format, default: 2025')
 
     args = parser.parse_args()
 
     try:
         # Initialize engine
-        engine = DaftarUpahEngineRealFixed()
+        engine = DaftarUpahEngineRealFixed(month=args.month, year=args.year)
 
         # Generate report
         result = engine.generate_report_from_real_database(
