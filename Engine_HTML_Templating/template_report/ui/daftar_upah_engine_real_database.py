@@ -759,6 +759,7 @@ class DaftarUpahEngineRealFixed:
                 'TUNJANGAN JABATAN',
                 'TUNJANGAN MASA KERJA',
                 'PRUNING',
+                'BRONDOL',
                 # Additional PPH21 variants
                 'PPH 21',
                 'PPH21',
@@ -778,10 +779,18 @@ class DaftarUpahEngineRealFixed:
                     if header not in excluded_headers:
                         dynamic_headers.append(header)
 
+            # Deduplicate while preserving order
+            seen = set()
+            unique_headers = []
+            for h in dynamic_headers:
+                if h not in seen:
+                    seen.add(h)
+                    unique_headers.append(h)
+
             # Limit to maximum 7 headers for Premi section
-            if not dynamic_headers:
-                return ['PANEN', 'BRONDOL', 'PRUNING', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
-            return dynamic_headers[:7]
+            if not unique_headers:
+                return ['PANEN', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE', 'RETASE', 'ANGKUT TBS']
+            return unique_headers[:7]
 
         except Exception as e:
             print(f"[ERROR] Failed to get dynamic premi headers: {e}")
@@ -855,6 +864,7 @@ class DaftarUpahEngineRealFixed:
         try:
             import pyodbc
             from datetime import datetime
+            import re
 
             # Load database config
             with open("D:/Gawean Rebinmas/Monitoring Database/Plantware_Auto_Report/Daftar_Upah_Reporting/Explore_database/config.json", 'r') as f:
@@ -872,6 +882,7 @@ class DaftarUpahEngineRealFixed:
             query_file = Path(__file__).parent.parent / "query" / "Tunjangan" / "get_tunjangan_premi_amount.sql"
             with open(query_file, 'r', encoding='utf-8') as f:
                 query = f.read()
+            query = self._apply_table_mode(query)
 
             # Calculate date range for the specified month and year
             start_date = f"{year:04d}-{month:02d}-01"
@@ -880,17 +891,25 @@ class DaftarUpahEngineRealFixed:
             else:
                 end_date = f"{year:04d}-{month+1:02d}-01"
 
-            # Replace hardcoded values with proper parameter placeholders (no CAST - use simple strings like original)
+            # Replace hardcoded values with parameter placeholders
             query = query.replace("t.EmpCode = 'H0033'", "t.EmpCode = ?")
-            query = query.replace("DocDesc = 'TUNJANGAN MASA KERJA'", "DocDesc = ?")
             query = query.replace("t.DocDate >= '2025-05-01'", "t.DocDate >= ?")
             query = query.replace("t.DocDate <  '2025-06-01'", "t.DocDate < ?")
+            query = query.replace("DocDesc = 'TUNJANGAN MASA KERJA'", "DocDesc = ?")
+            query = query.replace("DocDesc = ?", "UPPER(t.DocDesc) LIKE UPPER(?)")
 
-            # Trim employee code to remove extra spaces
             emp_code_clean = emp_code.strip()
+            pattern = f"%{doc_desc.strip()}%"
+            if doc_desc.upper().strip() == 'CUCI UNIT':
+                pattern = '%CUCI%UNIT%'
+            elif 'BLOWER' in doc_desc.upper():
+                pattern = '%BLOWER%'
+            elif 'RETASE' in doc_desc.upper():
+                pattern = '%RETASE%'
+            elif 'ANGKUT' in doc_desc.upper() and 'TBS' in doc_desc.upper():
+                pattern = '%ANGKUT%TBS%'
 
-            # Execute query with correct parameter order matching the SQL query: EmpCode, DocDate, DocDate, DocDesc
-            cursor.execute(query, emp_code_clean, start_date, end_date, doc_desc)
+            cursor.execute(query, emp_code_clean, start_date, end_date, pattern)
             results = cursor.fetchall()
 
             cursor.close()
@@ -1646,11 +1665,11 @@ class DaftarUpahEngineRealFixed:
 
             bpjs_jumlah_total = bpjs_kesehatan_pekerja_total + bpjs_kesehatan_majikan_total + bpjs_pensiun_pekerja_total + bpjs_pensiun_majikan_total
 
-            # Calculate Grand Total SPSI
-            grand_total_spsi = sum(self.get_employee_spsi_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            # Calculate Grand Total SPSI (dynamic by selected period)
+            grand_total_spsi = sum(self.get_employee_spsi_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
-            # Calculate Grand Total PPH21
-            grand_total_pph21 = sum(self.get_employee_pph21_amount(emp['nik'], 5, 2025) for emp in merged_employees if isinstance(emp['nik'], str))
+            # Calculate Grand Total PPH21 (dynamic by selected period)
+            grand_total_pph21 = sum(self.get_employee_pph21_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Grand totals for potongan
             grand_total_pph21_legacy = sum(emp['potongan_pph'] for emp in merged_employees)
@@ -1917,8 +1936,8 @@ class DaftarUpahEngineRealFixed:
                     'potongan_total3': 0,
                     'potongan_total4': 0,
 
-                    # Final Grand Totals - Recalculate Upah Bersih using new formula
-                    'upah_bersih_total': grand_total_jumlah_upah_kotor - (bpjs_kesehatan_pekerja_total + bpjs_pensiun_pekerja_total + grand_total_spsi + grand_total_pph21),
+                    # Final Grand Totals - Upah Bersih equals SUM of row values for validation consistency
+                    'upah_bersih_total': total_upah_bersih,
                     'tidak_hadir_cth_total': grand_total_cth,
                     'tidak_hadir_alpa_total': grand_total_alpa
                 },
