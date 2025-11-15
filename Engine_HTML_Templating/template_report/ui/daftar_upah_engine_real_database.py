@@ -794,8 +794,24 @@ class DaftarUpahEngineRealFixed:
 
         except Exception as e:
             print(f"[ERROR] Failed to get dynamic premi headers: {e}")
-            # Return default headers if query fails
             return ['PANEN', 'BRONDOL', 'PRUNING', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
+
+    def filter_dynamic_headers_by_nonzero(self, headers: List[str], merged_employees: List[Dict[str, Any]], month: int, year: int) -> List[str]:
+        try:
+            nonzero_headers = []
+            for h in headers:
+                total = 0.0
+                for emp in merged_employees:
+                    nik = emp.get('nik')
+                    if isinstance(nik, str):
+                        amt = self.get_employee_premi_amount_by_docdesc(nik, h, month, year)
+                        if amt:
+                            total += float(amt)
+                if total > 0:
+                    nonzero_headers.append(h)
+            return nonzero_headers[:7]
+        except Exception:
+            return headers[:7]
 
     def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int, hk_minggu: int, hk_nasional: int) -> int:
         """Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)"""
@@ -1149,7 +1165,7 @@ class DaftarUpahEngineRealFixed:
             print(f"[ERROR] Failed to get PPH21 amount for {emp_code}: {e}")
             return 0
 
-    def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]]) -> str:
+    def generate_final_employee_rows(self, merged_employees: List[Dict[str, Any]], dynamic_headers: Optional[List[str]] = None) -> str:
         """Generate employee rows for final template with correct layout"""
         def clean_nik(nik):
             """Clean NIK by removing extra spaces and dots"""
@@ -1311,7 +1327,7 @@ class DaftarUpahEngineRealFixed:
             pruning_amount = self.get_employee_pruning_amount(emp['nik'], self.month, self.year)
 
             # Get dynamic Premi headers and their amounts
-            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
+            dynamic_premi_headers = dynamic_headers if dynamic_headers is not None else self.get_dynamic_premi_headers(self.month, self.year)
 
             # Fixed Premi values (BRONDOL and PRUNING are always first two)
             premi_values = [brondol_amount, pruning_amount]
@@ -1432,7 +1448,7 @@ class DaftarUpahEngineRealFixed:
             alpa_formatted = self.format_value(emp.get('tidak_hadir_alpa', 0))
 
             employee_rows += f"""
-                    <td class="number-cell col-upah center-cell">{upah_formatted}</td>
+                    <td class="number-cell col-upah center-cell" title="Upah Bersih = Jumlah Upah Kotor - Total Potongan">{upah_formatted}</td>
                     <td class="number-cell col-tidak-hadir center-cell">{cth_formatted}</td>
                     <td class="number-cell col-tidak-hadir center-cell">{alpa_formatted}</td>
                 </tr>"""
@@ -1597,7 +1613,8 @@ class DaftarUpahEngineRealFixed:
             grand_total_pruning = sum(self.get_employee_pruning_amount(emp['nik'], self.month, self.year) for emp in merged_employees if isinstance(emp['nik'], str))
 
             # Calculate dynamic Premi grand totals using DocDesc matching
-            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
+            base_dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
+            dynamic_premi_headers = self.filter_dynamic_headers_by_nonzero(base_dynamic_premi_headers, merged_employees, self.month, self.year)
 
             # Initialize list for dynamic grand totals
             grand_total_premi_dynamic = []
@@ -1692,8 +1709,13 @@ class DaftarUpahEngineRealFixed:
                 return nik.strip().replace('.', '').replace(' ', '')
 
             # Generate employee rows HTML based on template type
+            # Compute dynamic Premi headers filtered by nonzero totals across employees
+            base_dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
+            dynamic_premi_headers = self.filter_dynamic_headers_by_nonzero(base_dynamic_premi_headers, merged_employees, self.month, self.year)
+            print(f"[OK] Found {len(dynamic_premi_headers)} dynamic Premi headers: {', '.join(dynamic_premi_headers)}")
+
             if 'final' in template_file:
-                employee_rows = self.generate_final_employee_rows(merged_employees)
+                employee_rows = self.generate_final_employee_rows(merged_employees, dynamic_premi_headers)
             else:
                 # Original template structure (legacy)
                 employee_rows = ""
@@ -1755,9 +1777,9 @@ class DaftarUpahEngineRealFixed:
             unique_gangs = list(set(emp['gang_code'] for emp in merged_employees))
             unique_locs = list(set(emp['loc_code'] for emp in merged_employees))
 
-            # Get dynamic Premi headers first
-            dynamic_premi_headers = self.get_dynamic_premi_headers(self.month, self.year)
-            print(f"[OK] Found {len(dynamic_premi_headers)} dynamic Premi headers: {', '.join(dynamic_premi_headers)}")
+            # Get dynamic Premi headers first (filtered by non-zero totals)
+            base_dynamic_premi_headers_2 = self.get_dynamic_premi_headers(self.month, self.year)
+            dynamic_premi_headers = self.filter_dynamic_headers_by_nonzero(base_dynamic_premi_headers_2, merged_employees, self.month, self.year)
 
             # Prepare comprehensive data for template
             report_data = {
@@ -1971,11 +1993,14 @@ class DaftarUpahEngineRealFixed:
             # Headers that can be replaced (starting after BRONDOL and PRUNING)
             replaceable_headers = ['PANEN', 'CUCI UNIT', 'PREMI BLOWER', 'TABUR PUPUK', 'INCENTIVE']
 
-            # Replace replaceable headers with dynamic ones
-            for i, dynamic_header in enumerate(dynamic_premi_headers):
-                if i < len(replaceable_headers):
-                    static_header = replaceable_headers[i]
+            # Replace replaceable headers with dynamic ones and blank out unused
+            for i in range(len(replaceable_headers)):
+                static_header = replaceable_headers[i]
+                if i < len(dynamic_premi_headers):
+                    dynamic_header = dynamic_premi_headers[i]
                     template_content = template_content.replace(f">{static_header}<", f">{dynamic_header}<")
+                else:
+                    template_content = template_content.replace(f">{static_header}<", f">&nbsp;<")
 
             # Replace placeholders safely (only replace specific placeholders)
             html_content = template_content
