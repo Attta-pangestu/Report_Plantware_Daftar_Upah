@@ -11,20 +11,20 @@ export default defineConfig({
     port: 5174,
     strictPort: true, // Always use port 5174
     proxy: isDev ? {
-      '/auth': { target: 'http://localhost:8010', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8010', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8010', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8010', changeOrigin: true }
+      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
+      '/employees': { target: 'http://localhost:8000', changeOrigin: true },
+      '/payroll': { target: 'http://localhost:8000', changeOrigin: true },
+      '/reports': { target: 'http://localhost:8000', changeOrigin: true }
     } : {
       '/api/login': {
-        target: 'http://localhost:8010',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: () => '/auth/login'
       },
-      '/auth': { target: 'http://localhost:8010', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8010', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8010', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8010', changeOrigin: true }
+      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
+      '/employees': { target: 'http://localhost:8000', changeOrigin: true },
+      '/payroll': { target: 'http://localhost:8000', changeOrigin: true },
+      '/reports': { target: 'http://localhost:8000', changeOrigin: true }
     }
   }
 })

@@ -2,6 +2,10 @@ from typing import Dict, Any, List
 from datetime import datetime
 import json
 import os
+import time
+from database.services.database import Database
+from database.services.queries import Queries
+from database.services.cache import Cache
 
 class HeaderService:
     def __init__(self):
@@ -66,19 +70,9 @@ class HeaderService:
 
             table_structure = self.header_structure.get('table_structure', {})
 
-            try:
-                import sys
-                from pathlib import Path
-                engine_dir = Path(__file__).parent.parent.parent.parent.parent / "Engine_HTML_Templating" / "template_report" / "ui"
-                sys.path.insert(0, str(engine_dir))
-                from daftar_upah_engine_real_database import DaftarUpahEngineRealFixed
-                engine = DaftarUpahEngineRealFixed(month=str(month or datetime.now().month).zfill(2), year=str(year or datetime.now().year))
-                employees = engine.query_manager.get_employees_by_gang(gang_code or 'H1H', 200)
-                merged_emps = engine.merge_employee_with_cuti_data(employees, engine.month_name, str(engine.year))
-                dyn = engine.get_dynamic_premi_headers(engine.month, engine.year)
-                dyn = engine.filter_dynamic_headers_by_nonzero(dyn, merged_emps, engine.month, engine.year)
-            except Exception:
-                dyn = []
+            tq0 = time.perf_counter()
+            dyn = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            tq1 = time.perf_counter()
 
             hierarchy = table_structure.get('hierarchy', {})
             level2 = hierarchy.get('level_2', {}).get('columns', [])
@@ -95,11 +89,18 @@ class HeaderService:
                 if i < len(dyn):
                     c['text'] = dyn[i]
 
-            # Generate dynamic headers based on real data
+            t0 = time.perf_counter()
             headers = self._build_header_hierarchy(table_structure)
+            t1 = time.perf_counter()
 
             return {
-                "report_info": report_info,
+                "report_info": {
+                    **report_info,
+                    "metrics": {
+                        "build_ms": int((t1 - t0) * 1000),
+                        "query_ms": int((tq1 - tq0) * 1000)
+                    }
+                },
                 "table_structure": {
                     **table_structure,
                     "generated_headers": headers,
@@ -111,6 +112,55 @@ class HeaderService:
         except Exception as e:
             print(f"Error generating dynamic headers: {e}")
             return self._get_error_response(str(e))
+
+    def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        start = time.perf_counter()
+        cache_key = f"dyn_hdr:{gang_code}:{year}-{str(month).zfill(2)}"
+        cached = Cache.instance().get(cache_key)
+        if cached is not None:
+            return cached
+        db = Database.instance()
+        q = Queries()
+        sql_entry = q.get('premi', 'dynamic_headers_by_gang_month')
+        if not sql_entry or 'sql' not in sql_entry:
+            return []
+        start_date = f"{year}-{str(month).zfill(2)}-01"
+        if month == 12:
+            end_date = f"{year+1}-01-01"
+        else:
+            end_date = f"{year}-{str(month+1).zfill(2)}-01"
+        rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+        mid = time.perf_counter()
+        excluded = {
+            'KOREKSI',
+            'POTONGAN PPH21',
+            'POTONGAN SPSI',
+            'TUNJANGAN JABATAN',
+            'TUNJANGAN MASA KERJA',
+            'PRUNING',
+            'BRONDOL',
+            'PPH 21',
+            'PPH21',
+            'SPSI',
+            'KOREKSI PANEN',
+            'POTONGAN KOREKSI',
+            'POTONGAN KOREKSI PANEN'
+        }
+        headers = []
+        for r in rows:
+            if not r:
+                continue
+            h = str(r[0]).strip()
+            if h and h.upper() not in excluded:
+                headers.append(h)
+        seen = set()
+        unique = []
+        for h in headers:
+            if h not in seen:
+                seen.add(h)
+                unique.append(h)
+        Cache.instance().set(cache_key, unique[:7], ttl=900)
+        return unique[:7]
 
     def _build_header_hierarchy(self, table_structure: Dict[str, Any]) -> Dict[str, Any]:
         """Build complete header hierarchy from structure"""
