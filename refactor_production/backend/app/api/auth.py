@@ -1,0 +1,152 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+from app.models.user import User, UserCreate, UserUpdate, UserResponse, UserLogin, UserRole, Token
+from app.services.auth_service import auth_service
+from app.services.database_service import db_service
+from typing import List
+
+security = HTTPBearer()
+
+router = APIRouter(tags=["authentication"])
+
+# Helper dependency function
+async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Get current user from authorization header"""
+    token = credentials.credentials
+    user = auth_service.get_current_user(token)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+# Pydantic models for API
+class UserRegister(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: str
+    divisions: List[str] = []
+
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+
+class ResetPassword(BaseModel):
+    new_password: str
+
+@router.post("/login", response_model=Token)
+async def login(user_credentials: UserLogin):
+    """Authenticate user and return access token"""
+    user = auth_service.authenticate_user(user_credentials.username, user_credentials.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return auth_service.create_user_token(user)
+
+@router.post("/register", response_model=UserResponse)
+async def register(user_data: UserRegister):
+    """Register new user"""
+    try:
+        # Create user with default role
+        user_create = UserCreate(
+            username=user_data.username,
+            email=user_data.email,
+            password=user_data.password,
+            full_name=user_data.full_name,
+            role=UserRole.USER,
+            divisions=user_data.divisions
+        )
+
+        user = db_service.create_user(user_create)
+        return UserResponse(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role,
+            divisions=user.divisions,
+            is_active=user.is_active,
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user"
+        )
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user_from_token)):
+    """Get current user information"""
+    return UserResponse(
+        id=current_user.id,
+        username=current_user.username,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role,
+        divisions=current_user.divisions,
+        is_active=current_user.is_active,
+        created_at=current_user.created_at,
+        updated_at=current_user.updated_at
+    )
+
+@router.get("/accessible-divisions", response_model=List[str])
+async def get_accessible_divisions(current_user: User = Depends(get_current_user_from_token)):
+    """Get list of divisions current user can access"""
+    return auth_service.get_user_accessible_divisions(current_user)
+
+@router.post("/change-password")
+async def change_password(
+    password_data: ChangePassword,
+    current_user: User = Depends(get_current_user_from_token)
+):
+    """Change current user password"""
+    if auth_service.change_password(current_user.id, password_data.old_password, password_data.new_password):
+        return {"message": "Password changed successfully"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid old password"
+        )
+
+@router.post("/reset-password/{user_id}")
+async def reset_password(
+    user_id: int,
+    password_data: ResetPassword,
+    current_user: User = Depends(get_current_user_from_token)
+):
+    """Reset user password (admin only)"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin can reset passwords"
+        )
+
+    target_user = db_service.get_user_by_id(user_id)
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if auth_service.reset_password(user_id, password_data.new_password):
+        return {"message": "Password reset successfully"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset password"
+        )

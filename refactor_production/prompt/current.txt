@@ -1,0 +1,31 @@
+Modifikasi file  untuk mengimplementasikan query dengan fitur berikut:
+
+1. Sistem pengelompokan GangCode berdasarkan divisi Estate:
+   - Buat mapping awal GangCode ke divisi sesuai konfigurasi:
+     * A = PG1A
+     * B = PG1B
+     * C = PG2A
+     * D = PG2B
+     * E = DME
+     * F = ARA
+     * G = ARB1
+     * H = ARB2
+     * I = INFRA
+     * J = AREC
+     * L = IJL
+     * O = STF-OFFICE
+     * SEC = SECURITY
+
+2. Alur kerja query:
+   - Pertama, user memilih divisi yang diinginkan
+   - Sistem melakukan filter dan menampilkan list Gang berdasarkan awalan GangCode yang sesuai dengan divisi terpilih
+
+3. Pada file :
+   - Tambahkan operator LIKE dalam query untuk memungkinkan pencarian fleksibel
+   - Setelah user memilih divisi dan mendapatkan list Gang yang difilter, query harus mampu menangani pemilihan spesifik Gang oleh user
+
+4. Persyaratan teknis:
+   - Pastikan query mengembalikan data dalam format yang konsisten
+   - Optimalkan performa query untuk penanganan data besar
+   - Sertakan validasi input untuk mencegah SQL injection
+   - Dokumentasikan struktur hasil query dan parameter yang diperlukan

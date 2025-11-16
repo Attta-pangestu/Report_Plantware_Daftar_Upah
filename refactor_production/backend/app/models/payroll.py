@@ -1,0 +1,52 @@
+from pydantic import BaseModel
+from typing import Optional
+
+class PayrollRow(BaseModel):
+    no: int
+    jenis_kelamin: str
+    nik: str
+    nama: str
+    upah_dasar: float
+    hari_kerja: int
+    upah_pokok: float
+    cuti_tahunan_hari: int
+    cuti_sakit_haid_hari: int
+    cuti_minggu_hari: int
+    cuti_nasional_hari: int
+    cuti_izin_hari: int
+    jumlah_hk: int
+    gaji_pokok: float
+    beras_rate: float
+    beras_jumlah: float
+    jabatan_rate: float
+    jabatan_jumlah: float
+    masa_kerja_tahun: int
+    masa_kerja_jumlah: float
+    lembur_jam: int
+    lembur_jumlah: float
+    total_tunjangan: float
+    premi_brondol: float
+    premi_pruning: float
+    premi_angkut_material: float
+    premi_angkut_tbs: float
+    premi_harvesting: float
+    premi_harvesting_incentive: float
+    premi_pupuk: float
+    total_premi: float
+    jumlah_upah_kotor: float
+    pot_pph21: float
+    pot_kontan: float
+    pot_thr: float
+    pot_pinjam: float
+    pot_kl: float
+    pot_bpjs_kes: float
+    pot_bpjs_pek: float
+    pot_bpjs_maj: float
+    pot_total_1: float
+    pot_total_2: float
+    pot_total_3: float
+    pot_total_4: float
+    total_potongan: float
+    upah_bersih: float
+    tidak_hadir_cth: int
+    tidak_hadir_alpa: int

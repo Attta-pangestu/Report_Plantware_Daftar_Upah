@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Test</title>
+</head>
+<body>
+    <h1>React Frontend Test</h1>
+    <p>Frontend is running at: <span id="time"></span></p>
+    <button onclick="testAPI()">Test API Connection</button>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleTimeString();
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing API...';
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = '<b style="color: green;">API Success!</b><br>Token: ' + data.access_token.substring(0, 20) + '...';
+                } else {
+                    resultDiv.innerHTML = '<b style="color: red;">API Error: ' + response.status + ' ' + response.statusText + '</b>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<b style="color: red;">Network Error: ' + error.message + '</b>';
+            }
+        }
+    </script>
+</body>
+</html>

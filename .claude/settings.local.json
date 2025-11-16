@@ -13,7 +13,16 @@
       "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Penambahan-Kolom-Total-Potongan.md\")",
       "Bash(echo:*)",
       "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Ikhtisar-Kalkulasi-Upah-Bersih.md\")",
-      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Perbaikan-Header-Alignment.md\")"
+      "Bash(\"D:\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\2025-11-10-Perbaikan-Header-Alignment.md\")",
+      "Bash(findstr:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(netstat:*)",
+      "Bash(curl:*)",
+      "Bash(start http://localhost:5173)",
+      "Bash(start http://localhost:5174)",
+      "Bash(pip install:*)",
+      "Bash(start http://localhost:5175)"
     ],
     "deny": [],
     "ask": []

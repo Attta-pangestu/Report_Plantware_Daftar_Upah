@@ -1,0 +1,14 @@
+{
+  "gangs_all": {
+    "sql": "SELECT DISTINCT \"GangCode\" FROM \"HR_GANGLN\" ORDER BY \"GangCode\"",
+    "description": "List all available gang codes"
+  },
+  "gangs_by_prefix": {
+    "sql": "SELECT DISTINCT \"GangCode\" FROM \"HR_GANGLN\" WHERE \"GangCode\" LIKE ? ORDER BY \"GangCode\"",
+    "description": "List gang codes filtered by code prefix"
+  },
+  "gangs_with_desc_by_prefix": {
+    "sql": "SELECT g.\"GangCode\", g.\"Description\" FROM \"HR_GANG\" g JOIN (SELECT DISTINCT \"GangCode\" FROM \"HR_GANGLN\") ln ON ln.\"GangCode\" = g.\"GangCode\" WHERE g.\"GangCode\" LIKE ? ORDER BY g.\"GangCode\"",
+    "description": "List gang code and description filtered by code prefix"
+  }
+}

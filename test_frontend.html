@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Test</title>
+</head>
+<body>
+    <h1>React Frontend Test</h1>
+    <p>Frontend is running at: <span id="time"></span></p>
+    <div style="margin-bottom: 12px;">
+        <button onclick="login()">Login</button>
+        <span id="loginStatus" style="margin-left:8px; color: #555;"></span>
+    </div>
+    <div style="margin-bottom: 12px;">
+        <label for="division">Division:</label>
+        <select id="division">
+            <option value="">-- All --</option>
+            <option>PG1A</option>
+            <option>PG1B</option>
+            <option>PG2A</option>
+            <option>PG2B</option>
+            <option>DME</option>
+            <option>ARA</option>
+            <option>ARB1</option>
+            <option>ARB2</option>
+            <option>INFRA</option>
+            <option>AREC</option>
+            <option>IJL</option>
+            <option>STF-OFFICE</option>
+            <option>SECURITY</option>
+        </select>
+        <button onclick="loadGangs()">Load Gangs</button>
+    </div>
+    <div id="result" style="white-space: pre-line;"></div>
+
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleTimeString();
+
+        const BASE_URL = 'http://localhost:8001';
+        let token = null;
+
+        async function login() {
+            const statusEl = document.getElementById('loginStatus');
+            statusEl.textContent = 'Logging in...';
+            try {
+                const response = await fetch(`${BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' })
+                });
+                if (!response.ok) {
+                    statusEl.textContent = `Login failed (${response.status})`;
+                    return;
+                }
+                const data = await response.json();
+                token = data.access_token;
+                statusEl.textContent = 'Logged in';
+            } catch (e) {
+                statusEl.textContent = `Network error: ${e.message}`;
+            }
+        }
+
+        async function loadGangs() {
+            const division = document.getElementById('division').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Loading gangs...';
+            const url = division ? `${BASE_URL}/payroll/gangs?division=${encodeURIComponent(division)}` : `${BASE_URL}/payroll/gangs`;
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            try {
+                const response = await fetch(url, { headers });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `<b style="color:red;">Error ${response.status}:</b> ${errorText}`;
+                    return;
+                }
+                const codes = await response.json();
+                if (Array.isArray(codes) && codes.length > 0) {
+                    resultDiv.innerHTML = `<b>Found ${codes.length} gangs</b>\n` + codes.join(', ');
+                } else {
+                    resultDiv.innerHTML = '<b style="color:#a67c00;">No gangs found.</b>';
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<b style="color:red;">Network Error:</b> ${e.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+.grid-wrapper { padding: 8px; }
+.ag-theme-alpine { --ag-header-height: 36px; --ag-row-height: 30px; }
+.header-strong { background: #34495e; color: #fff; font-weight: 700; border: 1px solid #d0d0d0; }
+.cell-right { text-align: right; }
+.cell-center { text-align: center; }
+.col-upah-bersih { background: #ffe082; color: #bf360c; font-weight: 700; border: 2px solid #d0d0d0; }
+.col-jumlah-kotor { background: #ffebee; color: #b71c1c; font-weight: 700; }
+.col-total-potongan { background: #e3f2fd; color: #0d47a1; font-weight: 700; }
+.row-odd .ag-cell { background: #ffffff; }
+.row-even .ag-cell { background: #fff8e1; }
+.grand-total .ag-cell { background: #f0f0f0; font-weight: 700; }
+.ag-row-pinned .ag-cell { background: #ffffcc; font-weight: 700; }
+.ag-row-selected .ag-cell { outline: 2px solid #ff7043; }
+.cuti-col-odd { background-color: #f5f5f5; }
+.cuti-col-even { background-color: #ffffff; }
