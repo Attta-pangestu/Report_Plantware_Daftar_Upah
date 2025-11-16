@@ -64,8 +64,36 @@ class HeaderService:
                 "description": "Laporan daftar upah dengan header dinamis berdasarkan data real"
             }
 
-            # Get table structure from loaded JSON
             table_structure = self.header_structure.get('table_structure', {})
+
+            try:
+                import sys
+                from pathlib import Path
+                engine_dir = Path(__file__).parent.parent.parent.parent.parent / "Engine_HTML_Templating" / "template_report" / "ui"
+                sys.path.insert(0, str(engine_dir))
+                from daftar_upah_engine_real_database import DaftarUpahEngineRealFixed
+                engine = DaftarUpahEngineRealFixed(month=str(month or datetime.now().month).zfill(2), year=str(year or datetime.now().year))
+                employees = engine.query_manager.get_employees_by_gang(gang_code or 'H1H', 200)
+                merged_emps = engine.merge_employee_with_cuti_data(employees, engine.month_name, str(engine.year))
+                dyn = engine.get_dynamic_premi_headers(engine.month, engine.year)
+                dyn = engine.filter_dynamic_headers_by_nonzero(dyn, merged_emps, engine.month, engine.year)
+            except Exception:
+                dyn = []
+
+            hierarchy = table_structure.get('hierarchy', {})
+            level2 = hierarchy.get('level_2', {}).get('columns', [])
+            premi_children = [c for c in level2 if c.get('parent') == 'premi']
+            fixed = []
+            dynamic_slots = []
+            for c in premi_children:
+                t = (c.get('text') or '').upper()
+                if 'BRONDOL' in t or 'PRUNING' in t:
+                    fixed.append(c)
+                else:
+                    dynamic_slots.append(c)
+            for i, c in enumerate(dynamic_slots):
+                if i < len(dyn):
+                    c['text'] = dyn[i]
 
             # Generate dynamic headers based on real data
             headers = self._build_header_hierarchy(table_structure)
@@ -203,7 +231,7 @@ class HeaderService:
 
             # Cuti columns
             "cuti_tahunan_unit": "cuti_tahunan_hari",
-            "cuti_sakit_haid_unit": "cuti_sakit_haid_hai",
+            "cuti_sakit_haid_unit": "cuti_sakit_haid_hari",
             "cuti_minggu_unit": "cuti_minggu_hari",
             "cuti_nasional_unit": "cuti_nasional_hari",
             "cuti_izin_unit": "cuti_izin_hari",
@@ -274,47 +302,77 @@ class HeaderService:
             }
         }
 
-    def get_column_definitions(self) -> List[Dict[str, Any]]:
-        """
-        Get column definitions for AG Grid based on header structure
-        """
+    def get_column_definitions(self, month: int = None, year: int = None, gang_code: str = None) -> List[Dict[str, Any]]:
         try:
-            level_3_columns = self.header_structure.get('table_structure', {}).get('hierarchy', {}).get('level_3', {}).get('columns', [])
+            headers = self.generate_dynamic_headers(month=month, year=year, gang_code=gang_code)
+            hierarchy = headers.get('table_structure', {}).get('hierarchy', {})
+            l1 = hierarchy.get('level_1', {}).get('columns', [])
+            l2 = hierarchy.get('level_2', {}).get('columns', [])
+            l3 = hierarchy.get('level_3', {}).get('columns', [])
 
-            column_defs = []
+            l2_by_parent = {}
+            for c in l2:
+                p = c.get('parent')
+                l2_by_parent.setdefault(p, []).append(c)
+            l3_by_parent = {}
+            for c in l3:
+                p = c.get('parent')
+                l3_by_parent.setdefault(p, []).append(c)
 
-            # Add static columns first
-            static_columns = [
-                {"field": "no", "headerName": "NO", "width": 60, "pinned": "left"},
-                {"field": "jenis_kelamin", "headerName": "L/P", "width": 50, "pinned": "left"},
-                {"field": "nik", "headerName": "NIK", "width": 100, "pinned": "left"},
-                {"field": "nama", "headerName": "NAMA", "width": 200, "pinned": "left"}
-            ]
+            static_map = {
+                'no': 'no',
+                'gender': 'jenis_kelamin',
+                'nik': 'nik',
+                'name': 'nama',
+                'upah_dasar': 'upah_dasar',
+                'hari_kerja': 'hari_kerja',
+                'upah_pokok': 'upah_pokok',
+                'jml_hk': 'jumlah_hk',
+                'gaji_pokok': 'gaji_pokok',
+                'total_tunjangan': 'total_tunjangan',
+                'upah_bersih': 'upah_bersih'
+            }
 
-            column_defs.extend(static_columns)
+            col_defs = []
 
-            # Add dynamic columns based on header structure
-            for col in level_3_columns:
-                col_id = col.get('id')
-                field = self._map_to_data_field(col_id)
+            for c1 in l1:
+                c1_id = c1.get('id')
+                children_ids = c1.get('children', [])
+                if not children_ids:
+                    field = static_map.get(c1_id)
+                    if field:
+                        col_defs.append({
+                            'field': field,
+                            'headerName': c1.get('text'),
+                            'width': self._get_column_width(field),
+                            'type': self._get_column_type(field),
+                            'cellStyle': self._get_cell_style(field),
+                            'pinned': 'left' if field in ['jenis_kelamin','nik','nama'] else None
+                        })
+                    continue
 
-                if field not in ['no', 'jenis_kelamin', 'nik', 'nama']:  # Skip already added
-                    header_name = col.get('text', col_id.upper())
+                level2_cols = l2_by_parent.get(c1_id, [])
+                group2_defs = []
+                for c2 in level2_cols:
+                    c2_id = c2.get('id')
+                    level3_cols = l3_by_parent.get(c2_id, [])
+                    leaf_defs = []
+                    for c3 in level3_cols:
+                        field = self._map_to_data_field(c3.get('id'))
+                        leaf_defs.append({
+                            'field': field,
+                            'headerName': c3.get('text'),
+                            'width': self._get_column_width(field),
+                            'type': self._get_column_type(field),
+                            'cellStyle': self._get_cell_style(field)
+                        })
+                    group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
-                    col_def = {
-                        "field": field,
-                        "headerName": header_name,
-                        "width": self._get_column_width(field),
-                        "type": self._get_column_type(field),
-                        "cellStyle": self._get_cell_style(field)
-                    }
-
-                    column_defs.append(col_def)
-
-            return column_defs
+            return col_defs
 
         except Exception as e:
-            print(f"Error generating column definitions: {e}")
+            print(f"Error generating nested column definitions: {e}")
             return self._get_fallback_column_defs()
 
     def _get_column_width(self, field: str) -> int:

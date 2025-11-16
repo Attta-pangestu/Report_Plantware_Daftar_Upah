@@ -5,6 +5,8 @@ export async function fetchReportRows(token, { month, year, gang_code }) {
   if (month) params.month = month
   if (year) params.year = year
   if (gang_code) params.gang_code = gang_code
-  const r = await axios.get('/payroll/report', { headers: { Authorization: `Bearer ${token}` }, params })
+  const config = { params }
+  if (token) config.headers = { Authorization: `Bearer ${token}` }
+  const r = await axios.get('/payroll/report', config)
   return r.data
 }

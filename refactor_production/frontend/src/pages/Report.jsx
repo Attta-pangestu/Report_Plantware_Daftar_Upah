@@ -5,13 +5,16 @@ import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
 import { fetchReportRows } from '../services/payrollService'
 import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
+import { login } from '../services/authService'
+import { fetchReferenceHtml } from '../services/validationService'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
 
 export default function Report({ token, month, year, gang_code, onLoad }) {
   // In development mode, use default values if props are not provided
-  const devToken = DEV_MODE ? 'dev-token' : token
+  const [authToken, setAuthToken] = useState(token || null)
+  const devToken = DEV_MODE ? authToken : token
   const devMonth = DEV_MODE ? '2025-05' : month
   const devYear = DEV_MODE ? 2025 : year
   const devGangCode = DEV_MODE ? 'H1H' : gang_code
@@ -28,6 +31,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const [loading, setLoading] = useState(false)
   const [headerLoading, setHeaderLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showValidation, setShowValidation] = useState(false)
+  const [referenceHtml, setReferenceHtml] = useState('')
+  const [validationResult, setValidationResult] = useState(null)
   const gridRef = useRef(null)
   useEffect(() => {
     async function loadHeaders() {
@@ -46,7 +52,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
         const [headersData, columnDefsData] = await Promise.all([
           fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
-          fetchColumnDefinitions(finalToken)
+          fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
         ])
         setHeaders(headersData)
 
@@ -60,18 +66,119 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           level3: generatedHeaders.level_3?.columns || []
         })
 
-        setColumnDefs(columnDefsData)
+        const gen = headersData?.table_structure?.generated_headers || {}
+        const l1 = gen?.level_1?.columns || []
+        const l2 = gen?.level_2?.columns || []
+        const l3 = gen?.level_3?.columns || []
+        const l2ByParent = {}
+        l2.forEach(c => { const p = c.parent; if (!l2ByParent[p]) l2ByParent[p] = []; l2ByParent[p].push(c) })
+        const l3ByParent = {}
+        l3.forEach(c => { const p = c.parent; if (!l3ByParent[p]) l3ByParent[p] = []; l3ByParent[p].push(c) })
+        const mapField = (id) => {
+          const m = {
+            no:'no', gender:'jenis_kelamin', nik:'nik', name:'nama', upah_dasar:'upah_dasar', hari_kerja:'hari_kerja', upah_pokok:'upah_pokok', jml_hk:'jumlah_hk', gaji_pokok:'gaji_pokok', total_tunjangan:'total_tunjangan', upah_bersih:'upah_bersih',
+            cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
+            beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
+            brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
+            pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
+          }
+          return m[id] || id
+        }
+        const built = []
+        l1.forEach(c1 => {
+          const childrenIds = c1.children || []
+          if (!childrenIds || childrenIds.length === 0) {
+            const field = mapField(c1.id)
+            if (field) {
+              built.push({ field, headerName: c1.text, pinned: ['jenis_kelamin','nik','nama'].includes(field) ? 'left' : undefined })
+            }
+            return
+          }
+          const group2 = (l2ByParent[c1.id] || []).map(c2 => {
+            const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
+            return { headerName: c2.text, children: leaves }
+          })
+          built.push({ headerName: c1.text, children: group2 })
+        })
+        const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
+        const chosen = hasChildren ? columnDefsData : built
+        const leafFields = []
+        const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
+        chosen.forEach(walk)
+        const dupFields = leafFields.filter((f, i, a) => a.indexOf(f) !== i)
+        console.log('[Columns] Leaf fields count:', leafFields.length)
+        if (dupFields.length > 0) {
+          console.warn('[Columns] Duplicate fields detected:', dupFields)
+        }
+        setColumnDefs(chosen)
       } catch (e) {
         console.error('Failed to load headers:', e)
-        setError('Failed to load dynamic headers')
+        if (DEV_MODE && !finalToken) {
+          try {
+            const res = await login('admin', 'admin')
+            setAuthToken(res.access_token)
+            const [headersData, columnDefsData] = await Promise.all([
+              fetchDynamicHeaders(res.access_token, monthValue, yearValue, finalGangCode),
+              fetchColumnDefinitions(res.access_token, monthValue, yearValue, finalGangCode)
+            ])
+            setHeaders(headersData)
+            const gen = headersData?.table_structure?.generated_headers || {}
+            const l1 = gen?.level_1?.columns || []
+            const l2 = gen?.level_2?.columns || []
+            const l3 = gen?.level_3?.columns || []
+            const l2ByParent = {}
+            l2.forEach(c => { const p = c.parent; if (!l2ByParent[p]) l2ByParent[p] = []; l2ByParent[p].push(c) })
+            const l3ByParent = {}
+            l3.forEach(c => { const p = c.parent; if (!l3ByParent[p]) l3ByParent[p] = []; l3ByParent[p].push(c) })
+            const mapField = (id) => {
+              const m = {
+                no:'no', gender:'jenis_kelamin', nik:'nik', name:'nama', upah_dasar:'upah_dasar', hari_kerja:'hari_kerja', upah_pokok:'upah_pokok', jml_hk:'jumlah_hk', gaji_pokok:'gaji_pokok', total_tunjangan:'total_tunjangan', upah_bersih:'upah_bersih',
+                cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
+                beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
+                brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
+                pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
+              }
+              return m[id] || id
+            }
+            const built = []
+            l1.forEach(c1 => {
+              const childrenIds = c1.children || []
+              if (!childrenIds || childrenIds.length === 0) {
+                const field = mapField(c1.id)
+                if (field) {
+                  built.push({ field, headerName: c1.text, pinned: ['jenis_kelamin','nik','nama'].includes(field) ? 'left' : undefined })
+                }
+                return
+              }
+              const group2 = (l2ByParent[c1.id] || []).map(c2 => {
+                const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
+                return { headerName: c2.text, children: leaves }
+              })
+              built.push({ headerName: c1.text, children: group2 })
+            })
+            const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
+            const chosen = hasChildren ? columnDefsData : built
+            const leafFields = []
+            const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
+            chosen.forEach(walk)
+            const dupFields = leafFields.filter((f, i, a) => a.indexOf(f) !== i)
+            console.log('[Columns] Leaf fields count:', leafFields.length)
+            if (dupFields.length > 0) {
+              console.warn('[Columns] Duplicate fields detected:', dupFields)
+            }
+            setColumnDefs(chosen)
+          } catch (e2) {
+            setError('Failed to load dynamic headers')
+          }
+        } else {
+          setError('Failed to load dynamic headers')
+        }
       } finally {
         setHeaderLoading(false)
       }
     }
 
-    if (finalToken) {
-      loadHeaders()
-    }
+    loadHeaders()
   }, [finalToken, finalMonth, finalYear, finalGangCode])
 
   useEffect(() => {
@@ -92,13 +199,17 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         const data = await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
         setRows(data)
         const safe = Array.isArray(data) ? data : []
-
+        
         // Debug: Tampilkan data baris pertama di console
         if (safe.length > 0) {
           console.log('🔍 Data Baris Pertama (JSON):')
           console.log(JSON.stringify(safe[0], null, 2))
           console.log('📊 Data Baris Pertama (Object):')
           console.table(safe[0])
+          const keys = Object.keys(safe[0] || {})
+          const sampleDistinct = {}
+          keys.forEach(k => { sampleDistinct[k] = new Set(safe.slice(0, Math.min(10, safe.length)).map(r => r[k])).size })
+          console.log('[Rows] Distinct counts across first 10 rows:', sampleDistinct)
         } else {
           console.warn('⚠️ Tidak ada data yang ditemukan')
         }
@@ -112,9 +223,32 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
       } catch (e) {
-        setError('Failed to load report data')
-        setRows([])
-        setPinnedBottom([])
+        if (DEV_MODE && !finalToken) {
+          try {
+            const res = await login('admin', 'admin')
+            setAuthToken(res.access_token)
+            const data = await fetchReportRows(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+            setRows(data)
+            const safe = Array.isArray(data) ? data : []
+            const agg = (field) => safe.reduce((a, b) => a + Number(b[field] || 0), 0)
+            setPinnedBottom(safe.length > 0 ? [{
+              no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
+              upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
+              cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
+              gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
+              premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'), total_premi: agg('total_premi'),
+              jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
+            }] : [])
+          } catch (e2) {
+            setError('Failed to load report data')
+            setRows([])
+            setPinnedBottom([])
+          }
+        } else {
+          setError('Failed to load report data')
+          setRows([])
+          setPinnedBottom([])
+        }
       } finally {
         setLoading(false)
         if (typeof onLoad === 'function') onLoad()
@@ -135,63 +269,116 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   }
 
   // Enhanced column definitions with proper formatting
-  const enhancedColumnDefs = useMemo(() => {
-    return columnDefs.map(col => {
-      // Column specific configurations
-      const colConfig = {
-        ...col,
-        ...baseCol,
-        valueFormatter: undefined,
-        type: undefined,
-        cellStyle: undefined
+  const formatLeaf = (col) => {
+    const cfg = { ...col, ...baseCol }
+    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','total_potongan','upah_bersih']
+    const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','cuti_izin_hari','jumlah_hk','masa_kerja_tahun','lembur_jam','tidak_hadir_cth','tidak_hadir_alpa']
+    if (cfg.field && moneyFields.includes(cfg.field)) {
+      cfg.valueFormatter = p => {
+        const v = p.value
+        if (v === null || v === undefined || v === 0) return '-'
+        return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0,maximumFractionDigits:0}).format(v)
       }
+      cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
+    } else if (cfg.field && intFields.includes(cfg.field)) {
+      cfg.valueFormatter = p => { const v = p.value; if (v === null || v === undefined || v === 0) return '-'; return new Intl.NumberFormat('id-ID').format(v) }
+      cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
+    } else if (cfg.field && ['nama'].includes(cfg.field)) {
+      cfg.cellStyle = { textAlign: 'left' }; cfg.type = 'leftAligned'
+    } else if (cfg.field && ['nik','jenis_kelamin'].includes(cfg.field)) {
+      cfg.cellStyle = { textAlign: 'center' }; cfg.type = 'centerAligned'
+    }
+    const classMap = {
+      jumlah_upah_kotor: 'col-jumlah-kotor',
+      total_potongan: 'col-total-potongan',
+      upah_bersih: 'col-upah-bersih',
+      cuti_tahunan_hari: 'cuti-col-odd',
+      cuti_sakit_haid_hari: 'cuti-col-even',
+      cuti_minggu_hari: 'cuti-col-odd',
+      cuti_nasional_hari: 'cuti-col-even',
+      cuti_izin_hari: 'cuti-col-odd'
+    }
+    if (cfg.field && classMap[cfg.field]) {
+      cfg.cellClass = classMap[cfg.field]
+    }
+    return cfg
+  }
 
-      // Numeric columns with currency formatting
-      if (col.field && ['upah_dasar', 'upah_pokok', 'gaji_pokok', 'beras_jumlah', 'jabatan_jumlah',
-          'masa_kerja_jumlah', 'lembur_jumlah', 'total_tunjangan', 'premi_brondol', 'premi_pruning',
-          'premi_angkut_material', 'premi_angkut_tbs', 'premi_harvesting', 'premi_harvesting_incentive',
-          'premi_pupuk', 'total_premi', 'jumlah_upah_kotor', 'pot_pph21', 'pot_kontan', 'pot_thr',
-          'pot_pinjam', 'pot_kl', 'pot_bpjs_kes', 'pot_bpjs_pek', 'pot_bpjs_maj', 'pot_total_1',
-          'pot_total_2', 'pot_total_3', 'pot_total_4', 'total_potongan', 'upah_bersih'].includes(col.field)) {
-        colConfig.valueFormatter = (params) => {
-          const val = params.value
-          if (val === null || val === undefined || val === 0) return '-'
-          return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-          }).format(val)
-        }
-        colConfig.type = 'rightAligned'
-        colConfig.cellStyle = { textAlign: 'right' }
-      }
-      // Integer columns
-      else if (col.field && ['no', 'hari_kerja', 'cuti_tahunan_hari', 'cuti_sakit_haid_hari', 'cuti_minggu_hari',
-          'cuti_nasional_hari', 'cuti_izin_hari', 'jumlah_hk', 'masa_kerja_tahun', 'lembur_jam',
-          'tidak_hadir_cth', 'tidak_hadir_alpa'].includes(col.field)) {
-        colConfig.valueFormatter = (params) => {
-          const val = params.value
-          if (val === null || val === undefined || val === 0) return '-'
-          return new Intl.NumberFormat('id-ID').format(val)
-        }
-        colConfig.type = 'rightAligned'
-        colConfig.cellStyle = { textAlign: 'right' }
-      }
-      // Text columns with left alignment for names
-      else if (col.field && ['nama'].includes(col.field)) {
-        colConfig.cellStyle = { textAlign: 'left' }
-        colConfig.type = 'leftAligned'
-      }
-      // Center aligned columns
-      else if (col.field && ['nik', 'jenis_kelamin'].includes(col.field)) {
-        colConfig.cellStyle = { textAlign: 'center' }
-        colConfig.type = 'centerAligned'
-      }
+  const enhanceColumnsRecursive = (cols) => cols.map(c => {
+    if (c.children && Array.isArray(c.children)) {
+      return { ...c, children: enhanceColumnsRecursive(c.children) }
+    }
+    return formatLeaf(c)
+  })
 
-      return colConfig
-    })
-  }, [columnDefs])
+  const enhancedColumnDefs = useMemo(() => enhanceColumnsRecursive(columnDefs), [columnDefs])
+
+  const runValidation = async () => {
+    try {
+      const refPath = 'D\\Gawean Rebinmas\\Monitoring Database\\Plantware_Auto_Report\\Daftar_Upah_Reporting\\Engine_HTML_Templating\\template_report\\ui\\output\\daftar_upah_gang_H1H_real_dynamic_2025-11-16_13-58-11.html'
+      const html = await fetchReferenceHtml(refPath, finalToken)
+      setReferenceHtml(html)
+      const getLeafHeaders = (cols) => {
+        const out = []
+        const walk = (c) => {
+          if (c.children && Array.isArray(c.children)) {
+            c.children.forEach(walk)
+          } else if (c.headerName) {
+            out.push(String(c.headerName).trim())
+          }
+        }
+        cols.forEach(walk)
+        return out
+      }
+      const gridHeaders = getLeafHeaders(enhancedColumnDefs)
+
+      const theadMatch = html.match(/<thead[\s\S]*?<\/thead>/i)
+      let refLeaf = []
+      if (theadMatch) {
+        const thead = theadMatch[0]
+        const trs = [...thead.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map(m => m[0])
+        if (trs.length > 0) {
+          const last = trs[trs.length - 1]
+          refLeaf = [...last.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)].map(m => m[1].replace(/<[^>]*>/g,'').trim()).filter(x => x.length > 0)
+        }
+      }
+      let valuesDiff = null
+      try {
+        const tbodyMatch = html.match(/<tbody[\s\S]*?<\/tbody>/i)
+        if (tbodyMatch) {
+          const tbody = tbodyMatch[0]
+          const rowsHtml = [...tbody.matchAll(/<tr[\s\S]*?<\/tr>/gi)].map(m => m[0])
+          const grandRowHtml = rowsHtml.reverse().find(r => /GRAND\s+TOTAL/i.test(r)) || rowsHtml[0]
+          const cells = [...grandRowHtml.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(m => m[1].replace(/<[^>]*>/g,'').trim())
+          const num = (s) => {
+            const cleaned = (s || '').replace(/[^0-9.-]/g,'')
+            if (cleaned === '') return null
+            const n = Number(cleaned)
+            return isNaN(n) ? null : n
+          }
+          const refNums = cells.map(num).filter(v => v !== null)
+          const treeLeaves = []
+          const collect = (c) => { if (c.children) c.children.forEach(collect); else treeLeaves.push(c) }
+          enhancedColumnDefs.forEach(collect)
+          const gridFields = treeLeaves.map(l => l.field).filter(f => f && typeof pinnedBottom[0]?.[f] !== 'undefined')
+          const gridNums = gridFields.map(f => Number(pinnedBottom[0][f] || 0))
+          const sameLen = refNums.length === gridNums.length
+          const equal = sameLen && gridNums.every((v, i) => v === refNums[i])
+          valuesDiff = { valuesMatch: equal, gridValues: gridNums, referenceValues: refNums }
+        }
+      } catch {}
+      const diffs = {
+        headersMatch: gridHeaders.length === refLeaf.length && gridHeaders.every((h, i) => h === refLeaf[i]),
+        gridHeaders,
+        referenceHeaders: refLeaf,
+        values: valuesDiff
+      }
+      setValidationResult(diffs)
+      setShowValidation(true)
+    } catch (e) {
+      console.error('Validation load failed', e)
+    }
+  }
 
   const rowClassRules = {
     'row-odd': params => params.node.rowIndex % 2 === 0,
@@ -265,6 +452,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         </button>
         <button onClick={exportCsv}>Export CSV</button>
         <button onClick={autoSizeAll} style={{ marginLeft: 8 }}>Auto-size Columns</button>
+        <button onClick={runValidation} style={{ marginLeft: 8, backgroundColor: '#2196f3', color: 'white', border: 'none', padding: '4px 8px' }}>Validate vs Reference</button>
       </div>
 
       <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
@@ -284,6 +472,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           suppressRowClickSelection={true}
           animateRows={true}
           domLayout='autoHeight'
+          sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
           getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
           onGridReady={params => {
             if (rows.length > 0) {
@@ -296,6 +485,32 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           }}
         />
       </div>
+      {showValidation && (
+        <div className="validation-panel" style={{ marginTop: 16 }}>
+          <h3>Reference Preview</h3>
+          <iframe title="reference" style={{ width: '100%', height: '60vh', border: '1px solid #ccc' }} srcDoc={referenceHtml} />
+          {validationResult && (
+            <div style={{ marginTop: 8, fontSize: 14 }}>
+              <div>Headers match: <strong>{validationResult.headersMatch ? 'Yes' : 'No'}</strong></div>
+              {validationResult.values && (
+                <div>Grand totals match: <strong>{validationResult.values.valuesMatch ? 'Yes' : 'No'}</strong></div>
+              )}
+              {!validationResult.headersMatch && (
+                <div style={{ display:'flex', gap:16, marginTop:8 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight: 600 }}>Grid Headers</div>
+                    <div>{validationResult.gridHeaders.join(' | ')}</div>
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight: 600 }}>Reference Headers</div>
+                    <div>{validationResult.referenceHeaders.join(' | ')}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
