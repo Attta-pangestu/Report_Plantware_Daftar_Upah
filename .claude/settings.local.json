@@ -22,7 +22,15 @@
       "Bash(start http://localhost:5173)",
       "Bash(start http://localhost:5174)",
       "Bash(pip install:*)",
-      "Bash(start http://localhost:5175)"
+      "Bash(start http://localhost:5175)",
+      "Bash(start http://localhost:5177)",
+      "Bash(start http://localhost:5178)",
+      "Bash(taskkill:*)",
+      "Bash(wmic:*)",
+      "Bash(tasklist:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:test:*)",
+      "Bash(set:*)"
     ],
     "deny": [],
     "ask": []

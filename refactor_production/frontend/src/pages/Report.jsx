@@ -4,20 +4,104 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
 import { fetchReportRows } from '../services/payrollService'
+import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 
-export default function Report({ token, month, year, gang_code }) {
+// Check if running in development mode
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
+
+export default function Report({ token, month, year, gang_code, onLoad }) {
+  // In development mode, use default values if props are not provided
+  const devToken = DEV_MODE ? 'dev-token' : token
+  const devMonth = DEV_MODE ? '2025-05' : month
+  const devYear = DEV_MODE ? 2025 : year
+  const devGangCode = DEV_MODE ? 'H1H' : gang_code
+
+  const finalToken = devToken || token
+  const finalMonth = devMonth || month
+  const finalYear = devYear || year
+  const finalGangCode = devGangCode || gang_code
   const [rows, setRows] = useState([])
   const [pinnedBottom, setPinnedBottom] = useState([])
+  const [columnDefs, setColumnDefs] = useState([])
+  const [headers, setHeaders] = useState(null)
+  const [hierarchyHeaders, setHierarchyHeaders] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [headerLoading, setHeaderLoading] = useState(false)
   const [error, setError] = useState('')
   const gridRef = useRef(null)
+  useEffect(() => {
+    async function loadHeaders() {
+      setHeaderLoading(true)
+      try {
+        // Parse month if it's a string in YYYY-MM format
+        let monthValue = finalMonth
+        let yearValue = finalYear
+
+        if (typeof finalMonth === 'string' && finalMonth.includes('-')) {
+          const [year, month] = finalMonth.split('-')
+          monthValue = parseInt(month, 10)
+          yearValue = parseInt(year, 10)
+        }
+
+        console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
+        const [headersData, columnDefsData] = await Promise.all([
+          fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
+          fetchColumnDefinitions(finalToken)
+        ])
+        setHeaders(headersData)
+
+        // Extract hierarchy headers for 3-level header structure
+        const tableStructure = headersData.table_structure || {}
+        const generatedHeaders = tableStructure.generated_headers || {}
+
+        setHierarchyHeaders({
+          level1: generatedHeaders.level_1?.columns || [],
+          level2: generatedHeaders.level_2?.columns || [],
+          level3: generatedHeaders.level_3?.columns || []
+        })
+
+        setColumnDefs(columnDefsData)
+      } catch (e) {
+        console.error('Failed to load headers:', e)
+        setError('Failed to load dynamic headers')
+      } finally {
+        setHeaderLoading(false)
+      }
+    }
+
+    if (finalToken) {
+      loadHeaders()
+    }
+  }, [finalToken, finalMonth, finalYear, finalGangCode])
+
   useEffect(() => {
     async function run() {
       setLoading(true); setError('')
       try {
-        const data = await fetchReportRows(token, { month, year, gang_code })
+        // Parse month if it's a string in YYYY-MM format
+        let monthValue = finalMonth
+        let yearValue = finalYear
+
+        if (typeof finalMonth === 'string' && finalMonth.includes('-')) {
+          const [year, month] = finalMonth.split('-')
+          monthValue = parseInt(month, 10)
+          yearValue = parseInt(year, 10)
+        }
+
+        console.log('[Report] Loading data rows for:', { monthValue, yearValue, finalGangCode })
+        const data = await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
         setRows(data)
         const safe = Array.isArray(data) ? data : []
+
+        // Debug: Tampilkan data baris pertama di console
+        if (safe.length > 0) {
+          console.log('🔍 Data Baris Pertama (JSON):')
+          console.log(JSON.stringify(safe[0], null, 2))
+          console.log('📊 Data Baris Pertama (Object):')
+          console.table(safe[0])
+        } else {
+          console.warn('⚠️ Tidak ada data yang ditemukan')
+        }
         const agg = (field) => safe.reduce((a, b) => a + Number(b[field] || 0), 0)
         setPinnedBottom(safe.length > 0 ? [{
           no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
@@ -33,78 +117,87 @@ export default function Report({ token, month, year, gang_code }) {
         setPinnedBottom([])
       } finally {
         setLoading(false)
+        if (typeof onLoad === 'function') onLoad()
       }
     }
-    run()
-  }, [token, month, year, gang_code])
+    if (columnDefs.length > 0) {
+      run()
+    }
+  }, [finalToken, finalMonth, finalYear, finalGangCode, columnDefs])
 
-  const currency = (v) => v === '' ? '' : (v ?? 0).toLocaleString('id-ID')
-  const baseCol = { resizable: true, sortable: true }
-  const colDefs = useMemo(() => ([
-    { field: 'no', headerName: 'NO', width: 60, cellClass: 'cell-center' },
-    { field: 'jenis_kelamin', headerName: 'L/P', width: 70, cellClass: 'cell-center', pinned: 'left' },
-    { field: 'nik', headerName: 'NIK', width: 110, pinned: 'left' },
-    { field: 'nama', headerName: 'NAMA', width: 180, pinned: 'left' },
-    { field: 'upah_dasar', headerName: 'UPAH DASAR', width: 120, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    { field: 'hari_kerja', headerName: 'HARI KERJA', width: 110, cellClass: 'cell-center' },
-    { field: 'upah_pokok', headerName: 'UPAH POKOK', width: 120, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    { headerName: 'CUTI/LIBUR', children: [
-      { field: 'cuti_tahunan_hari', headerName: 'TAHUNAN (H)', width: 110, cellClass: 'cell-center cuti-col-odd' },
-      { field: 'cuti_sakit_haid_hari', headerName: 'SAKIT+HAID (H)', width: 130, cellClass: 'cell-center cuti-col-even' },
-      { field: 'cuti_minggu_hari', headerName: 'MINGGU (H)', width: 110, cellClass: 'cell-center cuti-col-odd' },
-      { field: 'cuti_nasional_hari', headerName: 'NASIONAL (H)', width: 120, cellClass: 'cell-center cuti-col-even' },
-      { field: 'cuti_izin_hari', headerName: 'IZIN (H)', width: 100, cellClass: 'cell-center cuti-col-odd' },
-    ]},
-    { field: 'jumlah_hk', headerName: 'HK', width: 80, cellClass: 'cell-center' },
-    { field: 'gaji_pokok', headerName: 'GAJI POKOK', width: 120, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    { headerName: 'TUNJANGAN', children: [
-      { field: 'beras_rate', headerName: 'BERAS (RATE)', width: 120, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'beras_jumlah', headerName: 'BERAS (JUMLAH)', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'jabatan_rate', headerName: 'JABATAN (RATE)', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'jabatan_jumlah', headerName: 'JABATAN (JUMLAH)', width: 140, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'masa_kerja_tahun', headerName: 'MASA KERJA (LAMA)', width: 150, cellClass: 'cell-center' },
-      { field: 'masa_kerja_jumlah', headerName: 'MASA KERJA (JUMLAH)', width: 160, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'lembur_jam', headerName: 'LEMBUR (JAM)', width: 120, cellClass: 'cell-center' },
-      { field: 'lembur_jumlah', headerName: 'LEMBUR (JUMLAH)', width: 140, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    ]},
-    { field: 'total_tunjangan', headerName: 'TOTAL TUNJANGAN', width: 150, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    { headerName: 'PREMI', children: [
-      { field: 'premi_brondol', headerName: 'BRONDOL', width: 140, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_pruning', headerName: 'PRUNING', width: 120, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_angkut_material', headerName: 'PREMI ANGKUT MATERIAL', width: 180, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_angkut_tbs', headerName: 'PREMI ANGKUT TBS', width: 160, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_harvesting', headerName: 'PREMI HARVESTING', width: 160, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_harvesting_incentive', headerName: 'PREMI HARVESTING +INCENTIVE PANEN', width: 240, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'premi_pupuk', headerName: 'PREMI PUPUK', width: 140, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    ]},
-    { field: 'total_premi', headerName: 'TOTAL PREMI', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    { field: 'jumlah_upah_kotor', headerName: 'JUMLAH UPAH KOTOR', width: 170, valueFormatter: p => currency(p.value), cellClass: 'cell-right col-jumlah-kotor' },
-    { headerName: 'POTONGAN', children: [
-      { field: 'pot_pph21', headerName: 'PPH21', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_kontan', headerName: 'Kontan', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_thr', headerName: 'THR', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_pinjam', headerName: 'Pinjam', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_kl', headerName: 'KL', width: 90, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_bpjs_kes', headerName: 'BPJS Kes', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_bpjs_pek', headerName: 'BPJS Pek', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_bpjs_maj', headerName: 'BPJS Maj', width: 130, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_total_1', headerName: 'Total', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_total_2', headerName: 'Total', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_total_3', headerName: 'Total', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-      { field: 'pot_total_4', headerName: 'Total', width: 110, valueFormatter: p => currency(p.value), cellClass: 'cell-right' },
-    ]},
-    { field: 'total_potongan', headerName: 'TOTAL POTONGAN', width: 150, valueFormatter: p => currency(p.value), cellClass: 'cell-right col-total-potongan' },
-    { field: 'upah_bersih', headerName: 'UPAH BERSIH', width: 140, valueFormatter: p => currency(p.value), cellClass: 'cell-right col-upah-bersih' },
-    { headerName: 'TIDAK HADIR', children: [
-      { field: 'tidak_hadir_cth', headerName: 'CTH', width: 80, cellClass: 'cell-center' },
-      { field: 'tidak_hadir_alpa', headerName: 'ALPA', width: 80, cellClass: 'cell-center' },
-    ]},
-  ]), [])
+  const baseCol = {
+    resizable: true,
+    sortable: true,
+    filter: true,
+    floatingFilter: true,
+    flex: 1,
+    minWidth: 100
+  }
+
+  // Enhanced column definitions with proper formatting
+  const enhancedColumnDefs = useMemo(() => {
+    return columnDefs.map(col => {
+      // Column specific configurations
+      const colConfig = {
+        ...col,
+        ...baseCol,
+        valueFormatter: undefined,
+        type: undefined,
+        cellStyle: undefined
+      }
+
+      // Numeric columns with currency formatting
+      if (col.field && ['upah_dasar', 'upah_pokok', 'gaji_pokok', 'beras_jumlah', 'jabatan_jumlah',
+          'masa_kerja_jumlah', 'lembur_jumlah', 'total_tunjangan', 'premi_brondol', 'premi_pruning',
+          'premi_angkut_material', 'premi_angkut_tbs', 'premi_harvesting', 'premi_harvesting_incentive',
+          'premi_pupuk', 'total_premi', 'jumlah_upah_kotor', 'pot_pph21', 'pot_kontan', 'pot_thr',
+          'pot_pinjam', 'pot_kl', 'pot_bpjs_kes', 'pot_bpjs_pek', 'pot_bpjs_maj', 'pot_total_1',
+          'pot_total_2', 'pot_total_3', 'pot_total_4', 'total_potongan', 'upah_bersih'].includes(col.field)) {
+        colConfig.valueFormatter = (params) => {
+          const val = params.value
+          if (val === null || val === undefined || val === 0) return '-'
+          return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          }).format(val)
+        }
+        colConfig.type = 'rightAligned'
+        colConfig.cellStyle = { textAlign: 'right' }
+      }
+      // Integer columns
+      else if (col.field && ['no', 'hari_kerja', 'cuti_tahunan_hari', 'cuti_sakit_haid_hari', 'cuti_minggu_hari',
+          'cuti_nasional_hari', 'cuti_izin_hari', 'jumlah_hk', 'masa_kerja_tahun', 'lembur_jam',
+          'tidak_hadir_cth', 'tidak_hadir_alpa'].includes(col.field)) {
+        colConfig.valueFormatter = (params) => {
+          const val = params.value
+          if (val === null || val === undefined || val === 0) return '-'
+          return new Intl.NumberFormat('id-ID').format(val)
+        }
+        colConfig.type = 'rightAligned'
+        colConfig.cellStyle = { textAlign: 'right' }
+      }
+      // Text columns with left alignment for names
+      else if (col.field && ['nama'].includes(col.field)) {
+        colConfig.cellStyle = { textAlign: 'left' }
+        colConfig.type = 'leftAligned'
+      }
+      // Center aligned columns
+      else if (col.field && ['nik', 'jenis_kelamin'].includes(col.field)) {
+        colConfig.cellStyle = { textAlign: 'center' }
+        colConfig.type = 'centerAligned'
+      }
+
+      return colConfig
+    })
+  }, [columnDefs])
 
   const rowClassRules = {
     'row-odd': params => params.node.rowIndex % 2 === 0,
     'row-even': params => params.node.rowIndex % 2 === 1,
-    'grand-total': params => params.node.footer
+    'grand-total': params => params.node.footer,
+    'first-row': params => params.node.rowIndex === 0
   }
 
   const exportCsv = () => {
@@ -115,18 +208,93 @@ export default function Report({ token, month, year, gang_code }) {
     gridRef.current.columnApi.getColumns().forEach(c => allIds.push(c.getId()))
     gridRef.current.columnApi.autoSizeColumns(allIds)
   }
+  const scrollToFirstRow = () => {
+    if (gridRef.current && rows.length > 0) {
+      gridRef.current.api.ensureIndexVisible(0, 'top')
+      gridRef.current.api.clearFocusedCell()
+      gridRef.current.api.setFocusedCell(0, 'no')
 
-  if (loading) return <div className="grid-wrapper">Loading report...</div>
-  if (error) return <div className="grid-wrapper">{error}</div>
-  if (!rows || rows.length === 0) return <div className="grid-wrapper">No data for selected parameters</div>
+      // Debug: Tampilkan data baris pertama di console saat tombol diklik
+      console.log('🔍 DEBUG - Data Baris Pertama (JSON):')
+      console.log(JSON.stringify(rows[0], null, 2))
+      console.log('📊 DEBUG - Data Baris Pertama (Object):')
+      console.table(rows[0])
+      console.log('📈 Total baris data:', rows.length)
+    } else {
+      console.warn('⚠️ Tidak ada data untuk di-debug')
+    }
+  }
+
+  if (headerLoading || loading) return (
+    <div className="grid-wrapper">
+      <div className="loading-overlay">
+        <div className="spinner" />
+        <div className="loading-text">
+          {headerLoading ? 'Loading dynamic headers...' : `Analyzing ${gang_code || '-'} for ${month || '-'}-${year || '-'}`}
+        </div>
+      </div>
+    </div>
+  )
+  if (error) return <div className="grid-wrapper error-text">{error}</div>
+  if (!rows || rows.length === 0) return <div className="grid-wrapper info-text">No data for selected parameters</div>
+
   return (
     <div className="grid-wrapper">
+      {headers && (
+        <div className="report-header" style={{
+          padding: '16px',
+          backgroundColor: '#f5f5f5',
+          marginBottom: '16px',
+          borderRadius: '4px',
+          border: '1px solid #ddd'
+        }}>
+          <h2 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold' }}>
+            {headers.report_info?.title || 'LAPORAN DAFTAR UPAH'}
+          </h2>
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            <div>Gang: <strong>{headers.report_info?.gang || gang_code || '-'}</strong></div>
+            <div>Generated: <strong>{headers.report_info?.generated_date || '-'}</strong></div>
+            <div>Database: <strong>{headers.report_info?.database || '-'}</strong></div>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: 8 }}>
+        <button onClick={scrollToFirstRow} style={{ backgroundColor: '#4caf50', color: 'white', border: 'none', padding: '4px 8px', marginRight: 8 }}>
+          Debug First Row
+        </button>
         <button onClick={exportCsv}>Export CSV</button>
         <button onClick={autoSizeAll} style={{ marginLeft: 8 }}>Auto-size Columns</button>
       </div>
-      <div className="ag-theme-alpine" style={{ height: 600, width: '100%' }}>
-        <AgGridReact ref={gridRef} columnDefs={colDefs} rowData={rows} defaultColDef={baseCol} rowClassRules={rowClassRules} pinnedBottomRowData={pinnedBottom} sideBar={{ toolPanels: ['columns','filters'], defaultToolPanel: 'columns' }} rowSelection={'single'} />
+
+      <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
+        <AgGridReact
+          ref={gridRef}
+          columnDefs={enhancedColumnDefs}
+          rowData={rows}
+          defaultColDef={baseCol}
+          rowClassRules={rowClassRules}
+          pinnedBottomRowData={pinnedBottom}
+          rowSelection={'single'}
+          pagination={true}
+          paginationPageSize={20}
+          paginationPageSizeSelector={[10, 20, 50, 100]}
+          rowBuffer={20}
+          enableRangeSelection={true}
+          suppressRowClickSelection={true}
+          animateRows={true}
+          domLayout='autoHeight'
+          getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
+          onGridReady={params => {
+            if (rows.length > 0) {
+              params.api.ensureIndexVisible(0, 'top')
+            }
+            // Log grid ready state for debugging
+            console.log('[AG Grid] Grid ready with columns:', enhancedColumnDefs.length)
+            console.log('[AG Grid] Rows loaded:', rows.length)
+            console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)
+          }}
+        />
       </div>
     </div>
   )

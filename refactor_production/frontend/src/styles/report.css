@@ -8,8 +8,21 @@
 .col-total-potongan { background: #e3f2fd; color: #0d47a1; font-weight: 700; }
 .row-odd .ag-cell { background: #ffffff; }
 .row-even .ag-cell { background: #fff8e1; }
+.first-row .ag-cell {
+  background: #e8f5e8 !important;
+  font-weight: 600 !important;
+  border: 1px solid #4caf50 !important;
+  color: #1b5e20 !important;
+}
 .grand-total .ag-cell { background: #f0f0f0; font-weight: 700; }
 .ag-row-pinned .ag-cell { background: #ffffcc; font-weight: 700; }
 .ag-row-selected .ag-cell { outline: 2px solid #ff7043; }
 .cuti-col-odd { background-color: #f5f5f5; }
 .cuti-col-even { background-color: #ffffff; }
+
+.loading-overlay { display:flex; flex-direction:column; align-items:center; justify-content:center; height: 300px; color:#333; }
+.spinner { width:48px; height:48px; border:4px solid #ccc; border-top-color:#1976d2; border-radius:50%; animation: spin 1s linear infinite; }
+.loading-text { margin-top:10px; }
+.error-text { color: #b71c1c; }
+.info-text { color: #455a64; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

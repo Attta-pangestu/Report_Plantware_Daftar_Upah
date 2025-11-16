@@ -1,9 +1,8 @@
 from typing import List, Optional
-from database.services.database import Database
-from database.services.queries import Queries
-from database.services.cache import Cache
+from app.services.mssql_service import mssql_service
 
 class GangService:
+    # GangCode to Division mapping sesuai kebutuhan user
     DIVISION_MAPPING = {
         "PG1A": ["A"],
         "PG1B": ["B"],
@@ -15,8 +14,8 @@ class GangService:
         "ARB2": ["H"],
         "INFRA": ["I"],
         "AREC": ["J"],
-        "IJL": ["IJL"],
-        "STF-OFFICE": ["STF"],
+        "IJL": ["L"],
+        "STF-OFFICE": ["O"],
         "SECURITY": ["SEC"]
     }
 
@@ -27,9 +26,7 @@ class GangService:
             PREFIX_TO_DIVISION[prefix] = division
 
     def __init__(self):
-        self.db = Database.instance()
-        self.queries = Queries()
-        self.cache = Cache.instance()
+        self.mssql_service = mssql_service
 
     def get_all_divisions(self) -> List[str]:
         """Get list of all available divisions"""
@@ -43,9 +40,9 @@ class GangService:
         up = gang_code.upper()
         if up.startswith('SEC'):
             return "SECURITY"
-        if up.startswith('IJL'):
+        if up.startswith('L'):
             return "IJL"
-        if up.startswith('STF'):
+        if up.startswith('O'):
             return "STF-OFFICE"
         first_char = up[0]
         return self.PREFIX_TO_DIVISION.get(first_char)
@@ -66,79 +63,78 @@ class GangService:
         filtered_gangs = []
         for gang in gangs:
             gang_upper = gang.upper()
-            # Handle special case for SECURITY
-            if division == "SECURITY":
-                if gang_upper.startswith('SEC'):
+            # Check if gang starts with any of the division prefixes
+            for prefix in prefixes:
+                if gang_upper.startswith(prefix):
                     filtered_gangs.append(gang)
-            else:
-                # Check if gang starts with any of the division prefixes
-                for prefix in prefixes:
-                    if gang_upper.startswith(prefix):
-                        filtered_gangs.append(gang)
-                        break
+                    break
 
         return sorted(list(set(filtered_gangs)))  # Remove duplicates and sort
 
-    async def fetch_gangs_from_database(self, division: Optional[str] = None, search: Optional[str] = None, force: bool = False) -> List[str]:
+    def fetch_gangs_from_database(self, division: Optional[str] = None, search: Optional[str] = None, force: bool = False) -> List[str]:
+        """
+        Fetch gangs from database with optional division filtering and LIKE search.
+
+        Args:
+            division: Filter gangs by division (uses GangCode mapping)
+            search: Search term with LIKE operator (flexible search)
+            force: Force refresh from database, ignore cache
+
+        Returns:
+            List of gang codes filtered and searched according to parameters
+        """
         try:
-            key = f"gangs:{division or 'all'}"
-            if not force:
-                cached = self.cache.get(key)
-                if cached is not None:
-                    return cached
+            # Get all gangs from database
+            gangs_data = self.mssql_service.get_all_gangs()
+            codes = [gang["GangCode"] for gang in gangs_data if gang.get("GangCode")]
+
+            # Apply division filter if specified
             if division:
-                prefixes = self.get_gang_prefixes_for_division(division)
-                if not prefixes:
-                    return []
-                q = self.queries.get('gangs', 'gangs_by_prefix')
-                # Use first prefix for LIKE; SECURITY handled by 'SEC%'
-                like = prefixes[0] + '%'
-                rows = self.db.query_all(q['sql'], (like,))
-                codes = [str(r[0]).strip() for r in rows]
-            else:
-                q = self.queries.get('gangs', 'gangs_all')
-                rows = self.db.query_all(q['sql'])
-                codes = [str(r[0]).strip() for r in rows]
+                codes = self.filter_gangs_by_division(codes, division)
 
-            if search:
-                s = search.upper()
-                codes = [c for c in codes if s in c.upper()]
+            # Apply search filter if provided (case-insensitive LIKE)
+            if search and codes:
+                search_term = search.upper().strip()
+                # More flexible search - can match anywhere in gang code
+                codes = [c for c in codes if search_term in c.upper()]
 
-            result = sorted(codes)
-            self.cache.set(key, result, ttl=300)
-            return result
-        except Exception:
+            # Sort results
+            return sorted(codes)
+
+        except Exception as e:
+            print(f"Error fetching gangs from database: {e}")
+            # Fallback to mock data if database fails
             return self.get_mock_gangs_data(division, search)
 
     def get_mock_gangs_data(self, division: Optional[str] = None, search: Optional[str] = None) -> List[str]:
         """Fallback mock data when database is unavailable"""
         mock_gangs = [
-            # PG1A Division
-            "A001", "A002", "A003", "A101", "A102",
-            # PG1B Division
-            "B001", "B002", "B003", "B101", "B102",
-            # PG2A Division
-            "C001", "C002", "C003", "C101", "C102",
-            # PG2B Division
-            "D001", "D002", "D003", "D101", "D102",
-            # DME Division
-            "E001", "E002", "E003", "E101", "E102",
-            # ARA Division
-            "F001", "F002", "F003", "F101", "F102",
-            # ARB1 Division
-            "G001", "G002", "G003", "G101", "G102",
-            # ARB2 Division
-            "H001", "H002", "H003", "H101", "H102",
-            # INFRA Division
-            "I001", "I002", "I003", "I101", "I102",
-            # AREC Division
-            "J001", "J002", "J003", "J101", "J102",
-            # IJL Division
-            "L001", "L002", "L003", "L101", "L102",
-            # STF-OFFICE Division
-            "O001", "O002", "O003", "O101", "O102",
-            # SECURITY Division
-            "SEC001", "SEC002", "SEC003"
+            # PG1A Division (A)
+            "A001", "A002", "A003", "A101", "A102", "A201", "A202",
+            # PG1B Division (B)
+            "B001", "B002", "B003", "B101", "B102", "B201", "B202",
+            # PG2A Division (C)
+            "C001", "C002", "C003", "C101", "C102", "C201", "C202",
+            # PG2B Division (D)
+            "D001", "D002", "D003", "D101", "D102", "D201", "D202",
+            # DME Division (E)
+            "E001", "E002", "E003", "E101", "E102", "E201", "E202",
+            # ARA Division (F)
+            "F001", "F002", "F003", "F101", "F102", "F201", "F202",
+            # ARB1 Division (G)
+            "G001", "G002", "G003", "G101", "G102", "G201", "G202",
+            # ARB2 Division (H)
+            "H001", "H002", "H003", "H101", "H102", "H201", "H202",
+            # INFRA Division (I)
+            "I001", "I002", "I003", "I101", "I102", "I201", "I202",
+            # AREC Division (J)
+            "J001", "J002", "J003", "J101", "J102", "J201", "J202",
+            # IJL Division (L)
+            "L001", "L002", "L003", "L101", "L102", "L201", "L202",
+            # STF-OFFICE Division (O)
+            "O001", "O002", "O003", "O101", "O102", "O201", "O202",
+            # SECURITY Division (SEC)
+            "SEC001", "SEC002", "SEC003", "SEC101", "SEC102"
         ]
 
         # Apply search filter if provided

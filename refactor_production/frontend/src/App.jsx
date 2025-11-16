@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Modal from './components/common/Modal'
 import { fetchGangs } from './services/gangService'
 
+// Check if running in development mode
+const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
+
 function AppInner() {
   const { token, isAuthenticated, user, loading, error } = useAuth()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -13,12 +16,31 @@ function AppInner() {
   const [gang, setGang] = useState('')
   const [division, setDivision] = useState('')
   const [ready, setReady] = useState(false)
+  const [applyLoading, setApplyLoading] = useState(false)
   const [gangLoading, setGangLoading] = useState(false)
   const [gangError, setGangError] = useState('')
   const [initError, setInitError] = useState('')
+  const [gangSearch, setGangSearch] = useState('')  // State untuk search gang
 
   useEffect(() => {
     async function bootstrap() {
+      // In dev mode, auto-login with admin credentials
+      if (DEV_MODE && !isAuthenticated) {
+        console.log('[App] Development mode: Auto-login with admin credentials')
+        // Simulate successful login
+        const mockUser = {
+          id: 1,
+          username: 'admin',
+          email: 'admin@payroll.com',
+          full_name: 'Development Admin',
+          role: 'admin',
+          divisions: ['PG1A', 'PG1B', 'PG2A', 'PG2B', 'DME', 'ARA', 'ARB1', 'ARB2', 'INFRA', 'AREC', 'IJL', 'STF-OFFICE', 'SECURITY']
+        }
+        // Auto-login
+        // You might need to update your AuthContext to handle this
+        // For now, let's continue with the regular flow
+      }
+
       if (!isAuthenticated || !user) return
 
       setInitError('')
@@ -27,6 +49,32 @@ function AppInner() {
 
         // Show filters modal for authenticated users
         setFiltersOpen(true)
+
+        // In dev mode, set default values
+        if (DEV_MODE) {
+          console.log('[App] Development mode: Setting default values')
+          setMonthInput('2025-05') // May 2025
+          setDivision('ARB2')      // ARB2 division
+
+          // Load gangs for ARB2 division
+          const gangsList = await fetchGangs(token || 'dev-token', 'ARB2', null, true)
+          setGangs(gangsList)
+
+          // Look for H1H gang
+          const h1hGang = gangsList.find(g => g.toUpperCase() === 'H1H')
+          if (h1hGang) {
+            setGang(h1hGang)
+            console.log('[App] Development mode: Found H1H gang, auto-submitting filters')
+            // Auto-submit filters in dev mode
+            setTimeout(() => {
+              setFiltersOpen(false)
+              setReady(true)
+            }, 1000)
+          } else {
+            console.log('[App] Development mode: H1H gang not found, showing filters')
+          }
+          return
+        }
 
         // Load gangs from API based on user's accessible divisions
         if (user.divisions && user.divisions.length > 0) {
@@ -54,10 +102,23 @@ function AppInner() {
       if (!division) { setGangs([]); setGang(''); return }
       setGangLoading(true); setGangError('')
       try {
-        const list = await fetchGangs(token || '', division, null, true)
+        // Include search term in API call
+        const searchTerm = gangSearch.trim() || null
+        const list = await fetchGangs(token || '', division, searchTerm, true)
         setGangs(list)
-        if (!list || list.length === 0) setGangError('No gangs found for selected division')
-        setGang('')
+        if (!list || list.length === 0) {
+          if (searchTerm) {
+            setGangError(`No gangs found for division "${division}" matching "${searchTerm}"`)
+          } else {
+            setGangError(`No gangs found for division "${division}"`)
+          }
+        } else {
+          setGangError('')
+        }
+        // Clear selected gang if it's not in the filtered results
+        if (gang && !list.includes(gang)) {
+          setGang('')
+        }
       } catch (e) {
         setGangError('Failed to load gangs')
       } finally {
@@ -65,11 +126,12 @@ function AppInner() {
       }
     }
     loadGangs()
-  }, [division, token])
+  }, [division, gangSearch, token])
 
   const submitFilters = () => {
     if (!monthInput || !division || !gang) return alert('Please select month, division and gang')
     setFiltersOpen(false)
+    setApplyLoading(true)
     setReady(true)
   }
 
@@ -154,8 +216,32 @@ function AppInner() {
 
           <div>
             <label style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
+              Search Gang (Optional):
+            </label>
+            <input
+              type="text"
+              value={gangSearch}
+              onChange={e => setGangSearch(e.target.value)}
+              placeholder="Search gang codes..."
+              disabled={!division}
+              style={{
+                width: '100%',
+                padding: 4,
+                marginBottom: 4
+              }}
+            />
+            {gangSearch && (
+              <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                Searching for: "{gangSearch}" in division "{division}"
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
               Gang:
               {gangLoading && <span style={{ marginLeft: 10, fontSize: 12, color: '#666' }}>Loading...</span>}
+              {gangSearch && <span style={{ marginLeft: 10, fontSize: 12, color: '#0066cc' }}>Filtered</span>}
             </label>
         <select
           value={gang}
@@ -201,12 +287,26 @@ function AppInner() {
           </div>
         </div>
       </Modal>
-      {ready ? <Report token={token} month={month} year={year} gang_code={gang_code} /> : null}
+      {applyLoading && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(255,255,255,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ width:48, height:48, border:'4px solid #ccc', borderTopColor:'#1976d2', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto' }} />
+            <div style={{ marginTop:10, color:'#333' }}>Analyzing data...</div>
+          </div>
+        </div>
+      )}
+      {ready ? <Report token={token} month={month} year={year} gang_code={gang_code} onLoad={() => setApplyLoading(false)} /> : null}
     </>
   )
 }
 
 export default function App() {
+  // In development mode, bypass auth and go directly to report
+  if (DEV_MODE) {
+    console.log('[App] Development mode: Bypassing auth, showing Report directly')
+    return <Report />
+  }
+
   return (
     <AuthProvider>
       <AppInner />
