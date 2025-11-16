@@ -4,6 +4,7 @@ from app.models.payroll import PayrollRow
 from datetime import datetime
 from pathlib import Path
 from database.services.database import Database
+import time
 import logging
 
 class PayrollService:
@@ -37,11 +38,155 @@ class PayrollService:
         v = cur_row[idx]
         return float(v or 0)
 
-    async def generate_rows(self, repo: EmployeeRepository, gang_code: str = None, month: int = None, year: int = None) -> List[PayrollRow]:
+    _cache: Dict[str, Any] = {}
+    _cache_exp: Dict[str, float] = {}
+    _cache_ttl: int = 300
+
+    def _cache_get(self, key: str):
+        exp = self._cache_exp.get(key)
+        if not exp:
+            return None
+        if exp < time.time():
+            try:
+                del self._cache[key]
+                del self._cache_exp[key]
+            except Exception:
+                pass
+            return None
+        return self._cache.get(key)
+
+    def _cache_set(self, key: str, value: Any, ttl: int = None):
+        t = ttl if isinstance(ttl, int) and ttl > 0 else self._cache_ttl
+        self._cache[key] = value
+        self._cache_exp[key] = time.time() + t
+
+    def _chunks(self, arr: List[str], size: int) -> List[List[str]]:
+        out = []
+        for i in range(0, len(arr), size):
+            out.append(arr[i:i+size])
+        return out
+
+    def _payrates_map(self, db: Database, emp_codes: List[str]) -> Dict[str, float]:
+        if not emp_codes:
+            return {}
+        key = f"payrates:{hash(tuple(emp_codes))}"
+        cached = self._cache_get(key)
+        if isinstance(cached, dict):
+            return cached
+        m: Dict[str, float] = {}
+        for chunk in self._chunks(emp_codes, 200):
+            ph = ','.join(['?']*len(chunk))
+            sql = f'SELECT "EmpCode","PayRate" FROM "HR_PAYROLL" WHERE "EmpCode" IN ({ph})'
+            rows = db.query_all(sql, tuple(chunk))
+            for r in rows:
+                m[str(r[0]).strip()] = float(r[1] or 0)
+        self._cache_set(key, m)
+        return m
+
+    def _premi_map(self, db: Database, emp_codes: List[str], start_date: str, end_date: str, pattern: str) -> Dict[str, float]:
+        if not emp_codes:
+            return {}
+        key = f"premi:{pattern}:{start_date}:{end_date}:{hash(tuple(emp_codes))}"
+        cached = self._cache_get(key)
+        if isinstance(cached, dict):
+            return cached
+        m: Dict[str, float] = {}
+        for chunk in self._chunks(emp_codes, 200):
+            ph = ','.join(['?']*len(chunk))
+            sql = (
+                f'SELECT t."EmpCode", SUM(ln."Amount") '
+                f'FROM "PR_ADTRANS_ARC" t JOIN "PR_ADTRANSLN_ARC" ln ON t."ID" = ln."MasterID" '
+                f'WHERE t."EmpCode" IN ({ph}) AND t."DocDate" >= ? AND t."DocDate" < ? AND UPPER(t."DocDesc") LIKE UPPER(?) '
+                f'GROUP BY t."EmpCode"'
+            )
+            params = tuple(chunk) + (start_date, end_date, pattern)
+            rows = db.query_all(sql, params)
+            for r in rows:
+                m[str(r[0]).strip()] = float(r[1] or 0)
+        self._cache_set(key, m)
+        return m
+
+    def _cuti_maps(self, db: Database, emp_codes: List[str], start_date: str, end_date: str, cuti_tah_raw: str, cuti_sakit_raw: str, hk_minggu_raw: str, hk_nas_raw: str) -> Dict[str, Dict[str, int]]:
+        key = f"cuti:{start_date}:{end_date}:{hash(tuple(emp_codes))}"
+        cached = self._cache_get(key)
+        if isinstance(cached, dict):
+            return cached
+        out: Dict[str, Dict[str, int]] = { c: { 'tahunan':0, 'sakit':0, 'minggu':0, 'nasional':0 } for c in emp_codes }
+        if not emp_codes:
+            return out
+        for chunk in self._chunks(emp_codes, 100):
+            with db.transaction() as cur:
+                for nik in chunk:
+                    ct_q, ct_p = self._paramify(cuti_tah_raw, nik, start_date, end_date)
+                    cs_q, cs_p = self._paramify(cuti_sakit_raw, nik, start_date, end_date)
+                    hm_q, hm_p = self._paramify(hk_minggu_raw, nik, start_date, end_date)
+                    hn_q, hn_p = self._paramify(hk_nas_raw, nik, start_date, end_date)
+                    cur.execute(ct_q, *ct_p)
+                    t_rows = cur.fetchall()
+                    cur.execute(cs_q, *cs_p)
+                    s_rows = cur.fetchall()
+                    cur.execute(hm_q, *hm_p)
+                    m_rows = cur.fetchall()
+                    cur.execute(hn_q, *hn_p)
+                    n_rows = cur.fetchall()
+                    out[nik]['tahunan'] = len(t_rows)
+                    out[nik]['sakit'] = len(s_rows)
+                    out[nik]['minggu'] = len(m_rows)
+                    out[nik]['nasional'] = len(n_rows)
+        self._cache_set(key, out)
+        return out
+
+    async def generate_rows(self, repo: EmployeeRepository, gang_code: str = None, month: int = None, year: int = None, skip: int = 0, limit: int = 1000, fields: List[str] = None) -> List[PayrollRow]:
         rows: List[PayrollRow] = []
         db = Database.instance()
-        employees = repo.list(0, 1000, gang_code=gang_code)
+        employees = repo.list(skip, limit, gang_code=gang_code)
         s, e = self._dates(month or datetime.now().month, year or datetime.now().year)
+        want_all = fields is None or len(fields) == 0
+        want = (lambda name: True) if want_all else (lambda name: name in set(fields))
+        from pathlib import Path
+        base = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query"
+        with (base / "Tunjangan" / "Payrate_Beras.sql").open('r', encoding='utf-8') as f:
+            beras_q_raw = f.read()
+        with (base / "Tunjangan" / "Gett_Amount_Tunjangan_Jabatan.sql").open('r', encoding='utf-8') as f:
+            jab_q_raw = f.read()
+        with (base / "Tunjangan" / "count_masa_kerja.sql").open('r', encoding='utf-8') as f:
+            mk_y_raw = f.read()
+        with (base / "Tunjangan" / "get_amount_masa_kerja.sql").open('r', encoding='utf-8') as f:
+            mk_amt_raw = f.read()
+        with (base / "Tunjangan" / "get_amount_lembur.sql").open('r', encoding='utf-8') as f:
+            lembur_raw = f.read()
+        with (base / "Tunjangan" / "get_brondol_amount.sql").open('r', encoding='utf-8') as f:
+            brondol_raw = f.read()
+        with (base / "potongan" / "potongan_spsi.sql").open('r', encoding='utf-8') as f:
+            spsi_raw = f.read()
+        with (base / "potongan" / "potong_pph21.sql").open('r', encoding='utf-8') as f:
+            pph_raw = f.read()
+        with (base / "get_cuti_tahunan.sql").open('r', encoding='utf-8') as f:
+            cuti_tah_raw = f.read()
+        with (base / "get_cuti_sakit.sql").open('r', encoding='utf-8') as f:
+            cuti_sakit_raw = f.read()
+        with (base / "get_HK_minggu.sql").open('r', encoding='utf-8') as f:
+            hk_minggu_raw = f.read()
+        with (base / "get_HK_national_holiday.sql").open('r', encoding='utf-8') as f:
+            hk_nas_raw = f.read()
+
+        emp_codes = [ (e.get('nik') or '').strip() for e in employees ]
+        payrate_map: Dict[str, float] = {}
+        if want_all or want('upah_dasar') or want('upah_pokok') or want('gaji_pokok'):
+            payrate_map = self._payrates_map(db, emp_codes)
+        premi_maps: Dict[str, Dict[str, float]] = {}
+        if want_all or any([want('premi_brondol'), want('premi_pruning'), want('premi_angkut_material'), want('premi_angkut_tbs'), want('premi_harvesting'), want('premi_harvesting_incentive'), want('premi_pupuk'), want('total_premi'), want('jumlah_upah_kotor'), want('upah_bersih')]):
+            premi_maps = {
+                'pruning': self._premi_map(db, emp_codes, s, e, '%PRUNING%'),
+                'angkut_material': self._premi_map(db, emp_codes, s, e, '%ANGKUT%MATERIAL%'),
+                'angkut_tbs': self._premi_map(db, emp_codes, s, e, '%ANGKUT%TBS%'),
+                'harvesting': self._premi_map(db, emp_codes, s, e, '%HARVESTING%'),
+                'harvesting_incentive': self._premi_map(db, emp_codes, s, e, '%INCENTIVE%PANEN%'),
+                'pupuk': self._premi_map(db, emp_codes, s, e, '%PUPUK%'),
+            }
+        cuti_maps: Dict[str, Dict[str, int]] = {}
+        if want_all or any([want('cuti_tahunan_hari'), want('cuti_sakit_haid_hari'), want('cuti_minggu_hari'), want('cuti_nasional_hari'), want('hari_kerja'), want('jumlah_hk')]):
+            cuti_maps = self._cuti_maps(db, emp_codes, s, e, cuti_tah_raw, cuti_sakit_raw, hk_minggu_raw, hk_nas_raw)
 
         for i, emp in enumerate(employees, start=1):
             nik = (emp.get("nik") or "").strip()
@@ -49,52 +194,37 @@ class PayrollService:
             month_i = int((month or datetime.now().month))
             year_i = int((year or datetime.now().year))
             hk_count = calendar.monthrange(year_i, month_i)[1]
-
-            pay_q = "SELECT TOP 1 \"PayRate\" FROM \"HR_PAYROLL\" WHERE \"EmpCode\" = ?"
-            payrate = self._scalar(db.query_one(pay_q, (nik,)))
-
-            beras_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "Payrate_Beras.sql"
-            with beras_q_path.open('r', encoding='utf-8') as f:
-                beras_q_raw = f.read()
-            beras_q, beras_params = self._paramify(beras_q_raw, nik)
-            beras_rate = self._scalar(db.query_one(beras_q, beras_params))
-
-            jab_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "Gett_Amount_Tunjangan_Jabatan.sql"
-            with jab_q_path.open('r', encoding='utf-8') as f:
-                jab_q_raw = f.read()
-            jab_q, jab_params = self._paramify(jab_q_raw, nik, s, e)
-            jab_res = db.query_one(jab_q, jab_params)
-            jabatan_jumlah = self._scalar(jab_res, -1)
-            jabatan_rate = (jabatan_jumlah / hk_count) if hk_count > 0 and jabatan_jumlah > 0 else 0
-
-            mk_years_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "count_masa_kerja.sql"
-            with mk_years_q_path.open('r', encoding='utf-8') as f:
-                mk_y_raw = f.read()
-            mk_y_q, mk_y_params = self._paramify(mk_y_raw, nik)
-            mk_years_res = db.query_one(mk_y_q, mk_y_params)
-            masa_kerja_tahun = int((mk_years_res[-1] or 0) if mk_years_res else 0)
-
-            mk_amt_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "get_amount_masa_kerja.sql"
-            with mk_amt_q_path.open('r', encoding='utf-8') as f:
-                mk_amt_raw = f.read()
-            mk_amt_q, mk_amt_params = self._paramify(mk_amt_raw, nik, s, e)
-            mk_amt_res = db.query_one(mk_amt_q, mk_amt_params)
-            masa_kerja_jumlah = self._scalar(mk_amt_res, -1)
-
-            lembur_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "get_amount_lembur.sql"
-            with lembur_q_path.open('r', encoding='utf-8') as f:
-                lembur_raw = f.read()
-            lembur_q, lembur_params = self._paramify(lembur_raw, nik, s, e)
-            lembur_res = db.query_one(lembur_q, lembur_params)
-            lembur_jumlah = self._scalar(lembur_res, 0)
-            lembur_jam = int(self._scalar(lembur_res, 1))
-
-            brondol_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "Tunjangan" / "get_brondol_amount.sql"
-            with brondol_q_path.open('r', encoding='utf-8') as f:
-                brondol_raw = f.read()
-            brondol_q, brondol_params = self._paramify(brondol_raw, nik, s, e)
-            brondol_res = db.query_one(brondol_q, brondol_params)
-            premi_brondol = self._scalar(brondol_res, 0)
+            payrate = float(payrate_map.get(nik, 0.0))
+            beras_rate = 0.0
+            jabatan_jumlah = 0.0
+            jabatan_rate = 0.0
+            masa_kerja_tahun = 0
+            masa_kerja_jumlah = 0.0
+            lembur_jumlah = 0.0
+            lembur_jam = 0
+            if want_all or any([want('beras_rate'), want('beras_jumlah'), want('jabatan_rate'), want('jabatan_jumlah'), want('masa_kerja_tahun'), want('masa_kerja_jumlah'), want('lembur_jam'), want('lembur_jumlah'), want('total_tunjangan')]):
+                beras_q, beras_params = self._paramify(beras_q_raw, nik)
+                beras_rate = self._scalar(db.query_one(beras_q, beras_params))
+                jab_q, jab_params = self._paramify(jab_q_raw, nik, s, e)
+                jab_res = db.query_one(jab_q, jab_params)
+                jabatan_jumlah = self._scalar(jab_res, -1)
+                jabatan_rate = (jabatan_jumlah / hk_count) if hk_count > 0 and jabatan_jumlah > 0 else 0
+                mk_y_q, mk_y_params = self._paramify(mk_y_raw, nik)
+                mk_years_res = db.query_one(mk_y_q, mk_y_params)
+                masa_kerja_tahun = int((mk_years_res[-1] or 0) if mk_years_res else 0)
+                mk_amt_q, mk_amt_params = self._paramify(mk_amt_raw, nik, s, e)
+                mk_amt_res = db.query_one(mk_amt_q, mk_amt_params)
+                masa_kerja_jumlah = self._scalar(mk_amt_res, -1)
+                lembur_q, lembur_params = self._paramify(lembur_raw, nik, s, e)
+                lembur_res = db.query_one(lembur_q, lembur_params)
+                lembur_jumlah = self._scalar(lembur_res, 0)
+                lembur_jam = int(self._scalar(lembur_res, 1))
+            brondol_res = None
+            premi_brondol = 0.0
+            if want_all or any([want('premi_brondol'), want('total_premi'), want('jumlah_upah_kotor'), want('upah_bersih')]):
+                brondol_q, brondol_params = self._paramify(brondol_raw, nik, s, e)
+                brondol_res = db.query_one(brondol_q, brondol_params)
+                premi_brondol = self._scalar(brondol_res, 0)
 
             def premi_amount(pattern: str) -> float:
                 q = (
@@ -104,55 +234,31 @@ class PayrollService:
                 res = db.query_one(q, (nik, s, e, pattern))
                 return self._scalar(res, 0)
 
-            premi_pruning = premi_amount('%PRUNING%')
-            premi_angkut_material = premi_amount('%ANGKUT%MATERIAL%')
-            premi_angkut_tbs = premi_amount('%ANGKUT%TBS%')
-            premi_harvesting = premi_amount('%HARVESTING%')
-            premi_harvesting_incentive = premi_amount('%INCENTIVE%PANEN%')
-            premi_pupuk = premi_amount('%PUPUK%')
+            premi_pruning = float(premi_maps.get('pruning', {}).get(nik, 0.0))
+            premi_angkut_material = float(premi_maps.get('angkut_material', {}).get(nik, 0.0))
+            premi_angkut_tbs = float(premi_maps.get('angkut_tbs', {}).get(nik, 0.0))
+            premi_harvesting = float(premi_maps.get('harvesting', {}).get(nik, 0.0))
+            premi_harvesting_incentive = float(premi_maps.get('harvesting_incentive', {}).get(nik, 0.0))
+            premi_pupuk = float(premi_maps.get('pupuk', {}).get(nik, 0.0))
 
-            spsi_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "potongan" / "potongan_spsi.sql"
-            with spsi_path.open('r', encoding='utf-8') as f:
-                spsi_raw = f.read()
-            spsi_q, spsi_params = self._paramify(spsi_raw, nik, s, e)
-            spsi_res = db.query_one(spsi_q, spsi_params)
-            pot_spsi = self._scalar(spsi_res, -1)
+            pot_spsi = 0.0
+            pot_pph21 = 0.0
+            if want_all or any([want('pot_pph21'), want('total_potongan'), want('upah_bersih')]):
+                spsi_q, spsi_params = self._paramify(spsi_raw, nik, s, e)
+                spsi_res = db.query_one(spsi_q, spsi_params)
+                pot_spsi = self._scalar(spsi_res, -1)
+                pph_q, pph_params = self._paramify(pph_raw, nik, s, e)
+                pph_res = db.query_one(pph_q, pph_params)
+                pot_pph21 = self._scalar(pph_res, -1)
 
-            pph_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "potongan" / "potong_pph21.sql"
-            with pph_path.open('r', encoding='utf-8') as f:
-                pph_raw = f.read()
-            pph_q, pph_params = self._paramify(pph_raw, nik, s, e)
-            pph_res = db.query_one(pph_q, pph_params)
-            pot_pph21 = self._scalar(pph_res, -1)
-
-            cuti_tahunan_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "get_cuti_tahunan.sql"
-            with cuti_tahunan_q_path.open('r', encoding='utf-8') as f:
-                cuti_tah_raw = f.read()
-            cuti_tah_q, cuti_tah_params = self._paramify(cuti_tah_raw, nik, s, e)
-            cuti_tah_count = len(db.query_all(cuti_tah_q, cuti_tah_params))
-
-            cuti_sakit_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "get_cuti_sakit.sql"
-            with cuti_sakit_q_path.open('r', encoding='utf-8') as f:
-                cuti_sakit_raw = f.read()
-            cuti_sakit_q, cuti_sakit_params = self._paramify(cuti_sakit_raw, nik, s, e)
-            cuti_sakit_count = len(db.query_all(cuti_sakit_q, cuti_sakit_params))
-
-            hk_minggu_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "get_HK_minggu.sql"
-            with hk_minggu_q_path.open('r', encoding='utf-8') as f:
-                hk_minggu_raw = f.read()
-            hk_minggu_q, hk_minggu_params = self._paramify(hk_minggu_raw, nik, s, e)
-            cuti_minggu_hari = len(db.query_all(hk_minggu_q, hk_minggu_params))
-
-            hk_nas_q_path = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query" / "get_HK_national_holiday.sql"
-            with hk_nas_q_path.open('r', encoding='utf-8') as f:
-                hk_nas_raw = f.read()
-            hk_nas_q, hk_nas_params = self._paramify(hk_nas_raw, nik, s, e)
-            cuti_nasional_hari = len(db.query_all(hk_nas_q, hk_nas_params))
-
+            cuti_tah_count = int(cuti_maps.get(nik, {}).get('tahunan', 0))
+            cuti_sakit_count = int(cuti_maps.get(nik, {}).get('sakit', 0))
+            cuti_minggu_hari = int(cuti_maps.get(nik, {}).get('minggu', 0))
+            cuti_nasional_hari = int(cuti_maps.get(nik, {}).get('nasional', 0))
             cuti_izin_hari = 0
 
             hari_kerja = max(0, int(hk_count) - (cuti_tah_count + cuti_sakit_count + cuti_minggu_hari + cuti_nasional_hari))
-            upah_pokok = payrate * hari_kerja
+            upah_pokok = payrate * hari_kerja if (want_all or want('upah_pokok')) else 0
 
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
             total_tunjangan = beras_jumlah + jabatan_jumlah + masa_kerja_jumlah + lembur_jumlah

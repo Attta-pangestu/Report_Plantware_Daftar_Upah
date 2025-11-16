@@ -111,6 +111,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           console.warn('[Columns] Duplicate fields detected:', dupFields)
         }
         setColumnDefs(chosen)
+        try {
+          await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: ['nik'], limit: 1, benchmark: false, monitor: false })
+        } catch (prefetchErr) {}
       } catch (e) {
         console.error('Failed to load headers:', e)
         if (DEV_MODE && !finalToken) {
@@ -196,7 +199,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         console.log('[Report] Loading data rows for:', { monthValue, yearValue, finalGangCode })
-        const data = await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+        const leafFields = []
+        const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
+        columnDefs.forEach(walk)
+        const data = await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
         setRows(data)
         const safe = Array.isArray(data) ? data : []
         
@@ -227,7 +233,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           try {
             const res = await login('admin', 'admin')
             setAuthToken(res.access_token)
-            const data = await fetchReportRows(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+            const leafFields = []
+            const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
+            columnDefs.forEach(walk)
+            const data = await fetchReportRows(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
             setRows(data)
             const safe = Array.isArray(data) ? data : []
             const agg = (field) => safe.reduce((a, b) => a + Number(b[field] || 0), 0)

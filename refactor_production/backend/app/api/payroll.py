@@ -13,6 +13,8 @@ from app.models.payroll import PayrollRow
 import logging
 from app.api.auth import get_current_user_from_token
 from app.core.config import is_test_mode, DEFAULT_GANG, DEFAULT_MONTH, DEFAULT_YEAR
+import time
+import tracemalloc
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,18 @@ async def calculate_payroll(req: PayrollRequest, user=Depends(get_current_user_f
     return await svc.calculate(req.upah_dasar, req.hk_count, req.allowances, req.deductions)
 
 @router.get("/report", response_model=List[PayrollRow])
-async def report_grid(gang_code: Optional[str] = Query(None), month: Optional[int] = Query(None), year: Optional[int] = Query(None), response: Response = None, user=Depends(get_current_user_from_token)):
+async def report_grid(
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
+    skip: Optional[int] = Query(0, ge=0),
+    limit: Optional[int] = Query(500, ge=1, le=2000),
+    fields: Optional[str] = Query(None),
+    benchmark: Optional[bool] = Query(False),
+    monitor: Optional[bool] = Query(False),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
     svc = PayrollService()
     try:
         if is_test_mode():
@@ -39,14 +52,27 @@ async def report_grid(gang_code: Optional[str] = Query(None), month: Optional[in
             year = year or DEFAULT_YEAR
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
-        # Always try to use real database first
         repo = EmployeeRepositoryDB()
-        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year)
+        f_list = None
+        if fields:
+            f_list = [x.strip() for x in fields.split(',') if x.strip()]
+        t0 = time.perf_counter()
+        if monitor:
+            tracemalloc.start()
+        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit, fields=f_list)
+        t1 = time.perf_counter()
+        if monitor:
+            current, peak = tracemalloc.get_traced_memory()
+            tracemalloc.stop()
+            if response is not None:
+                response.headers["X-Memory-Current-KB"] = str(int(current/1024))
+                response.headers["X-Memory-Peak-KB"] = str(int(peak/1024))
+        if benchmark and response is not None:
+            response.headers["X-TotalMs"] = str(int((t1 - t0) * 1000))
+            response.headers["X-Rows"] = str(len(rows))
         return rows
     except Exception as e:
-        # Log the error but still try to return data if possible
         logger.error(f"Database error: {e}")
-        # Return empty result instead of fallback to mock data
         return []
 
 # Initialize services
@@ -144,7 +170,7 @@ async def get_column_definitions(
     user=Depends(get_current_user_from_token)
 ):
     try:
-        if TEST_MODE:
+        if is_test_mode():
             month = month or DEFAULT_MONTH
             year = year or DEFAULT_YEAR
             gang_code = gang_code or DEFAULT_GANG
@@ -345,3 +371,61 @@ async def validate_html(
         return result
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Validation failed: {str(e)}")
+@router.get("/report/row/{nik}", response_model=PayrollRow)
+async def report_single_row(
+    nik: str,
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
+    fields: Optional[str] = Query(None),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        if is_test_mode():
+            month = month or DEFAULT_MONTH
+            year = year or DEFAULT_YEAR
+            if response is not None:
+                response.headers["X-Test-Mode"] = "true"
+        repo = EmployeeRepositoryDB()
+        emp = repo.get_by_nik(nik)
+        if not emp:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        class SingleRepo:
+            def list(self, skip, limit, gang_code=None, loc_code=None):
+                return [emp]
+        f_list = None
+        if fields:
+            f_list = [x.strip() for x in fields.split(',') if x.strip()]
+        svc = PayrollService()
+        out = await svc.generate_rows(SingleRepo(), gang_code=None, month=month, year=year, skip=0, limit=1, fields=f_list)
+        return out[0]
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/report/column/{field}", response_model=List[dict])
+async def report_single_column(
+    field: str,
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
+    skip: Optional[int] = Query(0, ge=0),
+    limit: Optional[int] = Query(500, ge=1, le=2000),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        if is_test_mode():
+            gang_code = gang_code or DEFAULT_GANG
+            month = month or DEFAULT_MONTH
+            year = year or DEFAULT_YEAR
+            if response is not None:
+                response.headers["X-Test-Mode"] = "true"
+        svc = PayrollService()
+        repo = EmployeeRepositoryDB()
+        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit, fields=[field])
+        out = []
+        for r in rows:
+            out.append({"nik": r.nik, field: getattr(r, field)})
+        return out
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
