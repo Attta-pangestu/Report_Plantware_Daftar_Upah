@@ -7,7 +7,7 @@ const LoadingScreen = ({
   month = null,
   year = null,
   logoUrl = null,
-  bgUrl = 'https://www.infosawit.com/wp-content/uploads/2023/04/Kebun-Sawit-3.jpg',
+  bgUrl = '/images/wallpaper_loading_screen.webp',
   steps = [
     { name: 'Connecting to database', duration: 1000 },
     { name: 'Loading report headers', duration: 2000 },
@@ -66,6 +66,12 @@ const LoadingScreen = ({
     const img = new Image()
     img.loading = 'lazy'
     img.onload = () => { if (alive) setBgLoaded(true) }
+    img.onerror = () => {
+      if (alive) {
+        console.warn('Loading screen wallpaper failed to load, using fallback gradient')
+        setBgLoaded(false)
+      }
+    }
     img.src = bgUrl
     return () => { alive = false }
   }, [bgUrl])
@@ -86,7 +92,7 @@ const LoadingScreen = ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: bgLoaded ? `url(${bgUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+    background: bgLoaded ? `url(${bgUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #1e88e5 0%, #0d47a1 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -135,10 +141,10 @@ const LoadingScreen = ({
             width: '48px',
             height: '48px',
             border: '4px solid ' + (bgLoaded ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'),
-            borderTop: '4px solid #4CAF50',
+            borderTop: '4px solid #1976d2',
             borderRadius: '50%',
             animation: 'spin 1.2s linear infinite',
-            boxShadow: '0 0 20px rgba(76, 175, 80, 0.3)'
+            boxShadow: '0 0 20px rgba(25, 118, 210, 0.4)'
           }} />
         </div>
 
@@ -168,7 +174,7 @@ const LoadingScreen = ({
             <div style={{
               width: 56,
               height: 56,
-              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+              background: 'linear-gradient(135deg, #1976d2 0%, #0d47a1 100%)',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -176,7 +182,7 @@ const LoadingScreen = ({
               color: 'white',
               fontWeight: 'bold',
               fontSize: 20,
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+              boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)'
             }}>
               RJB
             </div>
@@ -205,21 +211,21 @@ const LoadingScreen = ({
         {/* Report Info */}
         {(gangCode || month || year) && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(46, 125, 50, 0.12) 100%)',
+            background: 'linear-gradient(135deg, rgba(25, 118, 210, 0.08) 0%, rgba(13, 71, 161, 0.12) 100%)',
             borderRadius: '12px',
             padding: '20px',
             marginBottom: '32px',
-            border: '1px solid rgba(76, 175, 80, 0.2)'
+            border: '1px solid rgba(25, 118, 210, 0.2)'
           }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
               Informasi Laporan
             </div>
             <div style={{ fontSize: 14, color: '#666', lineHeight: '1.6' }}>
               {gangCode && (
-                <div><strong style={{ color: '#2E7D32' }}>Gang:</strong> {gangCode}</div>
+                <div><strong style={{ color: '#1976d2' }}>Gang:</strong> {gangCode}</div>
               )}
               {month && year && (
-                <div><strong style={{ color: '#2E7D32' }}>Periode:</strong> {getMonthName(month)} {year}</div>
+                <div><strong style={{ color: '#1976d2' }}>Periode:</strong> {getMonthName(month)} {year}</div>
               )}
             </div>
           </div>
@@ -247,12 +253,12 @@ const LoadingScreen = ({
             marginBottom: '8px'
           }}>
             <div style={{
-              background: 'linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%)',
+              background: 'linear-gradient(90deg, #1976d2 0%, #0d47a1 100%)',
               height: '100%',
               borderRadius: '6px',
               width: `${progress}%`,
               transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.4)'
+              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.4)'
             }} />
           </div>
 
@@ -268,16 +274,16 @@ const LoadingScreen = ({
 
         {/* Professional Note */}
         <div style={{
-          background: 'rgba(76, 175, 80, 0.05)',
+          background: 'rgba(25, 118, 210, 0.05)',
           borderRadius: '8px',
           padding: '16px',
           fontSize: 13,
           color: '#555',
           lineHeight: '1.5',
-          borderLeft: '3px solid #4CAF50',
+          borderLeft: '3px solid #1976d2',
           textAlign: 'left'
         }}>
-          <div style={{ fontWeight: 600, color: '#2E7D32', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 600, color: '#1976d2', marginBottom: '4px' }}>
             📊 System Information
           </div>
           <div>
