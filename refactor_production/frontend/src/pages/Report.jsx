@@ -451,7 +451,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
     const checkColumnHasData = (field) => {
       // Jangan sembunyikan kolom esensial (no, jenis_kelamin, nik, nama)
-      if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(field)) {
+      // Jangan juga sembunyikan kolom yang bisa bernilai negatif/nol seperti koreksi dan bpjs pensiun
+      if (['no', 'jenis_kelamin', 'nik', 'nama', 'premi_koreksi', 'pot_bpjs_pensiun_pekerja', 'pot_bpjs_pensiun_majikan'].includes(field)) {
         return true
       }
       // Untuk kolom lain, cek apakah ada data numeric > 0
