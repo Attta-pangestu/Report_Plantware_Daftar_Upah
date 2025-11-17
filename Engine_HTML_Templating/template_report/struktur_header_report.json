@@ -117,7 +117,7 @@
             "rowspan": 1,
             "colspan": 7,
             "class": "header-cell section-header",
-            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_pupuk"]
+            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
           },
           {
             "id": "potongan",
@@ -125,7 +125,7 @@
             "rowspan": 1,
             "colspan": 13,
             "class": "header-cell section-header",
-            "children": ["pph21", "potongan_kontan", "thr", "pinjam", "kl", "bpjs_kes", "bpjs_pek", "bpjs_maj", "total1", "total2", "total3", "total4"]
+            "children": ["pph21", "potongan_kontan", "thr", "pinjam", "kl", "bpjs_kes", "bpjs_pek", "bpjs_maj", "bpjs_pensiun_pekerja", "bpjs_pensiun_majikan", "total1", "total2", "total3", "total4"]
           },
           {
             "id": "upah_bersih",
@@ -259,6 +259,13 @@
             "children": ["premi_harvesting_incentive_jumlah"]
           },
           {
+            "id": "premi_koreksi",
+            "text": "KOREKSI",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_koreksi_jumlah"]
+          },
+          {
             "id": "premi_pupuk",
             "text": "PREMI PUPUK",
             "parent": "premi",
@@ -317,6 +324,20 @@
           {
             "id": "bpjs_maj",
             "text": "BPJS Maj",
+            "parent": "potongan",
+            "class": "header-cell col-potongan",
+            "children": []
+          },
+          {
+            "id": "bpjs_pensiun_pekerja",
+            "text": "BPJS Pensiun Pekerja",
+            "parent": "potongan",
+            "class": "header-cell col-potongan",
+            "children": []
+          },
+          {
+            "id": "bpjs_pensiun_majikan",
+            "text": "BPJS Pensiun Majikan",
             "parent": "potongan",
             "class": "header-cell col-potongan",
             "children": []
@@ -484,6 +505,12 @@
             "class": "header-cell col-premi"
           },
           {
+            "id": "premi_koreksi_jumlah",
+            "text": "Jumlah (Rp)",
+            "parent": "premi_koreksi",
+            "class": "header-cell col-premi"
+          },
+          {
             "id": "premi_pupuk_jumlah",
             "text": "Jumlah (Rp)",
             "parent": "premi_pupuk",
@@ -508,11 +535,11 @@
       "premi_columns": [
         "brondol_jumlah", "pruning_jumlah", "premi_angkut_material_jumlah",
         "premi_angkut_tbs_jumlah", "premi_harvesting_jumlah",
-        "premi_harvesting_incentive_jumlah", "premi_pupuk_jumlah"
+        "premi_harvesting_incentive_jumlah", "premi_koreksi_jumlah", "premi_pupuk_jumlah"
       ],
       "potongan_columns": [
         "pph21", "potongan_kontan", "thr", "pinjam", "kl", "bpjs_kes", "bpjs_pek",
-        "bpjs_maj", "total1", "total2", "total3", "total4"
+        "bpjs_maj", "bpjs_pensiun_pekerja", "bpjs_pensiun_majikan", "total1", "total2", "total3", "total4"
       ],
       "tidak_hadir_columns": ["cth", "alpa"]
     },
