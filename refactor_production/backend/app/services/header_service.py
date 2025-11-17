@@ -25,8 +25,8 @@ class HeaderService:
             with open(header_file, 'r', encoding='utf-8') as f:
                 self.header_structure = json.load(f)
         except Exception as e:
-            print(f"Warning: Could not load header structure: {e}")
-            self.header_structure = self._get_fallback_structure()
+            print(f"ERROR: Failed to load header structure: {e}")
+            raise Exception(f"Header structure file not found or invalid: {header_file}")
 
     def _get_fallback_structure(self) -> Dict[str, Any]:
         """Fallback structure if JSON file cannot be loaded"""
@@ -508,8 +508,8 @@ class HeaderService:
             return lead_sorted + rest
 
         except Exception as e:
-            print(f"Error generating nested column definitions: {e}")
-            return self._get_fallback_column_defs()
+            print(f"ERROR: Failed to generate column definitions: {e}")
+            raise Exception(f"Column definition generation failed: {e}")
 
     def _get_column_width(self, field: str) -> int:
         """Get appropriate width for column"""

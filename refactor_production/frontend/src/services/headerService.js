@@ -63,48 +63,8 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   } catch (e) {
     console.error('Failed to fetch dynamic headers:', e)
 
-    // Return fallback structure
-    const fallbackData = {
-      report_info: {
-        title: 'LAPORAN DAFTAR UPAH',
-        generated_date: new Date().toISOString(),
-        gang: gangCode || '-',
-        database: 'Fallback',
-        description: 'Fallback headers (API Error)',
-        error: e.message
-      },
-      table_structure: {
-        hierarchy: {
-          level_1: { columns: [
-            { id: 'no', text: 'NO', rowspan: 3, colspan: 1, children: [] },
-            { id: 'name', text: 'NAMA', rowspan: 3, colspan: 1, children: [] },
-            { id: 'upah_dasar', text: 'UPAH DASAR', rowspan: 3, colspan: 1, children: [] },
-            { id: 'hari_kerja', text: 'HARI KERJA', rowspan: 3, colspan: 1, children: [] },
-            { id: 'upah_pokok', text: 'UPAH POKOK', rowspan: 3, colspan: 1, children: [] },
-            { id: 'upah_bersih', text: 'UPAH BERSIH', rowspan: 3, colspan: 1, children: [] }
-          ] },
-          level_2: { columns: [] },
-          level_3: { columns: [] }
-        },
-        generated_headers: {
-          level_1: { row: 1, columns: [
-            { id: 'no', text: 'NO' },
-            { id: 'name', text: 'NAMA' },
-            { id: 'upah_dasar', text: 'UPAH DASAR' },
-            { id: 'hari_kerja', text: 'HARI KERJA' },
-            { id: 'upah_pokok', text: 'UPAH POKOK' },
-            { id: 'upah_bersih', text: 'UPAH BERSIH' }
-          ] },
-          level_2: { row: 2, columns: [] },
-          level_3: { row: 3, columns: [] }
-        }
-      }
-    }
-
-    // Cache fallback for a shorter time (5 minutes)
-    setCache(headerCache, `${cacheKey}_fallback`, fallbackData)
-
-    return fallbackData
+    // No fallback - throw error immediately to prevent simple column display
+    throw new Error(`Failed to load dynamic headers: ${e.message}. Backend API may be down or header structure file missing.`)
   }
 }
 
@@ -145,20 +105,8 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   } catch (e) {
     console.error('Failed to fetch column definitions:', e)
 
-    // Return fallback column definitions
-    const fallbackData = [
-      { field: 'no', headerName: 'NO', width: 60, pinned: 'left' },
-      { field: 'nama', headerName: 'NAMA', width: 200, pinned: 'left' },
-      { field: 'upah_dasar', headerName: 'UPAH DASAR', width: 120, type: 'numericColumn' },
-      { field: 'hari_kerja', headerName: 'HARI KERJA', width: 100, type: 'numericColumn' },
-      { field: 'upah_pokok', headerName: 'UPAH POKOK', width: 120, type: 'numericColumn' },
-      { field: 'upah_bersih', headerName: 'UPAH BERSIH', width: 120, type: 'numericColumn' }
-    ]
-
-    // Cache fallback for a shorter time
-    setCache(columnCache, `${cacheKey}_fallback`, fallbackData)
-
-    return fallbackData
+    // No fallback - throw error to prevent simple column display
+    throw new Error(`Failed to load column definitions: ${e.message}. Backend API may be down or header structure missing.`)
   }
 }
 

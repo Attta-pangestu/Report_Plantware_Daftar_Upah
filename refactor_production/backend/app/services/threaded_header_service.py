@@ -119,8 +119,8 @@ class ThreadedHeaderService:
                 with open(header_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                logger.warning(f"Could not load header structure: {e}")
-                return self._get_fallback_structure()
+                logger.error(f"Failed to load header structure: {e}")
+                raise Exception(f"Header structure file not found or invalid: {header_file}")
 
         return task
 
@@ -202,8 +202,10 @@ class ThreadedHeaderService:
     def _build_final_headers(self, results: Dict[str, Any], month: int, year: int, gang_code: str) -> Dict[str, Any]:
         """Build final header structure from parallel results"""
 
-        # Get static structure
-        header_structure = results.get('static_structure', self._get_fallback_structure())
+        # Get static structure - no fallback, must be present
+        if 'static_structure' not in results or results['static_structure'] is None:
+            raise Exception("Static structure is required but not available")
+        header_structure = results['static_structure']
         table_structure = header_structure.get('table_structure', {})
         hierarchy = table_structure.get('hierarchy', {})
 
