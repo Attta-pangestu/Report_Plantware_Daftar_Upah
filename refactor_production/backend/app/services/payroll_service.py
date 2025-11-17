@@ -282,6 +282,8 @@ class PayrollService:
             hk_minggu_raw = f.read()
         with (base / "get_HK_national_holiday.sql").open('r', encoding='utf-8') as f:
             hk_nas_raw = f.read()
+        with (base / "Tunjangan" / "get_koreksi_emp.sql").open('r', encoding='utf-8') as f:
+            koreksi_raw = f.read()
 
         emp_codes = [ (e.get('nik') or '').strip() for e in employees ]
         payrate_map: Dict[str, float] = {}
@@ -384,33 +386,75 @@ class PayrollService:
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
             total_tunjangan = beras_jumlah + jabatan_jumlah + masa_kerja_jumlah + lembur_jumlah
 
+            # Get koreksi amount from database
+            koreksi_amount = 0.0
+            if want_all or want('premi_koreksi'):
+                koreksi_q, koreksi_params = self._paramify(koreksi_raw, nik, s, e)
+                koreksi_q = koreksi_q.replace("AND DocDesc LIKE '%KOREKSI%'", "AND DocDesc LIKE ?")
+                koreksi_res = db.query_one(koreksi_q, koreksi_params + ('%KOREKSI%',))
+                if koreksi_res and len(koreksi_res) > 0:
+                    total_koreksi = 0
+                    for col_idx in [len(koreksi_res)-1, len(koreksi_res)-2, 7, 8]:
+                        if col_idx >= 0 and col_idx < len(koreksi_res):
+                            try:
+                                amount_val = koreksi_res[col_idx]
+                                if amount_val is not None:
+                                    total_koreksi = float(amount_val)
+                                    break
+                            except (ValueError, TypeError):
+                                continue
+                    # Koreksi harus ditampilkan sebagai nilai negatif (pengurangan)
+                    koreksi_amount = -abs(total_koreksi)
+
             # Avoid double-counting: harvesting is merged into harvesting_incentive
             total_premi = sum([
                 premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
-                premi_harvesting_incentive, premi_pupuk
+                premi_harvesting_incentive, premi_pupuk, koreksi_amount  # Add koreksi to total premi
             ])
 
             # Correct calculation from reference code:
             # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
             jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
 
+            # BPJS Components - using reference code calculations
             bpjs_kes_rate = 0.01
-            bpjs_pek_rate = 0.02
-            bpjs_maj_rate = 0.0374
-            pot_bpjs_kes = min(gaji_pokok_jmlhk * bpjs_kes_rate, 150000)  # Use gaji_pokok_jmlhk (total HK base) for consistency
-            pot_bpjs_pek = min(jumlah_upah_kotor * bpjs_pek_rate, 300000)
-            pot_bpjs_maj = min(jumlah_upah_kotor * bpjs_maj_rate, 600000)
+            # From reference code: BPJS Kesehatan (pekerja) = (gaji_pokok_min + masa_kerja_jumlah) × 0.01
+            gaji_pokok_min = 3876600  # Default from reference code
+            bpjs_base = gaji_pokok_min + masa_kerja_jumlah
+            pot_bpjs_kesehatan_pekerja = min(bpjs_base * 0.01, 150000)  # Kesehatan Pekerja
+            pot_bpjs_kes = pot_bpjs_kesehatan_pekerja  # For backward compatibility
+
+            # BPJS Kesehatan Majikan (4x pekerja)
+            pot_bpjs_kesehatan_majikan = pot_bpjs_kesehatan_pekerja * 4
+
+            # Pensiun calculations using gaji_pokok_min (from reference code)
+            bpjs_pensiun_pekerja = gaji_pokok_min * 0.01
+            bpjs_pensiun_majikan = gaji_pokok_min * 0.02
+
+            # Other BPJS components (these are additional BPJS deductions)
+            pot_bpjs_pek = min(jumlah_upah_kotor * 0.02, 300000)  # Additional deduction for pensiun part?
+            pot_bpjs_maj = min(jumlah_upah_kotor * 0.0374, 600000)  # Additional deduction for pensiun part?
+
+            # Additional BPJS totals
+            pot_bpjs_jumlah = pot_bpjs_kesehatan_pekerja + pot_bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan
+            pot_bpjs_pekerja_total = pot_bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja
 
             pot_kontan = 0.0
             pot_thr = 0.0
             pot_pinjam = 0.0
             pot_kl = 0.0
 
-            pot_total_1 = pot_bpjs_kes
-            pot_total_2 = pot_bpjs_pek
-            pot_total_3 = pot_bpjs_maj
-            pot_total_4 = pot_pph21 + pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_spsi
-            total_potongan = pot_total_1 + pot_total_2 + pot_total_3 + pot_total_4
+            # Total potongan calculation based on reference code:
+            # BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21 + other deductions
+            total_potongan = (pot_bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
+                             pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_bpjs_pek + pot_bpjs_maj)
+
+            # Simplified for the predefined fields
+            pot_total_1 = pot_bpjs_kesehatan_pekerja  # BPJS Kesehatan Pekerja
+            pot_total_2 = bpjs_pensiun_pekerja      # BPJS Pensiun Pekerja
+            pot_total_3 = bpjs_pensiun_majikan      # BPJS Pensiun Majikan
+            pot_total_4 = pot_pph21 + pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_spsi + pot_bpjs_pek + pot_bpjs_maj
+
             upah_bersih = jumlah_upah_kotor - total_potongan
 
             row = PayrollRow(
@@ -444,6 +488,7 @@ class PayrollService:
                 premi_harvesting=0.0,
                 premi_harvesting_incentive=premi_harvesting_incentive,
                 premi_pupuk=premi_pupuk,
+                premi_koreksi=koreksi_amount,
                 total_premi=total_premi,
                 jumlah_upah_kotor=jumlah_upah_kotor,
                 pot_pph21=pot_pph21,
@@ -454,6 +499,12 @@ class PayrollService:
                 pot_bpjs_kes=pot_bpjs_kes,
                 pot_bpjs_pek=pot_bpjs_pek,
                 pot_bpjs_maj=pot_bpjs_maj,
+                pot_bpjs_kesehatan_pekerja=pot_bpjs_kesehatan_pekerja,
+                pot_bpjs_kesehatan_majikan=pot_bpjs_kesehatan_majikan,
+                pot_bpjs_pensiun_pekerja=bpjs_pensiun_pekerja,
+                pot_bpjs_pensiun_majikan=bpjs_pensiun_majikan,
+                pot_bpjs_jumlah=pot_bpjs_jumlah,
+                pot_bpjs_pekerja_total=pot_bpjs_pekerja_total,
                 pot_total_1=pot_total_1,
                 pot_total_2=pot_total_2,
                 pot_total_3=pot_total_3,
