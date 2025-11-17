@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import Report from './pages/Report'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { HeaderProvider, useHeader } from './context/HeaderContext'
 import Modal from './components/common/Modal'
 import { fetchGangs } from './services/gangService'
 
@@ -11,7 +10,6 @@ const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV
 
 function AppInner() {
   const { token, isAuthenticated, user, loading, error } = useAuth()
-  const { preloadHeaders, isHeadersPreloaded } = useHeader()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [monthInput, setMonthInput] = useState('')
   const [gangs, setGangs] = useState([])
@@ -130,29 +128,11 @@ function AppInner() {
     loadGangs()
   }, [division, gangSearch, token])
 
-  const submitFilters = async () => {
+  const submitFilters = () => {
     if (!monthInput || !division || !gang) return alert('Please select month, division and gang')
-
-    const [yyyy, mm] = monthInput.split('-')
-    const month = Number(mm)
-    const year = Number(yyyy)
-    const gangCode = gang.trim()
-
-    console.log('[App] Submitting filters and preloading headers for:', { month, year, gangCode })
-
+    console.log('[App] Submitting filters for:', { monthInput, division, gang })
     setFiltersOpen(false)
     setApplyLoading(true)
-
-    try {
-      // Start preloading headers in background
-      console.log('[App] Starting headers preload...')
-      await preloadHeaders(token, month, year, gangCode)
-      console.log('[App] Headers preload completed')
-    } catch (error) {
-      console.error('[App] Headers preload failed:', error)
-      // Continue anyway - Report component will handle the error
-    }
-
     setReady(true)
   }
 
@@ -331,9 +311,7 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <HeaderProvider>
-        <AppInner />
-      </HeaderProvider>
+      <AppInner />
     </AuthProvider>
   )
 }
