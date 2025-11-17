@@ -473,6 +473,10 @@ class HeaderService:
                 level2_cols = l2_by_parent.get(c1_id, [])
                 group2_defs = []
                 for c2 in level2_cols:
+                    t2 = (c2.get('text') or '').strip().upper()
+                    c1_text_upper = (c1.get('text') or '').strip().upper()
+                    if 'PREMI' in c1_text_upper and t2 in {'TOTAL PREMI', 'UPAH KOTOR'}:
+                        continue
                     c2_id = c2.get('id')
                     level3_cols = l3_by_parent.get(c2_id, [])
                     leaf_defs = []
@@ -487,6 +491,31 @@ class HeaderService:
                         })
                     group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
                 col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+
+            # Insert summary columns after top-level 'PREMI' (only once)
+            found_premi = False
+            for idx, c in enumerate(col_defs):
+                c_name = (c.get('headerName') or '').strip().upper()
+                if c_name == 'PREMI' and not found_premi:
+                    # Insert Total Premi and Upah Kotor as level 1 columns after PREMI
+                    col_defs[idx+1:idx+1] = [
+                        {
+                            'field': 'total_premi',
+                            'headerName': 'Total Premi',
+                            'width': self._get_column_width('total_premi'),
+                            'type': self._get_column_type('total_premi'),
+                            'cellStyle': self._get_cell_style('total_premi')
+                        },
+                        {
+                            'field': 'jumlah_upah_kotor',
+                            'headerName': 'Upah Kotor',
+                            'width': self._get_column_width('jumlah_upah_kotor'),
+                            'type': self._get_column_type('jumlah_upah_kotor'),
+                            'cellStyle': self._get_cell_style('jumlah_upah_kotor')
+                        }
+                    ]
+                    found_premi = True
+                    break
 
             # Reorder so 'no' and 'nama' are the first two columns
             lead = []
@@ -523,9 +552,9 @@ class HeaderService:
 
     def _get_column_type(self, field: str) -> str:
         """Get column type for formatting"""
-        if field in ['upah_dasar', 'upah_pokok', 'gaji_pokok', 'total_tunjangan', 'upah_bersih']:
+        if field in ['upah_dasar', 'upah_pokok', 'gaji_pokok', 'total_tunjangan', 'upah_bersih', 'total_premi', 'jumlah_upah_kotor']:
             return 'numericColumn'
-        elif any(x in field for x in ['rate', 'jumlah', 'pot_', 'premi_']):
+        elif any(x in field for x in ['rate', 'jumlah', 'pot_', 'premi_', 'premi']):
             return 'numericColumn'
         else:
             return 'textColumn'
