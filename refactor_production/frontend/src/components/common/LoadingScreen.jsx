@@ -18,7 +18,6 @@ const LoadingScreen = ({
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState(0)
   const [bgLoaded, setBgLoaded] = useState(false)
-  const [bgError, setBgError] = useState(false)
 
   useEffect(() => {
     if (!isLoading || !steps.length) return
@@ -32,7 +31,6 @@ const LoadingScreen = ({
         setCurrentStep(stepIndex)
         setProgress(((stepIndex + 1) / steps.length) * 100)
 
-        // Set up progress animation within current step
         const startProgress = (stepIndex / steps.length) * 100
         const endProgress = ((stepIndex + 1) / steps.length) * 100
         const progressDuration = steps[stepIndex].duration
@@ -68,7 +66,6 @@ const LoadingScreen = ({
     const img = new Image()
     img.loading = 'lazy'
     img.onload = () => { if (alive) setBgLoaded(true) }
-    img.onerror = () => { if (alive) setBgError(true) }
     img.src = bgUrl
     return () => { alive = false }
   }, [bgUrl])
@@ -89,176 +86,221 @@ const LoadingScreen = ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: bgLoaded && !bgError ? `url(${bgUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
+    background: bgLoaded ? `url(${bgUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9999,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
   }
+
+  const overlayStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.4)',
+    backdropFilter: 'blur(2px)'
+  }
+
+  const cardStyle = {
+    background: 'rgba(255, 255, 255, 0.92)',
+    borderRadius: '16px',
+    padding: '48px',
+    boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)',
+    maxWidth: '420px',
+    width: '90%',
+    textAlign: 'center',
+    position: 'relative',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    transition: 'all 0.3s ease'
+  }
+
   return (
-    <div style={containerStyle} className="loading-screen fade-in">
-      <div className="loading-overlay" />
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '20px',
-        padding: '40px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        maxWidth: '500px',
-        width: '90%',
-        textAlign: 'center',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
-      }}>
-        {/* Logo/Header */}
+    <div style={containerStyle} className="loading-screen">
+      <div style={overlayStyle} />
+      <div style={cardStyle}>
+        {/* Single Loading Circle */}
         <div style={{
-          marginBottom: '30px',
+          marginBottom: '32px',
+          position: 'relative',
+          height: '64px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid ' + (bgLoaded ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)'),
+            borderTop: '4px solid #4CAF50',
+            borderRadius: '50%',
+            animation: 'spin 1.2s linear infinite',
+            boxShadow: '0 0 20px rgba(76, 175, 80, 0.3)'
+          }} />
+        </div>
+
+        {/* Company Logo */}
+        <div style={{
+          marginBottom: '32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '15px'
+          gap: '16px'
         }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '20px'
-          }}>
-            PR
-          </div>
           {logoUrl ? (
-            <img src={logoUrl} alt="logo" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 8 }} onError={(e)=>{e.currentTarget.style.display='none'}} />
+            <img
+              src={logoUrl}
+              alt="logo"
+              style={{
+                width: 56,
+                height: 56,
+                objectFit: 'contain',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                padding: '8px'
+              }}
+              onError={(e)=>{e.currentTarget.style.display='none'}}
+            />
           ) : (
-            <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: 20 }}>RJ</div>
+            <div style={{
+              width: 56,
+              height: 56,
+              background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: 20,
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+            }}>
+              RJB
+            </div>
           )}
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 20, fontWeight: 600, color: '#333', margin: 0 }}>
-              PT. Rebinmas Jaya
-            </div>
-            <div style={{ fontSize: 14, color: '#666', margin: 0 }}>
-              Payroll Reporting
-            </div>
-          </div>
-        </div>
-
-        {/* Loading Animation */}
-        <div style={{
-          marginBottom: '25px',
-          position: 'relative',
-          height: '60px'
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '50px',
-            height: '50px'
-          }}>
             <div style={{
-              width: '100%',
-              height: '100%',
-              border: '4px solid #f3f3f3',
-              borderTop: '4px solid #1e88e5',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }} />
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#1a1a1a',
+              margin: 0,
+              letterSpacing: '-0.5px'
+            }}>
+              Rebinmas
+            </div>
             <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '24px',
-              height: '24px',
-              border: '3px solid #f3f3f3',
-              borderLeft: '3px solid #e53935',
-              borderRadius: '50%',
-              animation: 'spin 1.5s linear infinite reverse'
-            }} />
+              fontSize: 14,
+              color: '#666',
+              margin: 0,
+              fontWeight: 500
+            }}>
+              Payroll System
+            </div>
           </div>
         </div>
 
         {/* Report Info */}
         {(gangCode || month || year) && (
           <div style={{
-            background: 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)',
+            background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(46, 125, 50, 0.12) 100%)',
             borderRadius: '12px',
-            padding: '15px',
-            marginBottom: '25px',
-            border: '1px solid #667eea30'
+            padding: '20px',
+            marginBottom: '32px',
+            border: '1px solid rgba(76, 175, 80, 0.2)'
           }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#333', marginBottom: 8 }}>
-              Memuat Laporan
+            <div style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 12 }}>
+              Informasi Laporan
             </div>
-          <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.5' }}>
-            {gangCode && (
-              <div><strong>Gang:</strong> {gangCode}</div>
-            )}
-            {month && year && (
-                <div><strong>Periode:</strong> {getMonthName(month)} {year}</div>
-            )}
-          </div>
+            <div style={{ fontSize: 14, color: '#666', lineHeight: '1.6' }}>
+              {gangCode && (
+                <div><strong style={{ color: '#2E7D32' }}>Gang:</strong> {gangCode}</div>
+              )}
+              {month && year && (
+                <div><strong style={{ color: '#2E7D32' }}>Periode:</strong> {getMonthName(month)} {year}</div>
+              )}
+            </div>
           </div>
         )}
 
         {/* Current Step */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <div style={{
-            fontSize: '16px',
-            fontWeight: '500',
-            color: '#333',
-            marginBottom: '8px',
-            minHeight: '24px'
+            fontSize: 16,
+            fontWeight: 500,
+            color: '#1a1a1a',
+            marginBottom: '12px',
+            minHeight: '20px',
+            letterSpacing: '0.3px'
           }}>
             {steps[currentStep]?.name || message}
           </div>
 
           {/* Progress Bar */}
           <div style={{
-            background: '#f0f0f0',
-            borderRadius: '10px',
-            height: '8px',
+            background: 'rgba(0, 0, 0, 0.06)',
+            borderRadius: '6px',
+            height: '6px',
             overflow: 'hidden',
-            marginBottom: '10px'
+            marginBottom: '8px'
           }}>
             <div style={{
-              background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%)',
               height: '100%',
-              borderRadius: '10px',
+              borderRadius: '6px',
               width: `${progress}%`,
-              transition: 'width 0.3s ease',
-              boxShadow: '0 0 10px rgba(102, 126, 234, 0.3)'
+              transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.4)'
             }} />
           </div>
 
-          {/* Step Counter */}
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            Step {currentStep + 1} of {steps.length}
+          {/* Progress Text */}
+          <div style={{
+            fontSize: 13,
+            color: '#666',
+            fontWeight: 500
+          }}>
+            {progress.toFixed(0)}% Complete
           </div>
         </div>
 
-        {/* Tips */}
+        {/* Professional Note */}
         <div style={{
-          background: '#f8f9fa',
+          background: 'rgba(76, 175, 80, 0.05)',
           borderRadius: '8px',
-          padding: '12px',
-          fontSize: '11px',
-          color: '#666',
-          lineHeight: '1.4',
-          borderLeft: '3px solid #667eea'
+          padding: '16px',
+          fontSize: 13,
+          color: '#555',
+          lineHeight: '1.5',
+          borderLeft: '3px solid #4CAF50',
+          textAlign: 'left'
         }}>
-          💡 <strong>Tip:</strong> Report generation is optimized with parallel processing for maximum performance.
+          <div style={{ fontWeight: 600, color: '#2E7D32', marginBottom: '4px' }}>
+            📊 System Information
+          </div>
+          <div>
+            Sedang memproses data payroll dengan sistem query yang dioptimalkan untuk performa maksimal.
+          </div>
         </div>
       </div>
 
+      {/* CSS Animation */}
       <style jsx>{`
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .loading-screen {
+          animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
       `}</style>
     </div>
   )
