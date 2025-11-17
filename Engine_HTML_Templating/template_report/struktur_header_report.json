@@ -333,14 +333,18 @@
             "text": "BPJS Pensiun Pekerja",
             "parent": "potongan",
             "class": "header-cell col-potongan",
-            "children": []
+            "children": [],
+            "type": "data_column",
+            "field": "pot_bpjs_pensiun_pekerja"
           },
           {
             "id": "bpjs_pensiun_majikan",
             "text": "BPJS Pensiun Majikan",
             "parent": "potongan",
             "class": "header-cell col-potongan",
-            "children": []
+            "children": [],
+            "type": "data_column",
+            "field": "pot_bpjs_pensiun_majikan"
           },
           {
             "id": "total1",
@@ -508,7 +512,9 @@
             "id": "premi_koreksi_jumlah",
             "text": "Jumlah (Rp)",
             "parent": "premi_koreksi",
-            "class": "header-cell col-premi"
+            "class": "header-cell col-premi",
+            "type": "data_column",
+            "field": "premi_koreksi"
           },
           {
             "id": "premi_pupuk_jumlah",
