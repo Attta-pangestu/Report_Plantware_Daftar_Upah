@@ -7,6 +7,7 @@ import { fetchReportRows } from '../services/payrollService'
 import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
+import LoadingScreen from '../components/common/LoadingScreen'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
@@ -548,17 +549,93 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   }
 
   if (headerLoading || loading) return (
-    <div className="grid-wrapper">
-      <div className="loading-overlay">
-        <div className="spinner" />
-        <div className="loading-text">
-          {headerLoading ? 'Loading dynamic headers...' : `Analyzing ${gang_code || '-'} for ${month || '-'}-${year || '-'}`}
-        </div>
+    <LoadingScreen
+      isLoading={true}
+      message={headerLoading ? 'Loading report configuration...' : 'Analyzing payroll data...'}
+      gangCode={finalGangCode}
+      month={finalMonth}
+      year={finalYear}
+      steps={headerLoading ? [
+        { name: 'Loading report headers structure', duration: 2000 },
+        { name: 'Fetching dynamic column definitions', duration: 3000 },
+        { name: 'Building column hierarchy', duration: 1500 }
+      ] : [
+        { name: 'Connecting to payroll database', duration: 1500 },
+        { name: 'Loading employee data', duration: 3000 },
+        { name: 'Processing payroll calculations', duration: 2500 }
+      ]}
+    />
+  )
+  if (error) return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '50vh',
+      flexDirection: 'column',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{
+        color: '#d32f2f',
+        fontSize: '18px',
+        fontWeight: '500',
+        marginBottom: '20px',
+        textAlign: 'center'
+      }}>
+        ❌ {error}
+      </div>
+      <button
+        onClick={() => window.location.reload()}
+        style={{
+          padding: '10px 20px',
+          background: '#1976d2',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        Retry
+      </button>
+    </div>
+  )
+
+  if (!rows || rows.length === 0) return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '50vh',
+      flexDirection: 'column',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{
+        color: '#666',
+        fontSize: '18px',
+        fontWeight: '500',
+        textAlign: 'center',
+        marginBottom: '10px'
+      }}>
+        📋 No Data Found
+      </div>
+      <div style={{
+        color: '#999',
+        fontSize: '14px',
+        textAlign: 'center'
+      }}>
+        No payroll data available for the selected parameters
+      </div>
+      <div style={{
+        color: '#666',
+        fontSize: '12px',
+        textAlign: 'center',
+        marginTop: '20px'
+      }}>
+        Gang: {finalGangCode || '-'} | {finalMonth ? new Date(2000, finalMonth - 1).toLocaleString('default', { month: 'long' }) : '-'} {finalYear || '-'}
       </div>
     </div>
   )
-  if (error) return <div className="grid-wrapper error-text">{error}</div>
-  if (!rows || rows.length === 0) return <div className="grid-wrapper info-text">No data for selected parameters</div>
 
   return (
     <div className="grid-wrapper">

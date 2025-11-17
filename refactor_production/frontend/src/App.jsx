@@ -3,6 +3,7 @@ import Report from './pages/Report'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Modal from './components/common/Modal'
+import LoadingScreen from './components/common/LoadingScreen'
 import { fetchGangs } from './services/gangService'
 
 // Check if running in development mode
@@ -139,17 +140,15 @@ function AppInner() {
   // Show loading screen during authentication
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        flexDirection: 'column',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div>Loading Payroll System...</div>
-        <div style={{ marginTop: 10, fontSize: 12, color: '#666' }}>Authenticating...</div>
-      </div>
+      <LoadingScreen
+        isLoading={true}
+        message="Authenticating..."
+        steps={[
+          { name: 'Connecting to authentication server', duration: 1500 },
+          { name: 'Verifying credentials', duration: 1000 },
+          { name: 'Loading user profile', duration: 1000 }
+        ]}
+      />
     )
   }
 
@@ -289,13 +288,21 @@ function AppInner() {
         </div>
       </Modal>
       {applyLoading && (
-        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(255,255,255,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
-          <div style={{ textAlign:'center' }}>
-            <div style={{ width:48, height:48, border:'4px solid #ccc', borderTopColor:'#1976d2', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto' }} />
-            <div style={{ marginTop:10, color:'#333' }}>Loading report data...</div>
-            <div style={{ marginTop:5, fontSize:12, color:'#666' }}>Headers are being preloaded for faster display</div>
-          </div>
-        </div>
+        <LoadingScreen
+          isLoading={true}
+          message="Generating payroll report..."
+          gangCode={gang}
+          month={month}
+          year={year}
+          steps={[
+            { name: 'Connecting to database server', duration: 1000 },
+            { name: 'Loading dynamic headers', duration: 2000 },
+            { name: 'Fetching employee data from database', duration: 3000 },
+            { name: 'Processing payroll calculations', duration: 2500 },
+            { name: 'Auto-hiding empty columns', duration: 1000 },
+            { name: 'Finalizing report layout', duration: 1500 }
+          ]}
+        />
       )}
       {ready ? <Report token={token} month={month} year={year} gang_code={gang_code} onLoad={() => setApplyLoading(false)} /> : null}
     </>
