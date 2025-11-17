@@ -1,5 +1,9 @@
 {
   "dependencies": {
     "@qwen-code/qwen-code": "^0.1.4"
+  },
+  "scripts": {
+    "test-auth": "cd refactor_production/backend && python ../../test_auth.py",
+    "test": "cd refactor_production/backend && python -m pytest tests/"
   }
 }
