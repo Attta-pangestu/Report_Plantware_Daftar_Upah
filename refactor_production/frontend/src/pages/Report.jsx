@@ -555,14 +555,15 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       gangCode={finalGangCode}
       month={finalMonth}
       year={finalYear}
+      logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
       steps={headerLoading ? [
-        { name: 'Loading report headers structure', duration: 2000 },
-        { name: 'Fetching dynamic column definitions', duration: 3000 },
+        { name: `Loading headers for Gang ${finalGangCode}`, duration: 1800 },
+        { name: `Fetching dynamic columns for ${finalGangCode}`, duration: 2200 },
         { name: 'Building column hierarchy', duration: 1500 }
       ] : [
         { name: 'Connecting to payroll database', duration: 1500 },
-        { name: 'Loading employee data', duration: 3000 },
-        { name: 'Processing payroll calculations', duration: 2500 }
+        { name: `Loading rows for Gang ${finalGangCode}`, duration: 2800 },
+        { name: `Aggregating ${typeof finalMonth==='string' ? finalMonth : finalMonth+'/'+finalYear}`, duration: 2500 }
       ]}
     />
   )

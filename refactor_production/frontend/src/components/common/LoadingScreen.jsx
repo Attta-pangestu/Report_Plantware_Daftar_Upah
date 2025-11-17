@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 
 const LoadingScreen = ({
   isLoading = true,
-  message = 'Loading...',
+  message = 'Memuat...',
   gangCode = null,
   month = null,
   year = null,
+  logoUrl = null,
+  bgUrl = 'https://www.infosawit.com/wp-content/uploads/2023/04/Kebun-Sawit-3.jpg',
   steps = [
     { name: 'Connecting to database', duration: 1000 },
     { name: 'Loading report headers', duration: 2000 },
@@ -15,6 +17,8 @@ const LoadingScreen = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [bgLoaded, setBgLoaded] = useState(false)
+  const [bgError, setBgError] = useState(false)
 
   useEffect(() => {
     if (!isLoading || !steps.length) return
@@ -58,26 +62,43 @@ const LoadingScreen = ({
     }
   }, [isLoading, steps])
 
-  const getMonthName = (monthNum) => {
-    const months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-    return months[monthNum] || monthNum
+  useEffect(() => {
+    if (!bgUrl) return
+    let alive = true
+    const img = new Image()
+    img.loading = 'lazy'
+    img.onload = () => { if (alive) setBgLoaded(true) }
+    img.onerror = () => { if (alive) setBgError(true) }
+    img.src = bgUrl
+    return () => { alive = false }
+  }, [bgUrl])
+
+  const getMonthName = (m) => {
+    const months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    if (typeof m === 'string' && m.includes('-')) {
+      const parts = m.split('-')
+      const num = parseInt(parts[1], 10)
+      return months[num] || m
+    }
+    return months[m] || m
   }
 
+  const containerStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: bgLoaded && !bgError ? `url(${bgUrl}) center/cover no-repeat` : 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  }
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
+    <div style={containerStyle} className="loading-screen fade-in">
+      <div className="loading-overlay" />
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
         borderRadius: '20px',
@@ -111,12 +132,17 @@ const LoadingScreen = ({
           }}>
             PR
           </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt="logo" style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 8 }} onError={(e)=>{e.currentTarget.style.display='none'}} />
+          ) : (
+            <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #e53935 0%, #1e88e5 100%)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: 20 }}>RJ</div>
+          )}
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '20px', fontWeight: '600', color: '#333', margin: 0 }}>
-              Payroll Report System
+            <div style={{ fontSize: 20, fontWeight: 600, color: '#333', margin: 0 }}>
+              PT. Rebinmas Jaya
             </div>
-            <div style={{ fontSize: '14px', color: '#666', margin: 0 }}>
-              PT Rebinmas Indonesia
+            <div style={{ fontSize: 14, color: '#666', margin: 0 }}>
+              Payroll Reporting
             </div>
           </div>
         </div>
@@ -139,7 +165,7 @@ const LoadingScreen = ({
               width: '100%',
               height: '100%',
               border: '4px solid #f3f3f3',
-              borderTop: '4px solid #667eea',
+              borderTop: '4px solid #1e88e5',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }} />
@@ -151,7 +177,7 @@ const LoadingScreen = ({
               width: '24px',
               height: '24px',
               border: '3px solid #f3f3f3',
-              borderLeft: '3px solid #764ba2',
+              borderLeft: '3px solid #e53935',
               borderRadius: '50%',
               animation: 'spin 1.5s linear infinite reverse'
             }} />
@@ -167,17 +193,17 @@ const LoadingScreen = ({
             marginBottom: '25px',
             border: '1px solid #667eea30'
           }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#333', marginBottom: '8px' }}>
-              Report Details
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#333', marginBottom: 8 }}>
+              Memuat Laporan
             </div>
-            <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.5' }}>
-              {gangCode && (
-                <div><strong>Gang:</strong> {gangCode}</div>
-              )}
-              {month && year && (
+          <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.5' }}>
+            {gangCode && (
+              <div><strong>Gang:</strong> {gangCode}</div>
+            )}
+            {month && year && (
                 <div><strong>Periode:</strong> {getMonthName(month)} {year}</div>
-              )}
-            </div>
+            )}
+          </div>
           </div>
         )}
 
@@ -231,12 +257,8 @@ const LoadingScreen = ({
         </div>
       </div>
 
-      {/* CSS Animation */}
       <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
   )
