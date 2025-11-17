@@ -90,7 +90,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           if (!childrenIds || childrenIds.length === 0) {
             const field = mapField(c1.id)
             if (field) {
-              built.push({ field, headerName: c1.text, pinned: ['jenis_kelamin','nik','nama'].includes(field) ? 'left' : undefined })
+              built.push({ field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined })
             }
             return
           }
@@ -149,7 +149,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               if (!childrenIds || childrenIds.length === 0) {
                 const field = mapField(c1.id)
                 if (field) {
-                  built.push({ field, headerName: c1.text, pinned: ['jenis_kelamin','nik','nama'].includes(field) ? 'left' : undefined })
+                  built.push({ field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined })
                 }
                 return
               }

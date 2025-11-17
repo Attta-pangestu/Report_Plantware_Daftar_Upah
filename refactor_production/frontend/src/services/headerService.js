@@ -77,7 +77,6 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
         hierarchy: {
           level_1: { columns: [
             { id: 'no', text: 'NO', rowspan: 3, colspan: 1, children: [] },
-            { id: 'nik', text: 'NIK', rowspan: 3, colspan: 1, children: [] },
             { id: 'name', text: 'NAMA', rowspan: 3, colspan: 1, children: [] },
             { id: 'upah_dasar', text: 'UPAH DASAR', rowspan: 3, colspan: 1, children: [] },
             { id: 'hari_kerja', text: 'HARI KERJA', rowspan: 3, colspan: 1, children: [] },
@@ -90,7 +89,6 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
         generated_headers: {
           level_1: { row: 1, columns: [
             { id: 'no', text: 'NO' },
-            { id: 'nik', text: 'NIK' },
             { id: 'name', text: 'NAMA' },
             { id: 'upah_dasar', text: 'UPAH DASAR' },
             { id: 'hari_kerja', text: 'HARI KERJA' },
@@ -150,7 +148,6 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
     // Return fallback column definitions
     const fallbackData = [
       { field: 'no', headerName: 'NO', width: 60, pinned: 'left' },
-      { field: 'nik', headerName: 'NIK', width: 120, pinned: 'left' },
       { field: 'nama', headerName: 'NAMA', width: 200, pinned: 'left' },
       { field: 'upah_dasar', headerName: 'UPAH DASAR', width: 120, type: 'numericColumn' },
       { field: 'hari_kerja', headerName: 'HARI KERJA', width: 100, type: 'numericColumn' },
