@@ -6,6 +6,8 @@ from app.models.user import User
 from app.services.payroll_service import PayrollService
 from app.services.gang_service import GangService
 from app.services.header_service import HeaderService
+from app.services.threaded_header_service import ThreadedHeaderService
+from app.services.threaded_data_extractor import ThreadedDataExtractor
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.employee_repository_db import EmployeeRepositoryDB
 from app.repositories.gang_repository_db import GangRepositoryDB
@@ -41,10 +43,10 @@ async def report_grid(
     fields: Optional[str] = Query(None),
     benchmark: Optional[bool] = Query(False),
     monitor: Optional[bool] = Query(False),
+    use_threading: Optional[bool] = Query(False, description="Use threaded data extraction for better performance"),
     response: Response = None,
     user=Depends(get_current_user_from_token)
 ):
-    svc = PayrollService()
     try:
         if is_test_mode():
             gang_code = gang_code or DEFAULT_GANG
@@ -52,24 +54,69 @@ async def report_grid(
             year = year or DEFAULT_YEAR
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
-        repo = EmployeeRepositoryDB()
-        f_list = None
-        if fields:
-            f_list = [x.strip() for x in fields.split(',') if x.strip()]
-        t0 = time.perf_counter()
-        if monitor:
-            tracemalloc.start()
-        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit, fields=f_list)
-        t1 = time.perf_counter()
-        if monitor:
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            if response is not None:
-                response.headers["X-Memory-Current-KB"] = str(int(current/1024))
-                response.headers["X-Memory-Peak-KB"] = str(int(peak/1024))
+
+        start_time = time.perf_counter()
+
+        if use_threading:
+            # Use threaded data extraction
+            extracted_data = threaded_data_extractor.extract_all_payroll_data_parallel(
+                month=month or datetime.now().month,
+                year=year or datetime.now().year,
+                gang_code=gang_code or "ALL"
+            )
+
+            rows = extracted_data.get('data_rows', [])
+            processing_type = "threaded"
+
+            # Apply pagination if needed
+            if skip or limit:
+                rows = rows[skip:skip + limit]
+
+            # Filter fields if specified
+            if fields:
+                f_list = [x.strip() for x in fields.split(',') if x.strip()]
+                filtered_rows = []
+                for row in rows:
+                    filtered_row = {}
+                    for field in f_list:
+                        if hasattr(row, field):
+                            filtered_row[field] = getattr(row, field)
+                        elif field in row:
+                            filtered_row[field] = row[field]
+                    if filtered_row:
+                        filtered_rows.append(filtered_row)
+                rows = filtered_rows
+
+        else:
+            # Use original service
+            svc = PayrollService()
+            repo = EmployeeRepositoryDB()
+            f_list = None
+            if fields:
+                f_list = [x.strip() for x in fields.split(',') if x.strip()]
+
+            if monitor:
+                tracemalloc.start()
+
+            rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit, fields=f_list)
+            processing_type = "sequential"
+
+            if monitor:
+                current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                if response is not None:
+                    response.headers["X-Memory-Current-KB"] = str(int(current/1024))
+                    response.headers["X-Memory-Peak-KB"] = str(int(peak/1024))
+
+        execution_time = time.perf_counter() - start_time
+
+        # Add performance headers
         if benchmark and response is not None:
-            response.headers["X-TotalMs"] = str(int((t1 - t0) * 1000))
+            response.headers["X-TotalMs"] = str(int(execution_time * 1000))
             response.headers["X-Rows"] = str(len(rows))
+            response.headers["X-Processing-Type"] = processing_type
+            response.headers["X-Threading-Enabled"] = str(use_threading)
+
         return rows
     except Exception as e:
         logger.error(f"Database error: {e}")
@@ -78,6 +125,8 @@ async def report_grid(
 # Initialize services
 gang_service = GangService()
 header_service = HeaderService()
+threaded_header_service = ThreadedHeaderService.get_instance()
+threaded_data_extractor = ThreadedDataExtractor.get_instance()
 
 @router.get("/divisions", response_model=List[str])
 async def get_divisions(user=Depends(get_current_user_from_token)):
@@ -138,10 +187,11 @@ async def get_dynamic_headers(
     month: Optional[int] = Query(None, description="Month for report (1-12)"),
     year: Optional[int] = Query(None, description="Year for report"),
     gang_code: Optional[str] = Query(None, description="Gang code filter"),
+    use_threading: Optional[bool] = Query(True, description="Use threaded processing for better performance"),
     response: Response = None,
     user=Depends(get_current_user_from_token)
 ):
-    """Generate dynamic headers based on real data"""
+    """Generate dynamic headers based on real data with optional threading optimization"""
     try:
         if is_test_mode():
             month = month or DEFAULT_MONTH
@@ -149,13 +199,44 @@ async def get_dynamic_headers(
             gang_code = gang_code or DEFAULT_GANG
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
-        headers = header_service.generate_dynamic_headers(
-            month=month,
-            year=year,
-            gang_code=gang_code
-        )
+
+        start_time = time.perf_counter()
+
+        if use_threading:
+            # Use optimized threaded service
+            headers = threaded_header_service.generate_optimized_headers_parallel(
+                month=month,
+                year=year,
+                gang_code=gang_code
+            )
+            processing_type = "threaded"
+        else:
+            # Use original service
+            headers = header_service.generate_dynamic_headers(
+                month=month,
+                year=year,
+                gang_code=gang_code
+            )
+            processing_type = "sequential"
+
+        execution_time = time.perf_counter() - start_time
+
+        # Add performance metrics to response
+        if isinstance(headers, dict):
+            headers['performance_info'] = {
+                'processing_type': processing_type,
+                'execution_time_ms': int(execution_time * 1000),
+                'threading_enabled': use_threading
+            }
+
+        if response is not None:
+            response.headers["X-Processing-Type"] = processing_type
+            response.headers["X-Execution-Time-Ms"] = str(int(execution_time * 1000))
+            response.headers["X-Threading-Enabled"] = str(use_threading)
+
         return headers
     except Exception as e:
+        logger.error(f"Header generation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate headers: {str(e)}"
@@ -429,3 +510,107 @@ async def report_single_column(
         return out
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/performance/compare", response_model=dict)
+async def compare_performance(
+    gang_code: Optional[str] = Query(None, description="Gang code for testing"),
+    month: Optional[int] = Query(None, description="Month for testing"),
+    year: Optional[int] = Query(None, description="Year for testing"),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
+    """
+    Compare performance between sequential and threaded processing.
+    This endpoint runs both methods and returns performance comparison.
+    """
+    try:
+        if is_test_mode():
+            gang_code = gang_code or DEFAULT_GANG
+            month = month or DEFAULT_MONTH
+            year = year or DEFAULT_YEAR
+            if response is not None:
+                response.headers["X-Test-Mode"] = "true"
+
+        # Test 1: Sequential header generation
+        seq_start = time.perf_counter()
+        sequential_headers = header_service.generate_dynamic_headers(
+            month=month,
+            year=year,
+            gang_code=gang_code
+        )
+        seq_time = time.perf_counter() - seq_start
+
+        # Test 2: Threaded header generation
+        thread_start = time.perf_counter()
+        threaded_headers = threaded_header_service.generate_optimized_headers_parallel(
+            month=month,
+            year=year,
+            gang_code=gang_code
+        )
+        thread_time = time.perf_counter() - thread_start
+
+        # Test 3: Sequential data extraction (limited sample)
+        seq_data_start = time.perf_counter()
+        svc = PayrollService()
+        repo = EmployeeRepositoryDB()
+        sequential_data = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=0, limit=50)
+        seq_data_time = time.perf_counter() - seq_data_start
+
+        # Test 4: Threaded data extraction (limited sample)
+        thread_data_start = time.perf_counter()
+        threaded_extracted = threaded_data_extractor.extract_all_payroll_data_parallel(
+            month=month,
+            year=year,
+            gang_code=gang_code
+        )
+        threaded_data = threaded_extracted.get('data_rows', [])[:50]  # Limit to 50 for fair comparison
+        thread_data_time = time.perf_counter() - thread_data_start
+
+        # Calculate performance improvements
+        header_improvement = ((seq_time - thread_time) / seq_time * 100) if seq_time > 0 else 0
+        data_improvement = ((seq_data_time - thread_data_time) / seq_data_time * 100) if seq_data_time > 0 else 0
+
+        result = {
+            "test_parameters": {
+                "gang_code": gang_code,
+                "month": month,
+                "year": year,
+                "sample_size": 50
+            },
+            "header_generation": {
+                "sequential_time_ms": int(seq_time * 1000),
+                "threaded_time_ms": int(thread_time * 1000),
+                "improvement_percent": round(header_improvement, 2),
+                "faster_by": round(seq_time / thread_time, 2) if thread_time > 0 else 0
+            },
+            "data_extraction": {
+                "sequential_time_ms": int(seq_data_time * 1000),
+                "threaded_time_ms": int(thread_data_time * 1000),
+                "improvement_percent": round(data_improvement, 2),
+                "faster_by": round(seq_data_time / thread_data_time, 2) if thread_data_time > 0 else 0
+            },
+            "overall": {
+                "total_sequential_ms": int((seq_time + seq_data_time) * 1000),
+                "total_threaded_ms": int((thread_time + thread_data_time) * 1000),
+                "overall_improvement_percent": round(((seq_time + seq_data_time) - (thread_time + thread_data_time)) / (seq_time + seq_data_time) * 100, 2) if (seq_time + seq_data_time) > 0 else 0
+            },
+            "data_consistency": {
+                "header_count_match": len(sequential_headers.get('table_structure', {}).get('generated_headers', {}).get('level_3', {}).get('columns', [])) == len(threaded_headers.get('table_structure', {}).get('generated_headers', {}).get('level_3', {}).get('columns', [])),
+                "data_count_match": len(sequential_data) == len(threaded_data)
+            }
+        }
+
+        if response is not None:
+            response.headers["X-Header-Improvement"] = f"{round(header_improvement, 2)}%"
+            response.headers["X-Data-Improvement"] = f"{round(data_improvement, 2)}%"
+            response.headers["X-Overall-Improvement"] = f"{result['overall']['overall_improvement_percent']}%"
+
+        logger.info(f"Performance comparison completed. Header improvement: {round(header_improvement, 2)}%, Data improvement: {round(data_improvement, 2)}%")
+
+        return result
+    except Exception as e:
+        logger.error(f"Performance comparison failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Performance comparison failed: {str(e)}"
+        )

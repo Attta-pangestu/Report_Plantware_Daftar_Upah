@@ -30,7 +30,9 @@
       "Bash(tasklist:*)",
       "Bash(npm install:*)",
       "Bash(npm run dev:test:*)",
-      "Bash(set:*)"
+      "Bash(set:*)",
+      "mcp__obsidian-mcp-tools__list_vault_files",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

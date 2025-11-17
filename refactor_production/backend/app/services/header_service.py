@@ -114,23 +114,95 @@ class HeaderService:
             return self._get_error_response(str(e))
 
     def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """
+        Optimized version with better caching and query performance.
+        Uses faster query and improved caching strategy.
+        """
         start = time.perf_counter()
-        cache_key = f"dyn_hdr:{gang_code}:{year}-{str(month).zfill(2)}"
+
+        # Enhanced cache key with optimization strategy
+        cache_key = f"dyn_hdr_opt:{gang_code}:{year}-{str(month).zfill(2)}"
+        cached = Cache.instance().get(cache_key)
+        if cached is not None:
+            print(f"Cache hit for {cache_key}")
+            return cached
+
+        db = Database.instance()
+        q = Queries()
+
+        # Try optimized query first (without GROUP BY and SUM)
+        sql_entry_opt = q.get('premi', 'dynamic_headers_by_gang_month_optimized')
+        if sql_entry_opt and 'sql' in sql_entry_opt:
+            start_date = f"{year}-{str(month).zfill(2)}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+            # Execute optimized query
+            rows = db.query_all(sql_entry_opt['sql'], [gang_code, start_date, end_date])
+            mid = time.perf_counter()
+
+            # Pre-defined excluded items for better performance
+            excluded_lower = {
+                'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
+                'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
+                'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen'
+            }
+
+            # Optimized filtering with list comprehension
+            headers = [
+                str(r[0]).strip()
+                for r in rows
+                if r and r[0] and str(r[0]).strip().lower() not in excluded_lower
+            ]
+
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_headers = []
+            for h in headers:
+                if h not in seen:
+                    seen.add(h)
+                    unique_headers.append(h)
+
+            # Limit to 7 items for consistency
+            result = unique_headers[:7]
+
+            # Extended cache TTL for better performance (1 hour)
+            Cache.instance().set(cache_key, result, ttl=3600)
+
+            query_time = (mid - start) * 1000
+            total_time = (time.perf_counter() - start) * 1000
+            print(f"Optimized query time: {query_time:.2f}ms, Total time: {total_time:.2f}ms")
+
+            return result
+
+        # Fallback to original query if optimized query not available
+        return self._compute_dynamic_premi_headers_db_fallback(month, year, gang_code)
+
+    def _compute_dynamic_premi_headers_db_fallback(self, month: int, year: int, gang_code: str) -> List[str]:
+        """Fallback method using original query for compatibility"""
+        start = time.perf_counter()
+        cache_key = f"dyn_hdr_fallback:{gang_code}:{year}-{str(month).zfill(2)}"
         cached = Cache.instance().get(cache_key)
         if cached is not None:
             return cached
+
         db = Database.instance()
         q = Queries()
         sql_entry = q.get('premi', 'dynamic_headers_by_gang_month')
         if not sql_entry or 'sql' not in sql_entry:
             return []
+
         start_date = f"{year}-{str(month).zfill(2)}-01"
         if month == 12:
             end_date = f"{year+1}-01-01"
         else:
             end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
         rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
         mid = time.perf_counter()
+
         excluded = {
             'KOREKSI',
             'POTONGAN PPH21',
@@ -146,6 +218,7 @@ class HeaderService:
             'POTONGAN KOREKSI',
             'POTONGAN KOREKSI PANEN'
         }
+
         headers = []
         for r in rows:
             if not r:
@@ -153,14 +226,17 @@ class HeaderService:
             h = str(r[0]).strip()
             if h and h.upper() not in excluded:
                 headers.append(h)
+
         seen = set()
         unique = []
         for h in headers:
             if h not in seen:
                 seen.add(h)
                 unique.append(h)
-        Cache.instance().set(cache_key, unique[:7], ttl=900)
-        return unique[:7]
+
+        result = unique[:7]
+        Cache.instance().set(cache_key, result, ttl=1800)  # 30 minutes for fallback
+        return result
 
     def _build_header_hierarchy(self, table_structure: Dict[str, Any]) -> Dict[str, Any]:
         """Build complete header hierarchy from structure"""
