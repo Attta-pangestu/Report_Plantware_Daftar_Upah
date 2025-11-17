@@ -205,3 +205,5 @@ export const getMonthName = (monthNumber) => {
   ]
   return months[monthNumber] || ''
 }
+
+// Auto-hide by zero totals has been removed; backend now filters dynamic headers

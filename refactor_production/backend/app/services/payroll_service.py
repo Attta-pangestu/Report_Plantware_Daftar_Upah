@@ -238,7 +238,10 @@ class PayrollService:
             premi_angkut_material = float(premi_maps.get('angkut_material', {}).get(nik, 0.0))
             premi_angkut_tbs = float(premi_maps.get('angkut_tbs', {}).get(nik, 0.0))
             premi_harvesting = float(premi_maps.get('harvesting', {}).get(nik, 0.0))
-            premi_harvesting_incentive = float(premi_maps.get('harvesting_incentive', {}).get(nik, 0.0))
+            # Combine harvesting + incentive into a single column value
+            premi_harvesting_incentive = (
+                float(premi_maps.get('harvesting_incentive', {}).get(nik, 0.0)) + premi_harvesting
+            )
             premi_pupuk = float(premi_maps.get('pupuk', {}).get(nik, 0.0))
 
             pot_spsi = 0.0
@@ -263,8 +266,9 @@ class PayrollService:
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
             total_tunjangan = beras_jumlah + jabatan_jumlah + masa_kerja_jumlah + lembur_jumlah
 
+            # Avoid double-counting: harvesting is merged into harvesting_incentive
             total_premi = sum([
-                premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs, premi_harvesting,
+                premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
                 premi_harvesting_incentive, premi_pupuk
             ])
             jumlah_upah_kotor = upah_pokok + total_tunjangan + total_premi
@@ -316,7 +320,7 @@ class PayrollService:
                 premi_pruning=premi_pruning,
                 premi_angkut_material=premi_angkut_material,
                 premi_angkut_tbs=premi_angkut_tbs,
-                premi_harvesting=premi_harvesting,
+                premi_harvesting=0.0,
                 premi_harvesting_incentive=premi_harvesting_incentive,
                 premi_pupuk=premi_pupuk,
                 total_premi=total_premi,

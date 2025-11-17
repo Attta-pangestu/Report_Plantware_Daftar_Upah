@@ -130,19 +130,16 @@ class ThreadedHeaderService:
             'cache_key': f"premi_headers:{gang_code}:{start_date}_{end_date}",
             'sql': """
                 SELECT DISTINCT t.DocDesc
-                FROM PR_ADTRANS_ARC AS t
-                JOIN PR_ADTRANSLN_ARC AS ln ON t.ID = ln.MasterID
-                JOIN HR_GANGLN AS g ON g.GangMember = t.EmpCode
-                WHERE g.GangCode = ?
-                    AND t.DocDate >= ?
-                    AND t.DocDate < ?
-                    AND COALESCE(ln.Amount,0) > 0
-                    AND t.DocDesc IS NOT NULL
-                    AND UPPER(t.DocDesc) NOT IN (
-                        'KOREKSI','POTONGAN PPH21','POTONGAN SPSI',
-                        'TUNJANGAN JABATAN','TUNJANGAN MASA KERJA',
-                        'PRUNING','BRONDOL','PPH 21','PPH21','SPSI'
-                    )
+                FROM "PR_ADTRANS_ARC" AS t
+                JOIN "PR_ADTRANSLN_ARC" AS ln ON t.ID = ln.MasterID
+                WHERE t.EmpCode IN (
+                    SELECT "HR_EMPLOYEE"."EmpCode"
+                    FROM "HR_EMPLOYEE"
+                    JOIN "HR_GANGLN" ON "HR_GANGLN"."GangMember" = "HR_EMPLOYEE"."EmpCode"
+                    WHERE "HR_GANGLN"."GangCode" = ?
+                )
+                AND t.DocDate >= ?
+                AND t.DocDate < ?
                 ORDER BY t.DocDesc
             """,
             'params': [gang_code, start_date, end_date],
@@ -213,6 +210,13 @@ class ThreadedHeaderService:
         # Get dynamic premium headers
         dynamic_premi_results = results.get('dynamic_premi', [])
         dynamic_premi_headers = [str(row[0]).strip() for row in dynamic_premi_results if row and row[0]]
+        excluded_lower = {
+            'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
+            'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
+            'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
+            'tunjangan premi', 'tunjangan beras'
+        }
+        dynamic_premi_headers = [h for h in dynamic_premi_headers if h and h.strip().lower() not in excluded_lower]
 
         # Update premium headers in the structure
         level2 = hierarchy.get('level_2', {}).get('columns', [])
@@ -227,15 +231,15 @@ class ThreadedHeaderService:
             else:
                 dynamic_slots.append(c)
 
-        # Fill dynamic slots with real data
-        for i, c in enumerate(dynamic_slots):
-            if i < len(dynamic_premi_headers):
-                c['text'] = dynamic_premi_headers[i]
+        # Keep static header texts; dynamic headers are exposed for reference only
 
         # Get report metadata
         report_metadata = results.get('report_metadata', {})
         employee_count_result = results.get('employee_count', [(0,)])
         employee_count = employee_count_result[0][0] if employee_count_result else 0
+
+        # Keep all original premi children; only adjust text for dynamic slot
+        hierarchy.get('level_2', {})['columns'] = level2
 
         # Build complete header hierarchy
         headers = self._build_header_hierarchy(table_structure)
@@ -248,7 +252,8 @@ class ThreadedHeaderService:
                 "total_columns": len(headers.get('level_3', {}).get('columns', [])),
                 "data_source": "real_database",
                 "employee_count": employee_count,
-                "dynamic_premi_count": len(dynamic_premi_headers)
+                "dynamic_premi_count": len(dynamic_premi_headers),
+                "dynamic_docdesc": dynamic_premi_headers
             }
         }
 

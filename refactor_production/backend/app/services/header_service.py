@@ -75,19 +75,7 @@ class HeaderService:
             tq1 = time.perf_counter()
 
             hierarchy = table_structure.get('hierarchy', {})
-            level2 = hierarchy.get('level_2', {}).get('columns', [])
-            premi_children = [c for c in level2 if c.get('parent') == 'premi']
-            fixed = []
-            dynamic_slots = []
-            for c in premi_children:
-                t = (c.get('text') or '').upper()
-                if 'BRONDOL' in t or 'PRUNING' in t:
-                    fixed.append(c)
-                else:
-                    dynamic_slots.append(c)
-            for i, c in enumerate(dynamic_slots):
-                if i < len(dyn):
-                    c['text'] = dyn[i]
+            # Keep header texts from JSON; backend provides filtered dynamic_docdesc for reference only
 
             t0 = time.perf_counter()
             headers = self._build_header_hierarchy(table_structure)
@@ -105,7 +93,8 @@ class HeaderService:
                     **table_structure,
                     "generated_headers": headers,
                     "total_columns": len(headers.get('level_3', {}).get('columns', [])),
-                    "data_source": "real_database"
+                    "data_source": "real_database",
+                    "dynamic_docdesc": dyn
                 }
             }
 
@@ -147,7 +136,8 @@ class HeaderService:
             excluded_lower = {
                 'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
                 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
-                'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen'
+                'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
+                'tunjangan premi', 'tunjangan beras'
             }
 
             # Optimized filtering with list comprehension
@@ -216,7 +206,11 @@ class HeaderService:
             'SPSI',
             'KOREKSI PANEN',
             'POTONGAN KOREKSI',
-            'POTONGAN KOREKSI PANEN'
+            'POTONGAN KOREKSI PANEN',
+            'TUNJANGAN PREMI',
+            'TUNJANGAN BERAS',
+            'INCENTIVE PANEN',
+            'INCENTIVE'
         }
 
         headers = []
@@ -234,9 +228,8 @@ class HeaderService:
                 seen.add(h)
                 unique.append(h)
 
-        result = unique[:7]
-        Cache.instance().set(cache_key, result, ttl=1800)  # 30 minutes for fallback
-        return result
+        Cache.instance().set(cache_key, unique[:7], ttl=1800)  # 30 minutes for fallback
+        return unique[:7]
 
     def _build_header_hierarchy(self, table_structure: Dict[str, Any]) -> Dict[str, Any]:
         """Build complete header hierarchy from structure"""

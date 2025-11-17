@@ -6,6 +6,6 @@
     "sql": "SELECT t.DocDesc, SUM(COALESCE(ln.Amount,0)) AS TotalAmount FROM PR_ADTRANS_ARC AS t JOIN PR_ADTRANSLN_ARC AS ln ON t.ID = ln.MasterID JOIN HR_GANGLN AS g ON g.GangMember = t.EmpCode WHERE g.GangCode = ? AND t.DocDate >= ? AND t.DocDate < ? GROUP BY t.DocDesc HAVING SUM(COALESCE(ln.Amount,0)) > 0 ORDER BY TotalAmount DESC"
   },
   "dynamic_headers_by_gang_month": {
-    "sql": "SELECT t.DocDesc, SUM(COALESCE(ln.Amount,0)) AS TotalAmount FROM PR_ADTRANS_ARC AS t JOIN PR_ADTRANSLN_ARC AS ln ON t.ID = ln.MasterID JOIN HR_GANGLN AS g ON g.GangMember = t.EmpCode WHERE g.GangCode = ? AND t.DocDate >= ? AND t.DocDate < ? GROUP BY t.DocDesc HAVING SUM(COALESCE(ln.Amount,0)) > 0 ORDER BY SUM(COALESCE(ln.Amount,0)) DESC"
+    "sql": "SELECT t.DocDesc, SUM(COALESCE(ln.Amount,0)) AS TotalAmount FROM PR_ADTRANS_ARC AS t JOIN PR_ADTRANSLN_ARC AS ln ON t.ID = ln.MasterID JOIN HR_GANGLN AS g ON g.GangMember = t.EmpCode WHERE g.GangCode = ? AND t.DocDate >= ? AND t.DocDate < ? AND UPPER(t.DocDesc) NOT LIKE '%TUNJANGAN%' AND UPPER(t.DocDesc) NOT LIKE '%BERAS%' AND UPPER(t.DocDesc) NOT LIKE '%PPH%' AND UPPER(t.DocDesc) NOT LIKE '%SPSI%' GROUP BY t.DocDesc HAVING SUM(COALESCE(ln.Amount,0)) > 0 ORDER BY SUM(COALESCE(ln.Amount,0)) DESC"
   }
 }

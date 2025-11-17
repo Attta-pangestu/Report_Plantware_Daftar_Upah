@@ -103,7 +103,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             return
           }
           const group2 = (l2ByParent[c1.id] || []).map(c2 => {
-            const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
+            const isPremiHI = String(c2.text || '').toUpperCase().includes('PREMI HARVESTING') && String(c2.text || '').toUpperCase().includes('INCENTIVE')
+            let leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
+            if (isPremiHI) {
+              leaves = leaves.map(leaf => ({ ...leaf, field: 'premi_harvesting_incentive' }))
+            }
             return { headerName: c2.text, children: leaves }
           })
           otherColumns.push({ headerName: c1.text, children: group2 })
@@ -250,6 +254,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'), total_premi: agg('total_premi'),
           jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
+
+        // Frontend no longer auto-hides columns; backend filters dynamic headers
       } catch (e) {
         if (DEV_MODE && !finalToken) {
           try {
@@ -334,7 +340,74 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     if (cfg.field && classMap[cfg.field]) {
       cfg.cellClass = classMap[cfg.field]
     }
+
+    // Soft color header/text styling per header text to differentiate columns
+    const hdrText = String(cfg.headerName || '').toUpperCase()
+    if (hdrText.includes('PREMI HARVESTING') && hdrText.includes('INCENTIVE')) {
+      cfg.headerClass = 'hdr-premi-hi'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-hi'
+    } else if (hdrText.includes('PRUNING')) {
+      cfg.headerClass = 'hdr-premi-pruning'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-pruning'
+    } else if (hdrText.includes('BRONDOL')) {
+      cfg.headerClass = 'hdr-premi-brondol'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-brondol'
+    } else if (hdrText.includes('ANGKUT TBS')) {
+      cfg.headerClass = 'hdr-premi-angkut-tbs'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-angkut-tbs'
+    } else if (hdrText.includes('ANGKUT MATERIAL')) {
+      cfg.headerClass = 'hdr-premi-angkut-material'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-angkut-material'
+    } else if (hdrText.includes('PUPUK')) {
+      cfg.headerClass = 'hdr-premi-pupuk'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-premi-pupuk'
+    }
     return cfg
+  }
+
+  // Auto-hide kolom premi yang tidak ada data sama sekali
+  const hideEmptyPremiColumns = (cols, data) => {
+    if (!Array.isArray(cols) || !Array.isArray(data)) return cols
+
+    const checkColumnHasData = (field) => {
+      return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) > 0)
+    }
+
+    const processColumn = (col) => {
+      if (col.children && Array.isArray(col.children)) {
+        // Process level 2 header dengan children level 3
+        const processedChildren = col.children.map(child => {
+          if (child.children && Array.isArray(child.children)) {
+            // Level 3 children - periksa apakah ada data
+            const visibleChildren = child.children.filter(leaf => {
+              if (!leaf.field) return true
+              return checkColumnHasData(leaf.field)
+            })
+            return {
+              ...child,
+              children: visibleChildren,
+              hide: visibleChildren.length === 0
+            }
+          }
+          return child
+        }).filter(child => !child.hide)
+
+        return {
+          ...col,
+          children: processedChildren,
+          hide: processedChildren.length === 0
+        }
+      } else if (col.field) {
+        // Leaf column - periksa apakah ada data
+        return {
+          ...col,
+          hide: !checkColumnHasData(col.field)
+        }
+      }
+      return col
+    }
+
+    return cols.map(processColumn).filter(col => !col.hide)
   }
 
   const enhanceColumnsRecursive = (cols) => cols.map(c => {
@@ -344,7 +417,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     return formatLeaf(c)
   })
 
-  const enhancedColumnDefs = useMemo(() => enhanceColumnsRecursive(columnDefs), [columnDefs])
+  const enhancedColumnDefs = useMemo(() => {
+    const enhanced = enhanceColumnsRecursive(columnDefs)
+    // Auto-hide columns setelah data dimuat
+    return rows.length > 0 ? hideEmptyPremiColumns(enhanced, rows) : enhanced
+  }, [columnDefs, rows])
 
   const runValidation = async () => {
     try {

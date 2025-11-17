@@ -371,9 +371,10 @@ class ThreadedDataExtractor:
                 elif 'ANGKUT TBS' in doc_desc_upper:
                     employee_data[emp_code]['premi_angkut_tbs'] = amount or 0
                 elif 'HARVESTING' in doc_desc_upper:
-                    employee_data[emp_code]['premi_harvesting'] = amount or 0
-                elif 'INCENTIVE' in doc_desc_upper:
-                    employee_data[emp_code]['premi_harvesting_incentive'] = amount or 0
+                    # Merge harvesting into harvesting_incentive column
+                    employee_data[emp_code]['premi_harvesting_incentive'] = (employee_data[emp_code]['premi_harvesting_incentive'] or 0) + (amount or 0)
+                elif 'INCENTIVE' in doc_desc_upper or 'INCENTIVE PANEN' in doc_desc_upper:
+                    employee_data[emp_code]['premi_harvesting_incentive'] = (employee_data[emp_code]['premi_harvesting_incentive'] or 0) + (amount or 0)
                 elif 'PUPUK' in doc_desc_upper:
                     employee_data[emp_code]['premi_pupuk'] = amount or 0
 
@@ -414,10 +415,12 @@ class ThreadedDataExtractor:
         # Calculate derived values
         for emp_data in employee_data.values():
             # Calculate totals
+            # Avoid double-counting: harvesting merged into harvesting_incentive
+            emp_data['premi_harvesting'] = 0
             emp_data['total_premi'] = (
                 emp_data['premi_brondol'] + emp_data['premi_pruning'] +
                 emp_data['premi_angkut_material'] + emp_data['premi_angkut_tbs'] +
-                emp_data['premi_harvesting'] + emp_data['premi_harvesting_incentive'] +
+                emp_data['premi_harvesting_incentive'] +
                 emp_data['premi_pupuk']
             )
 
