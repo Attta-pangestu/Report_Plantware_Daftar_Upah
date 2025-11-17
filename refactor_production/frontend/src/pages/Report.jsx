@@ -15,10 +15,10 @@ const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV
 export default function Report({ token, month, year, gang_code, onLoad }) {
   // In development mode, use default values if props are not provided
   const [authToken, setAuthToken] = useState(token || null)
-  const devToken = DEV_MODE ? authToken : token
-  const devMonth = DEV_MODE ? '2025-05' : month
-  const devYear = DEV_MODE ? 2025 : year
-  const devGangCode = DEV_MODE ? 'H1H' : gang_code
+  const devToken = DEV_MODE ? (authToken || token) : token
+  const devMonth = DEV_MODE ? (month || '2025-05') : month
+  const devYear = DEV_MODE ? (year || 2025) : year
+  const devGangCode = DEV_MODE ? (gang_code || 'H1H') : gang_code
   
   const finalToken = devToken || token
   const finalMonth = devMonth || month
@@ -116,8 +116,34 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           otherColumns.push({ headerName: c1.text, children: group2 })
         })
 
-        // Pastikan kolom 'no' dan 'nama' berada di paling kiri
-        built.push(...leftColumns, ...otherColumns)
+        // Pastikan kolom utama (no, gender, nik, name) berada di paling kiri dan selalu tampil
+        const essentialColumns = []
+        const remainingLeftColumns = []
+
+        leftColumns.forEach(col => {
+          if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(col.field)) {
+            essentialColumns.push(col)
+          } else {
+            remainingLeftColumns.push(col)
+          }
+        })
+
+        // Urutkan essential columns: no, gender, nik, nama
+        const orderedEssential = []
+        if (essentialColumns.some(c => c.field === 'no')) {
+          orderedEssential.push(essentialColumns.find(c => c.field === 'no'))
+        }
+        if (essentialColumns.some(c => c.field === 'jenis_kelamin')) {
+          orderedEssential.push(essentialColumns.find(c => c.field === 'jenis_kelamin'))
+        }
+        if (essentialColumns.some(c => c.field === 'nik')) {
+          orderedEssential.push(essentialColumns.find(c => c.field === 'nik'))
+        }
+        if (essentialColumns.some(c => c.field === 'nama')) {
+          orderedEssential.push(essentialColumns.find(c => c.field === 'nama'))
+        }
+
+        built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
         const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
         const chosen = hasChildren ? columnDefsData : built
         const leafFields = []
@@ -186,8 +212,35 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               otherColumns.push({ headerName: c1.text, children: group2 })
             })
 
+            // Pastikan kolom utama (no, gender, nik, name) berada di paling kiri dan selalu tampil
+            const essentialColumns = []
+            const remainingLeftColumns = []
+
+            leftColumns.forEach(col => {
+              if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(col.field)) {
+                essentialColumns.push(col)
+              } else {
+                remainingLeftColumns.push(col)
+              }
+            })
+
+            // Urutkan essential columns: no, gender, nik, nama
+            const orderedEssential = []
+            if (essentialColumns.some(c => c.field === 'no')) {
+              orderedEssential.push(essentialColumns.find(c => c.field === 'no'))
+            }
+            if (essentialColumns.some(c => c.field === 'jenis_kelamin')) {
+              orderedEssential.push(essentialColumns.find(c => c.field === 'jenis_kelamin'))
+            }
+            if (essentialColumns.some(c => c.field === 'nik')) {
+              orderedEssential.push(essentialColumns.find(c => c.field === 'nik'))
+            }
+            if (essentialColumns.some(c => c.field === 'nama')) {
+              orderedEssential.push(essentialColumns.find(c => c.field === 'nama'))
+            }
+
             // Pastikan kolom 'no' dan 'nama' berada di paling kiri
-            built.push(...leftColumns, ...otherColumns)
+            built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
             const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
             const chosen = hasChildren ? columnDefsData : built
             const leafFields = []
@@ -397,6 +450,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     if (!Array.isArray(cols) || !Array.isArray(data)) return cols
 
     const checkColumnHasData = (field) => {
+      // Jangan sembunyikan kolom esensial (no, jenis_kelamin, nik, nama)
+      if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(field)) {
+        return true
+      }
+      // Untuk kolom lain, cek apakah ada data numeric > 0
       return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) > 0)
     }
 
