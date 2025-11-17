@@ -473,7 +473,7 @@ class HeaderService:
                             'width': self._get_column_width(field),
                             'type': self._get_column_type(field),
                             'cellStyle': self._get_cell_style(field),
-                            'pinned': 'left' if field in ['jenis_kelamin','nik','nama'] else None
+                            'pinned': 'left' if field in ['no','nama'] else None
                         })
                     continue
 
@@ -495,7 +495,24 @@ class HeaderService:
                     group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
                 col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
-            return col_defs
+            # Reorder so 'no' and 'nama' are the first two columns
+            lead = []
+            rest = []
+            for c in col_defs:
+                f = c.get('field')
+                if f in ['no', 'nama']:
+                    lead.append(c)
+                else:
+                    rest.append(c)
+            # Ensure order: no, then nama
+            lead_sorted = []
+            no_col = next((c for c in lead if c.get('field') == 'no'), None)
+            nama_col = next((c for c in lead if c.get('field') == 'nama'), None)
+            if no_col:
+                lead_sorted.append(no_col)
+            if nama_col:
+                lead_sorted.append(nama_col)
+            return lead_sorted + rest
 
         except Exception as e:
             print(f"Error generating nested column definitions: {e}")
