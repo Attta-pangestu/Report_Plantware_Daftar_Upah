@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Report from './pages/Report'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { HeaderProvider, useHeader } from './context/HeaderContext'
 import Modal from './components/common/Modal'
 import { fetchGangs } from './services/gangService'
 
@@ -10,6 +11,7 @@ const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV
 
 function AppInner() {
   const { token, isAuthenticated, user, loading, error } = useAuth()
+  const { preloadHeaders, isHeadersPreloaded } = useHeader()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [monthInput, setMonthInput] = useState('')
   const [gangs, setGangs] = useState([])
@@ -128,10 +130,29 @@ function AppInner() {
     loadGangs()
   }, [division, gangSearch, token])
 
-  const submitFilters = () => {
+  const submitFilters = async () => {
     if (!monthInput || !division || !gang) return alert('Please select month, division and gang')
+
+    const [yyyy, mm] = monthInput.split('-')
+    const month = Number(mm)
+    const year = Number(yyyy)
+    const gangCode = gang.trim()
+
+    console.log('[App] Submitting filters and preloading headers for:', { month, year, gangCode })
+
     setFiltersOpen(false)
     setApplyLoading(true)
+
+    try {
+      // Start preloading headers in background
+      console.log('[App] Starting headers preload...')
+      await preloadHeaders(token, month, year, gangCode)
+      console.log('[App] Headers preload completed')
+    } catch (error) {
+      console.error('[App] Headers preload failed:', error)
+      // Continue anyway - Report component will handle the error
+    }
+
     setReady(true)
   }
 
@@ -291,7 +312,8 @@ function AppInner() {
         <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(255,255,255,0.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
           <div style={{ textAlign:'center' }}>
             <div style={{ width:48, height:48, border:'4px solid #ccc', borderTopColor:'#1976d2', borderRadius:'50%', animation:'spin 1s linear infinite', margin:'0 auto' }} />
-            <div style={{ marginTop:10, color:'#333' }}>Analyzing data...</div>
+            <div style={{ marginTop:10, color:'#333' }}>Loading report data...</div>
+            <div style={{ marginTop:5, fontSize:12, color:'#666' }}>Headers are being preloaded for faster display</div>
           </div>
         </div>
       )}
@@ -309,7 +331,9 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <AppInner />
+      <HeaderProvider>
+        <AppInner />
+      </HeaderProvider>
     </AuthProvider>
   )
 }

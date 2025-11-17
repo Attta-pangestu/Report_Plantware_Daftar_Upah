@@ -7,6 +7,7 @@ import { fetchReportRows } from '../services/payrollService'
 import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
+import { useHeader } from '../context/HeaderContext'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
@@ -18,6 +19,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const devMonth = DEV_MODE ? '2025-05' : month
   const devYear = DEV_MODE ? 2025 : year
   const devGangCode = DEV_MODE ? 'H1H' : gang_code
+  const { getPreloadedHeaders, isHeadersPreloaded } = useHeader()
 
   const finalToken = devToken || token
   const finalMonth = devMonth || month
@@ -52,10 +54,24 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
-        const [headersData, columnDefsData] = await Promise.all([
-          fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
-          fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
-        ])
+
+        // Check if headers are already preloaded
+        const preloadedData = getPreloadedHeaders(finalToken, monthValue, yearValue, finalGangCode)
+        let headersData, columnDefsData
+
+        if (preloadedData) {
+          console.log('[Report] Using preloaded headers!')
+          headersData = preloadedData.headersData
+          columnDefsData = preloadedData.columnDefsData
+        } else {
+          console.log('[Report] No preloaded headers found, fetching from API...')
+          const [hd, cd] = await Promise.all([
+            fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
+            fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
+          ])
+          headersData = hd
+          columnDefsData = cd
+        }
         setHeaders(headersData)
 
         // Extract hierarchy headers for 3-level header structure

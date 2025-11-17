@@ -42,7 +42,7 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
 
   const config = {
     params,
-    timeout: 30000 // 30 second timeout
+    timeout: 15000 // 15 second timeout untuk mencegah tunggu terlalu lama
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
@@ -84,7 +84,7 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
 
   const config = {
     params,
-    timeout: 30000 // 30 second timeout
+    timeout: 15000 // 15 second timeout untuk mencegah tunggu terlalu lama
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
