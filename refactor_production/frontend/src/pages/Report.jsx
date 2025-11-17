@@ -28,6 +28,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const [columnDefs, setColumnDefs] = useState([])
   const [headers, setHeaders] = useState(null)
   const [hierarchyHeaders, setHierarchyHeaders] = useState(null)
+  const [enhancedColumnDefs, setEnhancedColumnDefs] = useState([]) // Cache hasil enhancement
+  const [autohideProcessed, setAutohideProcessed] = useState(false) // Flag untuk mencegah proses ulang
   const [loading, setLoading] = useState(false)
   const [headerLoading, setHeaderLoading] = useState(false)
   const [error, setError] = useState('')
@@ -255,6 +257,18 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
 
+        // Proses autohide hanya sekali saat data pertama kali dimuat
+        if (!autohideProcessed && safe.length > 0) {
+          console.log('[AutoHide] Processing column auto-hide for', safe.length, 'rows')
+          const enhanced = enhanceColumnsRecursive(columnDefs)
+          const hiddenColumns = hideEmptyPremiColumns(enhanced, safe)
+          setEnhancedColumnDefs(hiddenColumns)
+          setAutohideProcessed(true)
+          console.log('[AutoHide] Column auto-hide completed. Columns before:', enhanced.length, 'after:', hiddenColumns.length)
+        } else if (autohideProcessed) {
+          console.log('[AutoHide] Skipping auto-hide - already processed')
+        }
+
         // Frontend no longer auto-hides columns; backend filters dynamic headers
       } catch (e) {
         if (DEV_MODE && !finalToken) {
@@ -276,6 +290,18 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'), total_premi: agg('total_premi'),
               jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
             }] : [])
+
+            // Proses autohide hanya sekali saat data pertama kali dimuat (dev mode)
+            if (!autohideProcessed && safe.length > 0) {
+              console.log('[AutoHide] Processing column auto-hide for', safe.length, 'rows (dev mode)')
+              const enhanced = enhanceColumnsRecursive(columnDefs)
+              const hiddenColumns = hideEmptyPremiColumns(enhanced, safe)
+              setEnhancedColumnDefs(hiddenColumns)
+              setAutohideProcessed(true)
+              console.log('[AutoHide] Column auto-hide completed. Columns before:', enhanced.length, 'after:', hiddenColumns.length)
+            } else if (autohideProcessed) {
+              console.log('[AutoHide] Skipping auto-hide - already processed (dev mode)')
+            }
           } catch (e2) {
             setError('Failed to load report data')
             setRows([])
@@ -417,11 +443,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     return formatLeaf(c)
   })
 
-  const enhancedColumnDefs = useMemo(() => {
-    const enhanced = enhanceColumnsRecursive(columnDefs)
-    // Auto-hide columns setelah data dimuat
-    return rows.length > 0 ? hideEmptyPremiColumns(enhanced, rows) : enhanced
-  }, [columnDefs, rows])
+  // Enhanced column defs hanya di-update sekali saat autohide diproses
+  // Tidak menggunakan useMemo untuk mencegah re-komputasi berulang
 
   const runValidation = async () => {
     try {
@@ -440,7 +463,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         cols.forEach(walk)
         return out
       }
-      const gridHeaders = getLeafHeaders(enhancedColumnDefs)
+      const columnDefsToUse = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+      const gridHeaders = getLeafHeaders(columnDefsToUse)
 
       const theadMatch = html.match(/<thead[\s\S]*?<\/thead>/i)
       let refLeaf = []
@@ -469,7 +493,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           const refNums = cells.map(num).filter(v => v !== null)
           const treeLeaves = []
           const collect = (c) => { if (c.children) c.children.forEach(collect); else treeLeaves.push(c) }
-          enhancedColumnDefs.forEach(collect)
+          const columnDefsToUse = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+          columnDefsToUse.forEach(collect)
           const gridFields = treeLeaves.map(l => l.field).filter(f => f && typeof pinnedBottom[0]?.[f] !== 'undefined')
           const gridNums = gridFields.map(f => Number(pinnedBottom[0][f] || 0))
           const sameLen = refNums.length === gridNums.length
@@ -568,7 +593,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
         <AgGridReact
           ref={gridRef}
-          columnDefs={enhancedColumnDefs}
+          columnDefs={enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)}
           rowData={rows}
           defaultColDef={baseCol}
           rowClassRules={rowClassRules}
@@ -589,7 +614,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               params.api.ensureIndexVisible(0, 'top')
             }
             // Log grid ready state for debugging
-            console.log('[AG Grid] Grid ready with columns:', enhancedColumnDefs.length)
+            const activeColumnDefs = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+            console.log('[AG Grid] Grid ready with columns:', activeColumnDefs.length)
             console.log('[AG Grid] Rows loaded:', rows.length)
             console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)
           }}
