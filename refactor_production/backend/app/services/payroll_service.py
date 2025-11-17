@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 from app.repositories.employee_repository import EmployeeRepository
 from app.models.payroll import PayrollRow
 from datetime import datetime
@@ -6,8 +6,18 @@ from pathlib import Path
 from database.services.database import Database
 import time
 import logging
+from app.core.config import get_testing_token, is_test_mode
 
 class PayrollService:
+    """
+    Payroll calculation service implementing correct formulas from reference code
+    daftar_upah_engine_real_database.py
+    """
+
+    def __init__(self):
+        # Constants from reference code (can be made configurable)
+        self.gaji_pokok_min = 3876600  # Default BPJS calculation base
+
     def _paramify(self, sql: str, emp_code: str, start_date: str = None, end_date: str = None) -> Tuple[str, Tuple]:
         import re
         s = sql
@@ -19,13 +29,116 @@ class PayrollService:
                 s = re.sub(r"'\d{4}-\d{2}-\d{2}'", '?', s, count=2)
             return s, (emp_code, start_date, end_date)
         return s, (emp_code,)
-    async def calculate(self, upah_dasar: float, hk_count: int, allowances: Dict[str, float], deductions: Dict[str, float]) -> Dict[str, Any]:
+
+    def calculate_hari_kerja(self, hk_count: int, cuti_tahunan: int, cuti_sakit: int,
+                           hk_minggu: int, hk_nasional: int) -> int:
+        """
+        Calculate Hari Kerja = HK - (Tahunan + Sakit + Minggu + Nasional)
+        """
+        total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
+        hari_kerja = max(0, hk_count - total_cuti)
+        return hari_kerja
+
+    def calculate_gaji_pokok(self, hk_count: int, payrate: float,
+                           cuti_tahunan: int = 0, cuti_sakit: int = 0,
+                           hk_minggu: int = 0, hk_nasional: int = 0) -> float:
+        """
+        Calculate Gaji Pokok = (HK - Total Cuti) x Payrate (Rp)
+        """
+        total_cuti = cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional
+        hari_kerja = max(0, hk_count - total_cuti)
+        return hari_kerja * float(payrate) if payrate else 0
+
+    def calculate_gaji_pokok_jmlhk(self, hk_count: int, payrate: float) -> float:
+        """
+        Calculate Gaji Pokok (JML HK × Upah Dasar) - THIS IS USED FOR UPAH KOTOR CALCULATION
+        """
+        return hk_count * float(payrate) if payrate else 0
+
+    def calculate_total_tunjangan(self, hk_count: int, beras_payrate: float,
+                                 jabatan_amount: float, masa_kerja_amount: float,
+                                 lembur_amount: float) -> float:
+        """
+        Calculate Total Tunjangan = Beras + Jabatan + Masa Kerja + Lembur
+        """
+        beras_jumlah = hk_count * beras_payrate if beras_payrate > 0 else 0
+        return beras_jumlah + jabatan_amount + masa_kerja_amount + lembur_amount
+
+    def calculate_total_premi(self, brondol_amount: float, pruning_amount: float,
+                              dynamic_premi_amounts: List[float], koreksi_amount: float) -> float:
+        """
+        Calculate Total Premi = BRONDOL + PRUNING + Dynamic Premi + Koreksi
+        """
+        total_dynamic = sum(dynamic_premi_amounts)
+        return brondol_amount + pruning_amount + total_dynamic + koreksi_amount
+
+    def calculate_bpjs_components(self, masa_kerja_jumlah: float) -> Dict[str, float]:
+        """
+        Calculate BPJS components based on reference code formulas
+        Formula: (gaji_pokok_min + masa_kerja_jumlah) × 1% for pekerja, majikan = 4 × pekerja
+        """
+        bpjs_base = self.gaji_pokok_min + masa_kerja_jumlah
+
+        # Pekerja calculations (1% of base)
+        bpjs_kesehatan_pekerja = bpjs_base * 0.01
+        bpjs_pensiun_pekerja = self.gaji_pokok_min * 0.01  # Always use minimum for pension
+        bpjs_pensiun_majikan = self.gaji_pokok_min * 0.02
+
+        # Majikan calculations (4 × pekerja amount for health)
+        bpjs_kesehatan_majikan = bpjs_kesehatan_pekerja * 4
+
+        # Total BPJS (only pekerja components for deduction)
+        bpjs_pekerja_total = bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja
+
+        return {
+            'kesehatan_pekerja': bpjs_kesehatan_pekerja,
+            'kesehatan_majikan': bpjs_kesehatan_majikan,
+            'pensiun_pekerja': bpjs_pensiun_pekerja,
+            'pensiun_majikan': bpjs_pensiun_majikan,
+            'jumlah': bpjs_kesehatan_pekerja + bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan,
+            'pekerja_total': bpjs_pekerja_total
+        }
+
+    def calculate_jumlah_upah_kotor(self, hk_count: int, payrate: float,
+                                    total_tunjangan: float, total_premi: float) -> float:
+        """
+        Calculate Jumlah Upah Kotor = Gaji Pokok (JML HK × Upah Dasar) + Total Tunjangan + Total Premi
+        """
+        gaji_pokok = self.calculate_gaji_pokok_jmlhk(hk_count, payrate)
+        return gaji_pokok + total_tunjangan + total_premi
+
+    def calculate_total_potongan(self, bpjs_pekerja_total: float, spsi_amount: float,
+                               pph21_amount: float) -> float:
+        """
+        Calculate Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21
+        """
+        return bpjs_pekerja_total + spsi_amount + pph21_amount
+
+    def calculate_upah_bersih(self, jumlah_upah_kotor: float, total_potongan: float) -> float:
+        """
+        Calculate Upah Bersih = Jumlah Upah Kotor - Total Potongan
+        """
+        return jumlah_upah_kotor - total_potongan
+
+    async def calculate(self, upah_dasar: float, hk_count: int,
+                        allowances: Dict[str, float], deductions: Dict[str, float]) -> Dict[str, Any]:
+        """
+        Legacy method - simplified calculation for backward compatibility
+        """
         working_days = hk_count
         basic_salary = working_days * upah_dasar
         total_allowances = sum(allowances.values()) if allowances else 0
         total_deductions = sum(deductions.values()) if deductions else 0
         net_salary = basic_salary + total_allowances - total_deductions
-        return {"hk_count": hk_count, "working_days": working_days, "basic_salary": basic_salary, "allowances": allowances, "deductions": deductions, "net_salary": net_salary}
+
+        return {
+            "hk_count": hk_count,
+            "working_days": working_days,
+            "basic_salary": basic_salary,
+            "allowances": allowances,
+            "deductions": deductions,
+            "net_salary": net_salary
+        }
 
     def _dates(self, month: int, year: int) -> Tuple[str, str]:
         s = f"{year:04d}-{month:02d}-01"
@@ -261,6 +374,11 @@ class PayrollService:
             cuti_izin_hari = 0
 
             hari_kerja = max(0, int(hk_count) - (cuti_tah_count + cuti_sakit_count + cuti_minggu_hari + cuti_nasional_hari))
+
+            # Correct calculation from reference code:
+            # gaji_pokok_jmlhk = hk_count * payrate (use total HK count, not working days after deductions)
+            # upah_pokok column displays hari_kerja * payrate for display purposes
+            gaji_pokok_jmlhk = hk_count * payrate if payrate else 0
             upah_pokok = payrate * hari_kerja if (want_all or want('upah_pokok')) else 0
 
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
@@ -271,12 +389,15 @@ class PayrollService:
                 premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
                 premi_harvesting_incentive, premi_pupuk
             ])
-            jumlah_upah_kotor = upah_pokok + total_tunjangan + total_premi
+
+            # Correct calculation from reference code:
+            # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
+            jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
 
             bpjs_kes_rate = 0.01
             bpjs_pek_rate = 0.02
             bpjs_maj_rate = 0.0374
-            pot_bpjs_kes = min(upah_pokok * bpjs_kes_rate, 150000)
+            pot_bpjs_kes = min(gaji_pokok_jmlhk * bpjs_kes_rate, 150000)  # Use gaji_pokok_jmlhk (total HK base) for consistency
             pot_bpjs_pek = min(jumlah_upah_kotor * bpjs_pek_rate, 300000)
             pot_bpjs_maj = min(jumlah_upah_kotor * bpjs_maj_rate, 600000)
 
@@ -306,7 +427,7 @@ class PayrollService:
                 cuti_nasional_hari=int(cuti_nasional_hari),
                 cuti_izin_hari=int(cuti_izin_hari),
                 jumlah_hk=int(hk_count),
-                gaji_pokok=payrate * int(hk_count),
+                gaji_pokok=gaji_pokok_jmlhk,
                 beras_rate=beras_rate,
                 beras_jumlah=beras_jumlah,
                 jabatan_rate=jabatan_rate,
@@ -338,6 +459,7 @@ class PayrollService:
                 pot_total_3=pot_total_3,
                 pot_total_4=pot_total_4,
                 total_potongan=total_potongan,
+                pot_spsi=pot_spsi,
                 upah_bersih=upah_bersih,
                 tidak_hadir_cth=0,
                 tidak_hadir_alpa=0,
