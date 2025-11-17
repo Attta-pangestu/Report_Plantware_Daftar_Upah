@@ -85,12 +85,20 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           return m[id] || id
         }
         const built = []
+        const leftColumns = []
+        const otherColumns = []
+
         l1.forEach(c1 => {
           const childrenIds = c1.children || []
           if (!childrenIds || childrenIds.length === 0) {
             const field = mapField(c1.id)
             if (field) {
-              built.push({ field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined })
+              const colDef = { field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined }
+              if (['no','nama'].includes(field)) {
+                leftColumns.push(colDef)
+              } else {
+                otherColumns.push(colDef)
+              }
             }
             return
           }
@@ -98,8 +106,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
             return { headerName: c2.text, children: leaves }
           })
-          built.push({ headerName: c1.text, children: group2 })
+          otherColumns.push({ headerName: c1.text, children: group2 })
         })
+
+        // Pastikan kolom 'no' dan 'nama' berada di paling kiri
+        built.push(...leftColumns, ...otherColumns)
         const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
         const chosen = hasChildren ? columnDefsData : built
         const leafFields = []
@@ -144,12 +155,20 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               return m[id] || id
             }
             const built = []
+            const leftColumns = []
+            const otherColumns = []
+
             l1.forEach(c1 => {
               const childrenIds = c1.children || []
               if (!childrenIds || childrenIds.length === 0) {
                 const field = mapField(c1.id)
                 if (field) {
-                  built.push({ field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined })
+                  const colDef = { field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined }
+                  if (['no','nama'].includes(field)) {
+                    leftColumns.push(colDef)
+                  } else {
+                    otherColumns.push(colDef)
+                  }
                 }
                 return
               }
@@ -157,8 +176,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
                 const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
                 return { headerName: c2.text, children: leaves }
               })
-              built.push({ headerName: c1.text, children: group2 })
+              otherColumns.push({ headerName: c1.text, children: group2 })
             })
+
+            // Pastikan kolom 'no' dan 'nama' berada di paling kiri
+            built.push(...leftColumns, ...otherColumns)
             const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
             const chosen = hasChildren ? columnDefsData : built
             const leafFields = []
