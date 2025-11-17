@@ -241,7 +241,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         } else {
           console.warn('⚠️ Tidak ada data yang ditemukan')
         }
-        const agg = (field) => safe.reduce((a, b) => a + Number(b[field] || 0), 0)
+        const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
         setPinnedBottom(safe.length > 0 ? [{
           no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
           upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
@@ -261,7 +261,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             const data = await fetchReportRows(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
             setRows(data)
             const safe = Array.isArray(data) ? data : []
-            const agg = (field) => safe.reduce((a, b) => a + Number(b[field] || 0), 0)
+            const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
             setPinnedBottom(safe.length > 0 ? [{
               no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
               upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
@@ -308,7 +308,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       cfg.valueFormatter = p => {
         const v = p.value
         if (v === null || v === undefined || v === 0) return '-'
-        return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0,maximumFractionDigits:0}).format(v)
+        // Pastikan nilai bulat tanpa desimal
+        const roundedValue = Math.round(Number(v))
+        return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0,maximumFractionDigits:0}).format(roundedValue)
       }
       cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
     } else if (cfg.field && intFields.includes(cfg.field)) {
