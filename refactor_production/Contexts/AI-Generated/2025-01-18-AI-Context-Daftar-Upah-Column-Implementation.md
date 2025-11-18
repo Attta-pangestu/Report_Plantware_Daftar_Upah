@@ -203,28 +203,205 @@ Found 5 deduction columns:
 5. **Check Grand Totals** - Verify all new columns have proper sum calculations in bottom row
 6. **Test Data Values** - Confirm that actual payroll data populates correctly (some may be 0)
 
-### Expected Column Order After Fix
+### Expected Column Structure After Fix (Matching HTML Template)
+
+**Based on `daftar_upah_template_final.html`:**
 ```
 ... Premi columns ...
 Total Premi
 Upah Kotor                    ← Reference point
-BPJS Kesehatan Pekerja       ← NEW (should appear here)
-BPJS Pensiun Pekerja         ← NEW
-Iuran SPSI                   ← NEW
-PPh21                        ← NEW
-Koreksi                      ← NEW
-... existing columns ...
+
+┌─ CARUMAN ASTEK (3 columns) ─────────────────────┐
+│  PEKERJA    │  MAJIKAN    │  JUMLAH           │
+│ pot_bpjs_pek│ pot_bpjs_maj│ pot_bpjs_jumlah    │
+└─────────────────────────────────────────────────┘
+
+┌─ POTONGAN BPJS (6 columns) ─────────────────────┐
+│  KESEHATAN       │  PENSIUN         │  JUMLAH  │
+│  PEKR│MAJIKAN    │  PEKR│MAJIKAN     │          │
+│ ─────────────────────────────────────────────────┤
+│ pot_ │pot_bpjs_  │ pot_ │pot_bpjs_  │pot_bpjs_ │
+│ bpjs_│kesehatan_ │ bpjs_│pensiun_   │pekerja_  │
+│ pek  │majikan    │ pek  │majikan    │total     │
+└─────────────────────────────────────────────────┘
+
+┌─ IURAN SPSI (1 column) ──────┐
+│       JUMLAH                │
+│     pot_spsi                │
+└─────────────────────────────┘
+
+┌─ PPH21 (1 column) ─────────────┐
+│       JUMLAH                   │
+│     pot_pph21                  │
+└────────────────────────────────┘
+
+TOTAL POTONGAN               ← Single column with special styling
+UPAH BERSIH                  ← Final column with special styling
 ```
+
+## Latest Implementation: Template-Based Grouped Structure
+
+### HTML Template Analysis Results
+**File:** `daftar_upah_template_final.html`
+
+**Key Structure Insights:**
+1. **3-Level Header Hierarchy** - Main headers → Sub-categories → Detail columns
+2. **Specific Column Grouping** after "JUMLAH UPAH KOTOR":
+   - CARUMAN ASTEK (3 columns)
+   - POTONGAN BPJS (6 columns with sub-grouping)
+   - IURAN SPSI (2 columns)
+   - PPH21 (2 columns)
+   - TOTAL POTONGAN (1 column)
+   - UPAH BERSIH (1 column)
+
+### Backend Structure Implementation ✅
+
+**Updated Header Service Logic** (`header_service.py` lines 542-667):
+- Created structured deduction groups matching HTML template
+- Implemented 3-level hierarchy: Group → Sub-group → Leaf columns
+- Added color-coded styling matching template:
+  - CARUMAN ASTEK: Green theme (`#e8f5e8`, `#2e7d32`)
+  - POTONGAN BPJS: Orange theme (`#fff3e0`, `#e65100`)
+  - TOTAL POTONGAN: Blue theme (`#e1f5fe`, `#0277bd`)
+  - UPAH BERSIH: Yellow theme (`#ffe082`, `#bf360c`)
+
+### Frontend Auto-Hide Enhancement ✅
+
+**Updated Auto-Hide Logic** (`Report.jsx` lines 520-535):
+- Added `checkGroupHasData()` function for grouped columns
+- Enhanced `processColumn()` to handle 3-level hierarchies
+- Preserves group visibility even when individual sub-columns have no data
+
+### Backend Testing Results ✅
+
+**Generated Column Structure:**
+```
+After Upah Kotor:
+16. GROUP: CARUMAN ASTEK (3 children)
+    PEKERJA -> pot_bpjs_pek
+    MAJIKAN -> pot_bpjs_maj
+    JUMLAH -> pot_bpjs_jumlah
+
+17. GROUP: POTONGAN BPJS (3 children)
+    SUB-GROUP: KESEHATAN (2 children)
+      PEKERJA -> pot_bpjs_kesehatan_pekerja
+      MAJIKAN -> pot_bpjs_kesehatan_majikan
+    SUB-GROUP: PENSIUN (2 children)
+      PEKERJA -> pot_bpjs_pensiun_pekerja
+      MAJIKAN -> pot_bpjs_pensiun_majikan
+    JUMLAH -> pot_bpjs_pekerja_total
+
+18. GROUP: IURAN SPSI (1 children)
+    JUMLAH -> pot_spsi
+
+19. GROUP: PPH21 (1 children)
+    JUMLAH -> pot_pph21
+
+20. TOTAL POTONGAN -> total_potongan
+21. UPAH BERSIH -> upah_bersih
+```
+
+### Final Testing Instructions
+
+**Required Steps for Template-Matching Display:**
+1. **Restart Backend Services** - CRITICAL to load new grouped structure
+2. **Clear Browser Cache** - Refresh with `Ctrl+F5`
+3. **Verify Column Hierarchy** - Check that headers match HTML template:
+   - **Main Groups:** CARUMAN ASTEK, POTONGAN BPJS, IURAN SPSI, PPH21
+   - **Sub-groups:** KESEHATAN, PENSIUN under POTONGAN BPJS
+   - **Individual columns:** All properly mapped to data fields
+4. **Check Color Coding** - Verify styling matches template:
+   - Green for ASTEK, Orange for BPJS, Blue for totals, Yellow for upah bersih
+5. **Test Data Population** - Confirm payroll data flows correctly through hierarchy
+6. **Verify Responsive Layout** - Ensure horizontal scrolling works properly
 
 ### Expected Behavior Based on Sample Data
 From your sample data, these columns should display with values:
-- ✅ `pot_bpjs_kesehatan_pekerja`: **38,766**
-- ✅ `pot_bpjs_kesehatan_majikan`: **155,064** (if included)
-- ✅ `pot_bpjs_pensiun_pekerja`: **0** (but still visible)
-- ✅ `pot_bpjs_pensiun_majikan`: **77,532** (if included)
-- ✅ `pot_spsi`: **0** (but still visible)
-- ✅ `pot_pph21`: **0** (but still visible)
-- ✅ `premi_koreksi`: **0** (but still visible)
+- ✅ `pot_bpjs_kesehatan_pekerja`: **38,766** (KESEHATAN PEKERJA)
+- ✅ `pot_bpjs_kesehatan_majikan`: **155,064** (KESEHATAN MAJIKAN)
+- ✅ `pot_bpjs_pensiun_pekerja`: **0** (PENSIUN PEKERJA - still visible)
+- ✅ `pot_bpjs_pensiun_majikan`: **77,532** (PENSIUN MAJIKAN)
+- ✅ `pot_spsi`: **0** (IURAN SPSI - still visible)
+- ✅ `pot_pph21`: **0** (PPH21 - still visible)
+- ✅ CARUMAN ASTEK columns: Should use config constants (Pekerja: 77,532, Majikan: 175,998, Total: 253,530)
+
+## Final Implementation: Complete Reference Engine Alignment
+
+### Fixed Calculation Issues ✅
+
+**Problem:** CARUMAN ASTEK and BPJS calculations were not matching reference engine
+**Solution:** Completely aligned all calculations with `daftar_upah_engine_real_database.py`
+
+#### 1. CARUMAN ASTEK Calculations (Fixed)
+**Reference:** Lines 1372-1374 in reference engine
+**Implementation:** Use constants from `config.json`
+```javascript
+// From config.json constants:
+Caruman_Astek.Pekerja: 77532
+Caruman_Astek.Majikan: 175998
+Total = 77532 + 175998 = 253530
+```
+
+#### 2. BPJS Kesehatan Calculations (Fixed)
+**Reference:** Lines 1383-1396 in reference engine
+**Formula:** `(gaji_pokok_min + masa_kerja_jumlah) × 1%` for pekerja, `× 4` for majikan
+```javascript
+gaji_pokok_min = 3876600 (from config)
+bpjs_base = 3876600 + masa_kerja_jumlah
+bpjs_kesehatan_pekerja = bpjs_base * 0.01
+bpjs_kesehatan_majikan = bpjs_kesehatan_pekerja * 4
+```
+
+#### 3. BPJS Pensiun Calculations (Fixed)
+**Reference:** Lines 1391-1393 in reference engine
+**Formula:** `gaji_pokok_min × 1%` for pekerja, `× 2%` for majikan
+```javascript
+bpjs_pensiun_pekerja = 3876600 * 0.01 = 38766
+bpjs_pensiun_majikan = 3876600 * 0.02 = 77532
+```
+
+#### 4. SPSI & PPh21 Calculations (Fixed)
+**Reference:** Lines 1036-1100 in reference engine
+**Implementation:** Database queries with same column position logic
+```javascript
+// Try multiple positions for Amount column:
+[len(result)-1, len(result)-2, 7, 8]
+```
+
+#### 5. Total Potongan Calculation (Fixed)
+**Reference:** Line 1418 in reference engine
+**Formula:** Only employee portions counted:
+```javascript
+Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPh21
+```
+
+### Updated Files ✅
+
+1. **`backend/app/services/payroll_service.py`**
+   - Added config loading in constructor (lines 17-30)
+   - Updated CARUMAN ASTEK to use config constants (lines 423-431)
+   - Fixed BPJS calculations with proper formulas (lines 433-449)
+   - Enhanced SPSI/PPH21 query logic (lines 373-413)
+   - Corrected total potongan calculation (lines 459-463)
+
+2. **`backend/config.json`** ✅ (Constants confirmed)
+   ```json
+   "Caruman_Astek": {"Pekerja": 77532, "Majikan": 175998}
+   "potongan_bpjs": {"gaji_pokok_min": 3876600}
+   ```
+
+### Testing Results ✅
+
+**Config Loading Success:**
+- ✅ CARUMAN ASTEK Pekerja: 77,532
+- ✅ CARUMAN ASTEK Majikan: 175,998
+- ✅ Gaji Pokok Minimum: 3,876,600
+
+**Calculation Examples:**
+- ✅ BPJS Kesehatan Pekerja: 39,766 (based on example data)
+- ✅ BPJS Kesehatan Majikan: 159,064 (4x pekerja)
+- ✅ BPJS Pensiun Pekerja: 38,766 (1% of gaji pokok min)
+- ✅ BPJS Pensiun Majikan: 77,532 (2% of gaji pokok min)
 
 ### Expected Behavior Based on Sample Data
 From your sample data, these columns should display with values:

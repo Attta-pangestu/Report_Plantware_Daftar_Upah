@@ -15,8 +15,19 @@ class PayrollService:
     """
 
     def __init__(self):
+        # Load configuration
+        import json
+        import os
+        config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config.json')
+        try:
+            with open(config_path, 'r') as f:
+                self.config = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load config from {config_path}: {e}")
+            self.config = {"constants": {"potongan_bpjs": {"gaji_pokok_min": 3876600}, "Caruman_Astek": {"Pekerja": 77532, "Majikan": 175998}}}
+
         # Constants from reference code (can be made configurable)
-        self.gaji_pokok_min = 3876600  # Default BPJS calculation base
+        self.gaji_pokok_min = self.config.get('constants', {}).get('potongan_bpjs', {}).get('gaji_pokok_min', 3876600)
 
     def _paramify(self, sql: str, emp_code: str, start_date: str = None, end_date: str = None) -> Tuple[str, Tuple]:
         import re
@@ -359,15 +370,47 @@ class PayrollService:
             )
             premi_pupuk = float(premi_maps.get('pupuk', {}).get(nik, 0.0))
 
+            # Get SPSI and PPH21 amounts - matching reference engine logic (lines 1036-1100)
             pot_spsi = 0.0
             pot_pph21 = 0.0
-            if want_all or any([want('pot_pph21'), want('total_potongan'), want('upah_bersih')]):
-                spsi_q, spsi_params = self._paramify(spsi_raw, nik, s, e)
-                spsi_res = db.query_one(spsi_q, spsi_params)
-                pot_spsi = self._scalar(spsi_res, -1)
-                pph_q, pph_params = self._paramify(pph_raw, nik, s, e)
-                pph_res = db.query_one(pph_q, pph_params)
-                pot_pph21 = self._scalar(pph_res, -1)
+            if want_all or any([want('pot_spsi'), want('pot_pph21'), want('total_potongan'), want('upah_bersih')]):
+                # SPSI calculation - matching reference engine get_employee_spsi_amount logic
+                if want_all or want('pot_spsi'):
+                    spsi_q, spsi_params = self._paramify(spsi_raw, nik, s, e)
+                    try:
+                        spsi_res = db.query_one(spsi_q, spsi_params)
+                        if spsi_res and len(spsi_res) > 0:
+                            # Try multiple positions for the Amount column (matching reference engine logic line 1080-1094)
+                            for col_idx in [len(spsi_res)-1, len(spsi_res)-2, 7, 8]:
+                                if col_idx >= 0 and col_idx < len(spsi_res):
+                                    try:
+                                        amount_val = spsi_res[col_idx]
+                                        if amount_val is not None:
+                                            pot_spsi = float(amount_val)
+                                            break
+                                    except (ValueError, TypeError):
+                                        continue
+                    except Exception as e:
+                        pot_spsi = 0.0
+
+                # PPH21 calculation - matching reference engine get_employee_pph21_amount logic
+                if want_all or want('pot_pph21'):
+                    pph_q, pph_params = self._paramify(pph_raw, nik, s, e)
+                    try:
+                        pph_res = db.query_one(pph_q, pph_params)
+                        if pph_res and len(pph_res) > 0:
+                            # Try multiple positions for the Amount column (matching reference engine logic)
+                            for col_idx in [len(pph_res)-1, len(pph_res)-2, 7, 8]:
+                                if col_idx >= 0 and col_idx < len(pph_res):
+                                    try:
+                                        amount_val = pph_res[col_idx]
+                                        if amount_val is not None:
+                                            pot_pph21 = float(amount_val)
+                                            break
+                                    except (ValueError, TypeError):
+                                        continue
+                    except Exception as e:
+                        pot_pph21 = 0.0
 
             cuti_tah_count = int(cuti_maps.get(nik, {}).get('tahunan', 0))
             cuti_sakit_count = int(cuti_maps.get(nik, {}).get('sakit', 0))
@@ -416,43 +459,56 @@ class PayrollService:
             # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
             jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
 
-            # BPJS Components - using reference code calculations
-            bpjs_kes_rate = 0.01
-            # From reference code: BPJS Kesehatan (pekerja) = (gaji_pokok_min + masa_kerja_jumlah) × 0.01
-            gaji_pokok_min = 3876600  # Default from reference code
-            bpjs_base = gaji_pokok_min + masa_kerja_jumlah
-            pot_bpjs_kesehatan_pekerja = min(bpjs_base * 0.01, 150000)  # Kesehatan Pekerja
-            pot_bpjs_kes = pot_bpjs_kesehatan_pekerja  # For backward compatibility
+            # Load constants from config
+            config = self.config
+            gaji_pokok_min = config.get('constants', {}).get('potongan_bpjs', {}).get('gaji_pokok_min', 3876600)
 
-            # BPJS Kesehatan Majikan (4x pekerja)
+            # CARUMAN ASTEK - using constants from config (matching reference engine)
+            caruman_pekerja = config.get('constants', {}).get('Caruman_Astek', {}).get('Pekerja', 77532)
+            caruman_majikan = config.get('constants', {}).get('Caruman_Astek', {}).get('Majikan', 175998)
+            caruman_jumlah = caruman_pekerja + caruman_majikan
+
+            # Map Caruman ASTEK to existing field names for compatibility
+            pot_bpjs_pek = caruman_pekerja  # Caruman ASTEK Pekerja
+            pot_bpjs_maj = caruman_majikan  # Caruman ASTEK Majikan
+            pot_bpjs_jumlah = caruman_jumlah  # Caruman ASTEK Jumlah
+
+            # BPJS Components - using reference code calculations with config constants
+            # From reference code: BPJS Kesehatan (pekerja) = (gaji_pokok_min + masa_kerja_jumlah) × 0.01
+            bpjs_base = gaji_pokok_min + masa_kerja_jumlah
+
+            # BPJS Kesehatan Pekerja (1% of base)
+            pot_bpjs_kesehatan_pekerja = bpjs_base * 0.01
+            # BPJS Kesehatan Majikan (4x pekerja from reference code)
             pot_bpjs_kesehatan_majikan = pot_bpjs_kesehatan_pekerja * 4
 
-            # Pensiun calculations using gaji_pokok_min (from reference code)
-            bpjs_pensiun_pekerja = gaji_pokok_min * 0.01
-            bpjs_pensiun_majikan = gaji_pokok_min * 0.02
+            # BPJS Pensiun calculations (from reference code)
+            # Pension: employee = gaji_pokok_min * 1%, employer = gaji_pokok_min * 2%
+            pot_bpjs_pensiun_pekerja = gaji_pokok_min * 0.01
+            pot_bpjs_pensiun_majikan = gaji_pokok_min * 0.02
 
-            # Other BPJS components (these are additional BPJS deductions)
-            pot_bpjs_pek = min(jumlah_upah_kotor * 0.02, 300000)  # Additional deduction for pensiun part?
-            pot_bpjs_maj = min(jumlah_upah_kotor * 0.0374, 600000)  # Additional deduction for pensiun part?
+            # BPJS Totals (from reference code calculation)
+            pot_bpjs_pekerja_total = pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja
+            total_bpjs_jumlah = pot_bpjs_kesehatan_pekerja + pot_bpjs_kesehatan_majikan + pot_bpjs_pensiun_pekerja + pot_bpjs_pensiun_majikan
 
-            # Additional BPJS totals
-            pot_bpjs_jumlah = pot_bpjs_kesehatan_pekerja + pot_bpjs_kesehatan_majikan + bpjs_pensiun_pekerja + bpjs_pensiun_majikan
-            pot_bpjs_pekerja_total = pot_bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja
+            # Backward compatibility fields
+            pot_bpjs_kes = pot_bpjs_kesehatan_pekerja
 
             pot_kontan = 0.0
             pot_thr = 0.0
             pot_pinjam = 0.0
             pot_kl = 0.0
 
-            # Total potongan calculation based on reference code:
-            # BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21 + other deductions
-            total_potongan = (pot_bpjs_kesehatan_pekerja + bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
-                             pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_bpjs_pek + pot_bpjs_maj)
+            # Total potongan calculation based on reference code (line 1418 in reference engine):
+            # Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21
+            # Note: Only employee portions are counted in total potongan (from reference engine)
+            total_potongan = (pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
+                             pot_kontan + pot_thr + pot_pinjam + pot_kl)
 
             # Simplified for the predefined fields
             pot_total_1 = pot_bpjs_kesehatan_pekerja  # BPJS Kesehatan Pekerja
-            pot_total_2 = bpjs_pensiun_pekerja      # BPJS Pensiun Pekerja
-            pot_total_3 = bpjs_pensiun_majikan      # BPJS Pensiun Majikan
+            pot_total_2 = pot_bpjs_pensiun_pekerja      # BPJS Pensiun Pekerja
+            pot_total_3 = pot_bpjs_pensiun_majikan      # BPJS Pensiun Majikan
             pot_total_4 = pot_pph21 + pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_spsi + pot_bpjs_pek + pot_bpjs_maj
 
             upah_bersih = jumlah_upah_kotor - total_potongan

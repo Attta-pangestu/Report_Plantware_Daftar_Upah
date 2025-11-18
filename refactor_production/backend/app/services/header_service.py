@@ -539,7 +539,7 @@ class HeaderService:
                     found_premi = True
                     break
 
-            # Insert deduction columns after 'Upah Kotor' column
+            # Insert structured deduction groups after 'Upah Kotor' column based on HTML template
             upah_kotor_idx = None
             for idx, c in enumerate(col_defs):
                 if c.get('field') == 'jumlah_upah_kotor':
@@ -547,45 +547,124 @@ class HeaderService:
                     break
 
             if upah_kotor_idx is not None:
-                # Add important deduction columns as separate columns after Upah Kotor
-                deduction_columns = [
+                # Create structured deduction groups matching HTML template hierarchy
+                deduction_groups = [
                     {
-                        'field': 'pot_bpjs_kesehatan_pekerja',
-                        'headerName': 'BPJS Kesehatan Pekerja',
-                        'width': self._get_column_width('pot_bpjs_kesehatan_pekerja'),
-                        'type': self._get_column_type('pot_bpjs_kesehatan_pekerja'),
-                        'cellStyle': self._get_cell_style('pot_bpjs_kesehatan_pekerja')
+                        'headerName': 'CARUMAN ASTEK',
+                        'children': [
+                            {
+                                'headerName': 'PEKERJA',
+                                'field': 'pot_bpjs_pek',
+                                'width': 80,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e8f5e8', 'color': '#2e7d32'}
+                            },
+                            {
+                                'headerName': 'MAJIKAN',
+                                'field': 'pot_bpjs_maj',
+                                'width': 80,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e8f5e8', 'color': '#2e7d32'}
+                            },
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_bpjs_jumlah',
+                                'width': 80,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e8f5e8', 'color': '#2e7d32'}
+                            }
+                        ]
                     },
                     {
-                        'field': 'pot_bpjs_pensiun_pekerja',
-                        'headerName': 'BPJS Pensiun Pekerja',
-                        'width': self._get_column_width('pot_bpjs_pensiun_pekerja'),
-                        'type': self._get_column_type('pot_bpjs_pensiun_pekerja'),
-                        'cellStyle': self._get_cell_style('pot_bpjs_pensiun_pekerja')
+                        'headerName': 'POTONGAN BPJS',
+                        'children': [
+                            {
+                                'headerName': 'KESEHATAN',
+                                'children': [
+                                    {
+                                        'headerName': 'PEKERJA',
+                                        'field': 'pot_bpjs_kesehatan_pekerja',
+                                        'width': 90,
+                                        'type': 'numericColumn',
+                                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                                    },
+                                    {
+                                        'headerName': 'MAJIKAN',
+                                        'field': 'pot_bpjs_kesehatan_majikan',
+                                        'width': 90,
+                                        'type': 'numericColumn',
+                                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                                    }
+                                ]
+                            },
+                            {
+                                'headerName': 'PENSIUN',
+                                'children': [
+                                    {
+                                        'headerName': 'PEKERJA',
+                                        'field': 'pot_bpjs_pensiun_pekerja',
+                                        'width': 90,
+                                        'type': 'numericColumn',
+                                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                                    },
+                                    {
+                                        'headerName': 'MAJIKAN',
+                                        'field': 'pot_bpjs_pensiun_majikan',
+                                        'width': 90,
+                                        'type': 'numericColumn',
+                                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                                    }
+                                ]
+                            },
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_bpjs_pekerja_total',
+                                'width': 100,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                            }
+                        ]
                     },
                     {
-                        'field': 'pot_spsi',
-                        'headerName': 'Iuran SPSI',
-                        'width': self._get_column_width('pot_spsi'),
-                        'type': self._get_column_type('pot_spsi'),
-                        'cellStyle': self._get_cell_style('pot_spsi')
+                        'headerName': 'IURAN SPSI',
+                        'children': [
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_spsi',
+                                'width': 100,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                            }
+                        ]
                     },
                     {
-                        'field': 'pot_pph21',
-                        'headerName': 'PPh21',
-                        'width': self._get_column_width('pot_pph21'),
-                        'type': self._get_column_type('pot_pph21'),
-                        'cellStyle': self._get_cell_style('pot_pph21')
+                        'headerName': 'PPH21',
+                        'children': [
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_pph21',
+                                'width': 100,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                            }
+                        ]
                     },
                     {
-                        'field': 'premi_koreksi',
-                        'headerName': 'Koreksi',
-                        'width': self._get_column_width('premi_koreksi'),
-                        'type': self._get_column_type('premi_koreksi'),
-                        'cellStyle': self._get_cell_style('premi_koreksi')
+                        'field': 'total_potongan',
+                        'headerName': 'TOTAL POTONGAN',
+                        'width': 120,
+                        'type': 'numericColumn',
+                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}
+                    },
+                    {
+                        'field': 'upah_bersih',
+                        'headerName': 'UPAH BERSIH',
+                        'width': 120,
+                        'type': 'numericColumn',
+                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#ffe082', 'color': '#bf360c', 'fontWeight': 'bold', 'fontSize': '14px'}
                     }
                 ]
-                col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_columns
+                col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
 
             # Reorder so 'no' and 'nama' are the first two columns
             lead = []

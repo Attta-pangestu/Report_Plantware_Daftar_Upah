@@ -517,6 +517,23 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) !== 0)
     }
 
+    const checkGroupHasData = (group) => {
+      // For grouped columns, check if any leaf column has data
+      if (group.children && Array.isArray(group.children)) {
+        return group.children.some(child => {
+          if (child.children) {
+            return checkGroupHasData(child)
+          } else if (child.field) {
+            return checkColumnHasData(child.field)
+          }
+          return false
+        })
+      } else if (group.field) {
+        return checkColumnHasData(group.field)
+      }
+      return true // Always show headers without fields
+    }
+
     const processColumn = (col) => {
       if (col.children && Array.isArray(col.children)) {
         // Process level 2 header dengan children level 3
@@ -539,7 +556,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         return {
           ...col,
           children: processedChildren,
-          hide: processedChildren.length === 0
+          hide: !checkGroupHasData(col) // Use group data check instead of children length
         }
       } else if (col.field) {
         // Leaf column - periksa apakah ada data
