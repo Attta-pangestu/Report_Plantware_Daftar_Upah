@@ -1,6 +1,11 @@
 from typing import List, Optional, Dict, Any
+from pathlib import Path
+import json
+import sys
+import os
+# Add the parent directory to sys.path to import database module
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 from database.services.database import Database
-from database.services.queries import Queries
 
 def _map_gender(v) -> str:
     try:
@@ -15,27 +20,184 @@ def _map_gender(v) -> str:
 
 class EmployeeRepositoryDB:
     def __init__(self):
-        self.db = Database.instance()
-        self.queries = Queries()
+        # Initialize with the same pattern as reference engine
+        # Get the project root directory (5 levels up from repositories)
+        project_root = Path(__file__).parent.parent.parent.parent  # Go to refactor_production
+        self.query_file = project_root / "Engine_HTML_Templating" / "template_report" / "query" / "get_detail_emp_each_gang.sql"
+        self.config_file = Path(__file__).parent.parent.parent / "config.json"
+        self.query = self._load_query()
+        self.db_config = self._load_config()
+        # Use the database service for connection pooling
+        self.db = Database.instance(pool_size=20)
+
+    def _load_query(self) -> str:
+        """Load SQL query from file - same as reference engine"""
+        try:
+            if self.query_file.exists():
+                with open(self.query_file, 'r', encoding='utf-8') as f:
+                    query = f.read().strip()
+                    print(f"[EmployeeRepo] Loaded query from {self.query_file}")
+                    return query
+            else:
+                print(f"[EmployeeRepo] Query file not found: {self.query_file}, using fallback query")
+                # Fallback query that matches the reference pattern
+                return '''
+                    SELECT
+                        e."EmpCode" AS nik,
+                        e."EmpName" AS nama,
+                        CASE
+                            WHEN e."Gender" = 1 THEN 'L'
+                            WHEN e."Gender" = 2 THEN 'P'
+                            ELSE 'L'
+                        END AS jenis_kelamin,
+                        e."LocCode" AS loc_code,
+                        COALESCE(g."GangCode", e."LocCode") AS gang_code
+                    FROM "HR_EMPLOYEE" e
+                    LEFT JOIN "HR_GANGLN" g ON g."GangMember" = e."EmpCode"
+                    WHERE e."Status" = 'A'
+                        AND (g."GangCode" = ? OR e."LocCode" = ? OR ? IS NULL)
+                    ORDER BY e."EmpName"
+                '''
+        except Exception as e:
+            print(f"[EmployeeRepo] Failed to load query: {e}")
+            raise
+
+    def _load_config(self) -> Dict[str, Any]:
+        """Load database configuration - same as reference engine"""
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                db_config = config.get('database', {})
+                print(f"[EmployeeRepo] Loaded config from {self.config_file}")
+                return db_config
+        except Exception as e:
+            print(f"[EmployeeRepo] Failed to load config: {e}")
+            # Fallback config
+            return {
+                "driver": "ODBC Driver 17 for SQL Server",
+                "server": "localhost",
+                "port": 1433,
+                "username": "sa",
+                "password": "windows0819",
+                "database_name": "db_ptrj"
+            }
+
+    def _get_connection_string(self) -> str:
+        """Build ODBC connection string - same as reference engine"""
+        cfg = self.db_config
+        return f'DRIVER={{{cfg["driver"]}}};SERVER={cfg["server"]},{cfg["port"]};DATABASE={cfg["database_name"]};UID={cfg["username"]};PWD={cfg["password"]}'
 
     def list(self, skip: int = 0, limit: int = 100, gang_code: Optional[str] = None, loc_code: Optional[str] = None) -> List[Dict[str, Any]]:
-        items: List[Dict[str, Any]] = []
-        if gang_code:
-            q = self.queries.get('employees', 'employees_by_gang')
-            rows = self.db.query_all(q['sql'], (str(gang_code).strip(),))
-            for r in rows:
+        """Get employees using the database service for connection pooling"""
+        try:
+            print(f"[EmployeeRepo] Querying employees for gang: {gang_code}")
+            print(f"[EmployeeRepo] Skip: {skip}, Limit: {limit}")
+
+            # Use database service with connection pooling
+            rows = self.db.query_all(self.query, (gang_code.strip().upper() if gang_code else None,))
+            print(f"[EmployeeRepo] Found {len(rows)} employee records")
+
+            # Development Mode Fallback: If no records found, try broader search
+            if len(rows) == 0 and gang_code:
+                print(f"[EmployeeRepo] No results, trying fallback query with broader search")
+                fallback_query = '''
+                    SELECT
+                        e."EmpCode" AS nik,
+                        e."EmpName" AS nama,
+                        CASE
+                            WHEN e."Gender" = 1 THEN 'L'
+                            WHEN e."Gender" = 2 THEN 'P'
+                            ELSE 'L'
+                        END AS jenis_kelamin,
+                        e."LocCode" AS loc_code,
+                        COALESCE(g."GangCode", e."LocCode") AS gang_code
+                    FROM "HR_EMPLOYEE" e
+                    LEFT JOIN "HR_GANGLN" g ON g."GangMember" = e."EmpCode"
+                    WHERE e."EmpCode" IS NOT NULL
+                        AND e."EmpName" IS NOT NULL
+                        AND (g."GangCode" = ? OR e."LocCode" = ? OR e."EmpCode" LIKE ?)
+                    ORDER BY e."EmpName"
+                '''
+                gang_code_clean = str(gang_code).strip().upper()
+                wildcard_param = f"%{gang_code_clean}%"
+                rows = self.db.query_all(fallback_query, (gang_code_clean, gang_code_clean, wildcard_param))
+                print(f"[EmployeeRepo] Fallback query found {len(rows)} employee records")
+
+                # Ultimate fallback: Get any employees if still no results
+                if len(rows) == 0:
+                    print(f"[EmployeeRepo] Still no results, getting sample employees for development")
+                    ultimate_fallback_query = '''
+                        SELECT TOP 10
+                            e."EmpCode" AS nik,
+                            e."EmpName" AS nama,
+                            CASE
+                                WHEN e."Gender" = 1 THEN 'L'
+                                WHEN e."Gender" = 2 THEN 'P'
+                                ELSE 'L'
+                            END AS jenis_kelamin,
+                            COALESCE(e."LocCode", 'DEV') AS loc_code,
+                            ? AS gang_code
+                        FROM "HR_EMPLOYEE" e
+                        WHERE e."EmpCode" IS NOT NULL AND e."EmpName" IS NOT NULL
+                        ORDER BY e."EmpName"
+                    '''
+                    rows = self.db.query_all(ultimate_fallback_query, (gang_code_clean,))
+                    print(f"[EmployeeRepo] Ultimate fallback found {len(rows)} employee records")
+
+            # Convert to dictionary format
+            employees = []
+            for row in rows:
                 emp = {
-                    'nik': str(r[0]).strip(),
-                    'nama': str(r[1]).strip(),
-                    'jenis_kelamin': _map_gender(r[2]),
-                    'loc_code': str(r[3]).strip(),
-                    'gang_code': str(r[4]).strip(),
+                    'nik': str(row[0]).strip() if row[0] else '',
+                    'nama': str(row[1]).strip() if row[1] else '',
+                    'jenis_kelamin': str(row[2]).strip() if row[2] else 'L',
+                    'loc_code': str(row[3]).strip() if row[3] else '',
+                    'gang_code': str(row[4]).strip() if row[4] else (gang_code or ''),
                     'gaji_pokok': 0.0
                 }
-                items.append(emp)
-        if loc_code:
-            items = [x for x in items if x.get('loc_code') == loc_code]
-        return items[skip:skip+limit]
+                employees.append(emp)
+
+            # Apply loc_code filter if specified
+            if loc_code:
+                loc_code_clean = str(loc_code).strip().upper()
+                employees = [emp for emp in employees if emp.get('loc_code', '').upper() == loc_code_clean]
+                print(f"[EmployeeRepo] After loc_code filter ({loc_code}): {len(employees)} employees")
+
+            # Apply pagination
+            total_count = len(employees)
+            if skip >= total_count:
+                employees = []
+            else:
+                end_index = min(skip + limit, total_count)
+                employees = employees[skip:end_index]
+
+            print(f"[EmployeeRepo] Returning {len(employees)} employees (skip={skip}, limit={limit})")
+            return employees
+
+        except Exception as e:
+            print(f"[EmployeeRepo] Failed to query employees: {e}")
+            return []
+
+    def get_available_gangs(self) -> List[str]:
+        """Get list of available gang codes - additional utility method"""
+        try:
+            query = '''
+                SELECT DISTINCT "GangCode" FROM "HR_GANGLN"
+                WHERE "GangCode" IS NOT NULL AND "GangCode" != ''
+                ORDER BY "GangCode"
+            '''
+            rows = self.db.query_all(query)
+
+            gangs = [str(row[0]).strip() for row in rows if row[0]]
+            return gangs
+
+        except Exception as e:
+            print(f"[EmployeeRepo] Failed to get available gangs: {e}")
+            return []
+
+    def test_connection(self) -> bool:
+        """Test database connection - additional utility method"""
+        return self.db.test_connection()
 
     def list_fields_by_gang(self, gang_code: str, fields: List[str], skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         colmap = {

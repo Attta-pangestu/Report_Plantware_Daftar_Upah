@@ -15,3 +15,121 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
   const r = await axios.get('/payroll/report', config)
   return r.data
 }
+
+/**
+ * Optimized fetch function that uses the real data endpoint for best performance
+ * Uses the same query as the reference engine - returns actual employee data
+ */
+export async function fetchReportRowsSimple(token, { month, year, gang_code, skip = 0, limit = 50 }) {
+  const params = {}
+  if (month) params.month = month
+  if (year) params.year = year
+  if (gang_code) params.gang_code = gang_code
+  if (typeof skip === 'number') params.skip = skip
+  if (typeof limit === 'number') params.limit = limit
+
+  const config = { params }
+  if (token) config.headers = { Authorization: `Bearer ${token}` }
+
+  try {
+    console.log('[PayrollService] Using optimized real endpoint for best performance')
+    const r = await axios.get('/payroll/report/real', config)
+    return r.data
+  } catch (error) {
+    console.error('[PayrollService] Real endpoint failed, falling back to simple endpoint:', error)
+    // Fallback to simple endpoint if real endpoint fails
+    try {
+      const r = await axios.get('/payroll/report/simple', config)
+      return r.data
+    } catch (fallbackError) {
+      console.error('[PayrollService] All endpoints failed, using regular endpoint:', fallbackError)
+      // Last resort - use regular endpoint with minimal fields
+      return await fetchReportRows(token, { month, year, gang_code, fields: ['nik', 'nama', 'jenis_kelamin', 'upah_dasar', 'upah_pokok'], skip, limit })
+    }
+  }
+}
+
+/**
+ * Smart batching for large field requests to prevent connection pool exhaustion
+ * Splits requests with many fields into smaller batches of 15 fields each
+ */
+export async function fetchReportRowsBatched(token, { month, year, gang_code, fields, skip, limit, benchmark = false, monitor = false }) {
+  // If no fields or small field count, use regular request
+  if (!fields || fields.length <= 15) {
+    return await fetchReportRows(token, { month, year, gang_code, fields, skip, limit, benchmark, monitor })
+  }
+
+  console.log(`[PayrollService] Using smart batching for ${fields.length} fields`)
+
+  // Split fields into batches of 15
+  const BATCH_SIZE = 15
+  const fieldBatches = []
+  for (let i = 0; i < fields.length; i += BATCH_SIZE) {
+    fieldBatches.push(fields.slice(i, i + BATCH_SIZE))
+  }
+
+  console.log(`[PayrollService] Split into ${fieldBatches.length} batches of max ${BATCH_SIZE} fields`)
+
+  // Fetch data for each batch sequentially to avoid connection pool pressure
+  const batchResults = []
+  for (let i = 0; i < fieldBatches.length; i++) {
+    const batchFields = fieldBatches[i]
+    console.log(`[PayrollService] Fetching batch ${i + 1}/${fieldBatches.length} with ${batchFields.length} fields`)
+
+    try {
+      const batchData = await fetchReportRows(token, {
+        month,
+        year,
+        gang_code,
+        fields: batchFields,
+        skip: 0,
+        limit: 1000, // Get all rows for each batch
+        benchmark,
+        monitor
+      })
+
+      if (batchData && batchData.length > 0) {
+        batchResults.push(batchData)
+      }
+    } catch (error) {
+      console.error(`[PayrollService] Batch ${i + 1} failed:`, error)
+      throw new Error(`Batch ${i + 1} failed: ${error.message}`)
+    }
+  }
+
+  if (batchResults.length === 0) {
+    return []
+  }
+
+  // Merge batch results by row index/nik
+  const mergedResults = []
+  const firstBatch = batchResults[0]
+
+  for (let i = 0; i < firstBatch.length; i++) {
+    const mergedRow = { ...firstBatch[i] }
+
+    // Merge data from other batches based on NIK or row index
+    for (let j = 1; j < batchResults.length; j++) {
+      const batch = batchResults[j]
+      if (i < batch.length) {
+        // Use NIK as the key to match rows across batches
+        const nik = mergedRow.nik || mergedRow.NIK
+        const batchRow = batch.find(row => (row.nik || row.NIK) === nik) || batch[i]
+        Object.assign(mergedRow, batchRow)
+      }
+    }
+
+    mergedResults.push(mergedRow)
+  }
+
+  console.log(`[PayrollService] Merged ${batchResults.length} batches into ${mergedResults.length} complete rows`)
+
+  // Apply pagination if requested
+  if (typeof skip === 'number' || typeof limit === 'number') {
+    const start = typeof skip === 'number' ? skip : 0
+    const end = typeof limit === 'number' ? start + limit : mergedResults.length
+    return mergedResults.slice(start, end)
+  }
+
+  return mergedResults
+}

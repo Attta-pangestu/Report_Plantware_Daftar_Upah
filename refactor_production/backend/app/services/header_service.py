@@ -143,6 +143,10 @@ class HeaderService:
                 'tunjangan premi', 'tunjangan beras'
             }
 
+            # Handle case where db.query_all returns None
+            if rows is None:
+                rows = []
+
             # Optimized filtering with list comprehension
             headers = [
                 str(r[0]).strip()
@@ -195,6 +199,10 @@ class HeaderService:
 
         rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
         mid = time.perf_counter()
+
+        # Handle case where db.query_all returns None
+        if rows is None:
+            rows = []
 
         excluded = {
             # Remove important deduction columns from exclusion:
@@ -408,7 +416,7 @@ class HeaderService:
 
             # Final columns
             "total_tunjangan": "total_tunjangan",
-            "upah_bersih": "upah_bersih",
+            # "upah_bersih" removed - will be added in deduction_groups to avoid duplication
             "cth": "tidak_hadir_cth",
             "alpa": "tidak_hadir_alpa"
         }
@@ -467,7 +475,7 @@ class HeaderService:
                 'jml_hk': 'jumlah_hk',
                 'gaji_pokok': 'gaji_pokok',
                 'total_tunjangan': 'total_tunjangan',
-                'upah_bersih': 'upah_bersih',
+                # 'upah_bersih' removed - will be added in deduction_groups to avoid duplication
                 # Added new fields to ensure they're recognized by the column definitions
                 'premi_koreksi': 'premi_koreksi',
                 'bpjs_pensiun_pekerja': 'pot_bpjs_pensiun_pekerja',
@@ -481,7 +489,8 @@ class HeaderService:
                 children_ids = c1.get('children', [])
                 if not children_ids:
                     field = static_map.get(c1_id)
-                    if field:
+                    # Skip upah_bersih from static structure to avoid duplication
+                    if field and field != 'upah_bersih':
                         col_defs.append({
                             'field': field,
                             'headerName': c1.get('text'),
@@ -666,10 +675,23 @@ class HeaderService:
                 ]
                 col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
 
+            # Remove duplicate 'upah_bersih' fields - keep only the one in deduction_groups
+            filtered_col_defs = []
+            upah_bersih_found = False
+            for c in col_defs:
+                if c.get('field') == 'upah_bersih':
+                    if not upah_bersih_found:
+                        # Keep the first upah_bersih (the one in deduction_groups)
+                        filtered_col_defs.append(c)
+                        upah_bersih_found = True
+                    # Skip any additional upah_bersih fields
+                else:
+                    filtered_col_defs.append(c)
+
             # Reorder so 'no' and 'nama' are the first two columns
             lead = []
             rest = []
-            for c in col_defs:
+            for c in filtered_col_defs:
                 f = c.get('field')
                 if f in ['no', 'nama']:
                     lead.append(c)

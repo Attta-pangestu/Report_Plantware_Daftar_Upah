@@ -16,9 +16,10 @@ router = APIRouter(tags=["authentication"])
 # Helper dependency function
 async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     if is_test_mode():
-        # TESTING ONLY
         if credentials is None:
-            logging.warning("TESTING ONLY: Access without Authorization header; injecting testing admin user")
+            logging.warning("test_mode_auth_inject without Authorization header")
+        else:
+            logging.warning("test_mode_auth_inject with Authorization header present")
         now = datetime.now()
         return User(
             id=0,
@@ -41,6 +42,7 @@ async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials 
     token = credentials.credentials
     user = auth_service.get_current_user(token)
     if user is None:
+        logging.error("auth_token_validation_failed")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -54,7 +56,7 @@ async def get_test_token():
     if not is_test_mode():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not available in production")
     token = get_testing_token()
-    logging.warning("TESTING ONLY: Issuing permanent test token")
+    logging.warning("test_mode_issue_permanent_token")
     return {"access_token": token, "token_type": "bearer", "expires": "never"}
 
 # Pydantic models for API
@@ -75,15 +77,19 @@ class ResetPassword(BaseModel):
 @router.post("/login", response_model=Token)
 async def login(user_credentials: UserLogin):
     """Authenticate user and return access token"""
+    start = datetime.now()
     user = auth_service.authenticate_user(user_credentials.username, user_credentials.password)
     if not user:
+        logging.error(f"auth_login_failed username={user_credentials.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    return auth_service.create_user_token(user)
+    out = auth_service.create_user_token(user)
+    elapsed_ms = int((datetime.now() - start).total_seconds() * 1000)
+    logging.info(f"auth_login_success username={user_credentials.username} elapsed_ms={elapsed_ms}")
+    return out
 
 @router.post("/register", response_model=UserResponse)
 async def register(user_data: UserRegister):

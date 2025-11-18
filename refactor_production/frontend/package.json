@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:test": "cross-env VITE_DEV_MODE=true vite",
+    "dev:test": "cross-env VITE_DEV_MODE=true vite --config ./vite.config.test.js",
+    "dev:5175": "cross-env PORT=5175 vite --config ./vite.config.test.js",
     "build": "vite build",
     "preview": "vite preview --port 5173"
   },

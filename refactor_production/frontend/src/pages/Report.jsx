@@ -3,7 +3,7 @@ import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
-import { fetchReportRows } from '../services/payrollService'
+import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple } from '../services/payrollService'
 import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
@@ -41,6 +41,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   useEffect(() => {
     async function loadHeaders() {
       setHeaderLoading(true)
+      setError('')
       try {
         // Parse month if it's a string in YYYY-MM format
         let monthValue = finalMonth
@@ -53,21 +54,37 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
-        const [headersData, columnDefsData] = await Promise.all([
+
+        // Enhanced error handling with individual Promise.allSettled
+        const [headersResult, columnsResult] = await Promise.allSettled([
           fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
           fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
         ])
-        setHeaders(headersData)
+
+        let headersData = null
+        let columnDefsData = null
+
+        if (headersResult.status === 'fulfilled') {
+          headersData = headersResult.value
+          setHeaders(headersData)
+        }
+
+        if (columnsResult.status === 'fulfilled') {
+          columnDefsData = columnsResult.value
+        }
 
         // Extract hierarchy headers for 3-level header structure
-        const tableStructure = headersData.table_structure || {}
-        const generatedHeaders = tableStructure.generated_headers || {}
-
-        setHierarchyHeaders({
-          level1: generatedHeaders.level_1?.columns || [],
-          level2: generatedHeaders.level_2?.columns || [],
-          level3: generatedHeaders.level_3?.columns || []
-        })
+        if (headersData) {
+          const tableStructure = headersData.table_structure || {}
+          const generatedHeaders = tableStructure.generated_headers || {}
+          setHierarchyHeaders({
+            level1: generatedHeaders.level_1?.columns || [],
+            level2: generatedHeaders.level_2?.columns || [],
+            level3: generatedHeaders.level_3?.columns || []
+          })
+        } else {
+          setHierarchyHeaders({ level1: [], level2: [], level3: [] })
+        }
 
         const gen = headersData?.table_structure?.generated_headers || {}
         const l1 = gen?.level_1?.columns || []
@@ -145,8 +162,14 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
-        const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
-        const chosen = hasChildren ? columnDefsData : built
+        let chosen = null
+        if (Array.isArray(columnDefsData) && columnDefsData.length > 0) {
+          chosen = columnDefsData
+        } else if (headersData) {
+          chosen = built
+        } else {
+          throw new Error('No header or column definitions available')
+        }
         const leafFields = []
         const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
         chosen.forEach(walk)
@@ -283,10 +306,47 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         console.log('[Report] Loading data rows for:', { monthValue, yearValue, finalGangCode })
+
+        // Validate column definitions before proceeding
+        if (!columnDefs || columnDefs.length === 0) {
+          throw new Error('No column definitions available. Cannot fetch data without proper column structure.')
+        }
+
         const leafFields = []
         const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
         columnDefs.forEach(walk)
-        const data = await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
+
+        if (leafFields.length === 0) {
+          throw new Error('No valid fields found in column definitions. Cannot fetch data.')
+        }
+
+        console.log('[Report] Fetching data with fields:', leafFields.length, 'fields')
+
+        // Enhanced data fetching with optimized strategy
+        let data = []
+        // Always use the optimized real endpoint for better performance and data accuracy
+        console.log('[Report] Using optimized real endpoint for production performance')
+        data = await fetchReportRowsSimple(finalToken, {
+          month: monthValue,
+          year: yearValue,
+          gang_code: finalGangCode,
+          skip: 0,
+          limit: 50
+        })
+
+        // If real endpoint returns no data, try fallback
+        if (!data || data.length === 0) {
+          console.warn('[Report] No data from optimized endpoint, trying fallback')
+          data = await fetchReportRows(finalToken, {
+            month: monthValue,
+            year: yearValue,
+            gang_code: finalGangCode,
+            fields: leafFields.slice(0, 10), // Only essential fields
+            benchmark: true,
+            monitor: false
+          })
+        }
+
         setRows(data)
         const safe = Array.isArray(data) ? data : []
         
@@ -348,7 +408,16 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             const leafFields = []
             const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
             columnDefs.forEach(walk)
-            const data = await fetchReportRows(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
+            // Use simple endpoint in development mode for fallback
+            let data
+            if (DEV_MODE) {
+              data = await fetchReportRowsSimple(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 50 })
+            } else {
+              const leafFields = []
+              const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
+              columnDefs.forEach(walk)
+              data = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
+            }
             setRows(data)
             const safe = Array.isArray(data) ? data : []
             const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))

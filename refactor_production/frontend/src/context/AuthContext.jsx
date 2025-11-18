@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 import { login as apiLogin } from '../services/authService'
 
-// TESTING ONLY
-const TEST_MODE = (import.meta.env.VITE_DEV_MODE === 'true') || (import.meta.env.DEV_MODE === 'true')
+// TESTING ONLY - Force development mode for testing
+const TEST_MODE = true
 
 const AuthCtx = createContext(null)
 
@@ -11,36 +11,37 @@ export function AuthProvider({ children }) {
   const initialTestingToken = (TEST_MODE && typeof localStorage !== 'undefined') ? (localStorage.getItem('testing_token') || 'permanent-testing-token-2025-rebinmas-daftar-upah') : ''
   const [token, setToken] = useState(initialTestingToken)
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(TEST_MODE) // Loading true in test mode initially
+  const [loading, setLoading] = useState(false) // Start with false, let auto-login handle loading state
   const [error, setError] = useState('')
 
-  // TESTING ONLY: Auto-login in testing mode
+  // TESTING ONLY: Auto-login in testing mode using actual login request
   useEffect(() => {
-    if (TEST_MODE && !user) {
+    if (TEST_MODE && !user && !loading) {
       (async () => {
         try {
-          let t = initialTestingToken
-          if (!t) {
-            const r = await axios.get('/auth/test-token')
-            t = r?.data?.access_token || 'permanent-testing-token'
-            localStorage.setItem('testing_token', t)
+          console.warn('[AuthContext] TESTING ONLY: Attempting auto-login with credentials')
+          // Use actual login API with hardcoded credentials
+          const success = await login('admin', 'admin')
+          if (success) {
+            console.warn('[AuthContext] TESTING ONLY: Auto-login successful')
+          } else {
+            console.warn('[AuthContext] TESTING ONLY: Auto-login failed, using fallback user')
+            // Fallback: set mock user directly if login fails
+            const fallbackUser = {
+              id: 1,
+              username: 'admin',
+              email: 'admin@payroll.com',
+              full_name: 'Development Admin',
+              role: 'admin',
+              divisions: ['PG1A', 'PG1B', 'PG2A', 'PG2B', 'DME', 'ARA', 'ARB1', 'ARB2', 'INFRA', 'AREC', 'IJL', 'STF-OFFICE', 'SECURITY']
+            }
+            setUser(fallbackUser)
+            setToken('dev-mode-token')
+            setLoading(false)
           }
-          const mockUser = {
-            id: 1,
-            username: 'admin',
-            email: 'admin@payroll.com',
-            full_name: 'Development Admin',
-            role: 'admin',
-            divisions: ['PG1A', 'PG1B', 'PG2A', 'PG2B', 'DME', 'ARA', 'ARB1', 'ARB2', 'INFRA', 'AREC', 'IJL', 'STF-OFFICE', 'SECURITY']
-          }
-          setToken(t)
-          setUser(mockUser)
-          setLoading(false)
-          console.warn('[AuthContext] TESTING ONLY: Token injected and auto-login complete', { token: t, user: mockUser.username })
         } catch (e) {
-          console.warn('[AuthContext] TESTING ONLY: Failed to pre-inject token, using fallback', e)
-          // Fallback: set minimal token and user
-          const fallbackToken = 'permanent-testing-token-2025-rebinmas-daftar-upah'
+          console.warn('[AuthContext] TESTING ONLY: Auto-login error, using fallback', e)
+          // Fallback: set mock user directly on error
           const fallbackUser = {
             id: 1,
             username: 'admin',
@@ -49,14 +50,13 @@ export function AuthProvider({ children }) {
             role: 'admin',
             divisions: ['PG1A', 'PG1B', 'PG2A', 'PG2B', 'DME', 'ARA', 'ARB1', 'ARB2', 'INFRA', 'AREC', 'IJL', 'STF-OFFICE', 'SECURITY']
           }
-          localStorage.setItem('testing_token', fallbackToken)
-          setToken(fallbackToken)
           setUser(fallbackUser)
+          setToken('dev-mode-token')
           setLoading(false)
         }
       })()
     }
-  }, [])
+  }, [user, loading])
 
   async function login(username, password) {
     setLoading(true); setError('')

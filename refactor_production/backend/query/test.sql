@@ -1,10 +1,7 @@
-SELECT TOP 100
-       t.*,
-       ln.Amount
-FROM   "PR_ADTRANS_ARC"      AS t
-JOIN   "PR_ADTRANSLN_ARC"    AS ln
-       ON t.ID = ln.MasterID
-WHERE  t.EmpCode = 'H0488'
-  AND  t.DocDate >= '2025-05-01'
-  AND  t.DocDate <  '2025-06-01'
-  
+SELECT TOP 100 * 
+FROM "PR_EMP_ATTN_ARC"
+WHERE EmpCode = 'H0517'
+  AND AttnDate >= '2025-05-01'
+  AND AttnDate < '2025-06-01'
+AND IsPresent = 'true'
+

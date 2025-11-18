@@ -8,6 +8,7 @@ from app.services.gang_service import GangService
 from app.services.header_service import HeaderService
 from app.services.threaded_header_service import ThreadedHeaderService
 from app.services.threaded_data_extractor import ThreadedDataExtractor
+from app.services.cache_service import CacheService
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.employee_repository_db import EmployeeRepositoryDB
 from app.repositories.gang_repository_db import GangRepositoryDB
@@ -117,6 +118,12 @@ async def report_grid(
             response.headers["X-Processing-Type"] = processing_type
             response.headers["X-Threading-Enabled"] = str(use_threading)
 
+        try:
+            fields_count = len([x.strip() for x in (fields or '').split(',') if x.strip()])
+            logger.info(f"payroll_report_grid gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} fields={fields_count} rows={len(rows)} ms={int(execution_time*1000)} type={processing_type} threading={use_threading} test_mode={is_test_mode()}")
+        except Exception:
+            pass
+
         return rows
     except Exception as e:
         logger.error(f"Database error: {e}")
@@ -131,7 +138,12 @@ threaded_data_extractor = ThreadedDataExtractor.get_instance()
 @router.get("/divisions", response_model=List[str])
 async def get_divisions(user=Depends(get_current_user_from_token)):
     """Get all available divisions"""
-    return gang_service.get_all_divisions()
+    out = gang_service.get_all_divisions()
+    try:
+        logger.info(f"gang_divisions count={len(out)}")
+    except Exception:
+        pass
+    return out
 
 @router.get("/gangs", response_model=List[str])
 async def get_gangs(
@@ -142,7 +154,7 @@ async def get_gangs(
 ):
     """Get gang codes with optional division filtering and LIKE search - UPDATED VERSION"""
     try:
-        print(f"[DEBUG] get_gangs called - division: {division}, search: {search}, force: {force}")
+        logger.info(f"gang_list division={division} search={search} force={force}")
         if not division:
             accessible = gang_service.get_all_divisions() if user.role == 'admin' else user.divisions
             division = accessible[0] if accessible else None
@@ -151,9 +163,11 @@ async def get_gangs(
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Division not accessible")
 
         # Use gang service with real database connection
-        print(f"[DEBUG] About to call fetch_gangs_from_database with division: {division}")
         gangs = gang_service.fetch_gangs_from_database(division=division, search=search, force=bool(force))
-        print(f"[DEBUG] fetch_gangs_from_database returned: {type(gangs)} with {len(gangs)} items")
+        try:
+            logger.info(f"gang_list_return division={division} count={len(gangs)}")
+        except Exception:
+            pass
 
         if division and not gangs:
             raise HTTPException(
@@ -178,6 +192,10 @@ async def get_gang_info(gang_code: str, user=Depends(get_current_user_from_token
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Gang {gang_code} not found"
             )
+        try:
+            logger.info(f"gang_info gang_code={gang_code} keys={list(info.keys()) if isinstance(info, dict) else 'n/a'}")
+        except Exception:
+            pass
         return info
     except Exception as e:
         raise HTTPException(
@@ -261,6 +279,10 @@ async def get_column_definitions(
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
         column_defs = header_service.get_column_definitions(month=month, year=year, gang_code=gang_code)
+        try:
+            logger.info(f"payroll_columns gang_code={gang_code} month={month} year={year} count={len(column_defs)} test_mode={is_test_mode()}")
+        except Exception:
+            pass
         return column_defs
     except Exception as e:
         raise HTTPException(
@@ -514,6 +536,389 @@ async def report_single_column(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+@router.get("/debug/employee_query", response_model=dict)
+async def debug_employee_query(
+    gang_code: Optional[str] = Query("H1H", description="Gang code to test"),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
+    """
+    Debug endpoint to test the new employee query system
+    """
+    try:
+        from app.repositories.employee_repository_db import EmployeeRepositoryDB
+
+        gang_code_clean = str(gang_code).strip().upper() if gang_code else None
+
+        debug_info = {
+            "gang_code": gang_code_clean,
+            "timestamp": datetime.now().isoformat(),
+            "tests": {}
+        }
+
+        # Test 1: Employee repository initialization
+        try:
+            repo = EmployeeRepositoryDB()
+            debug_info["tests"]["repository_init"] = {
+                "status": "healthy",
+                "query_file": str(repo.query_file),
+                "config_file": str(repo.config_file),
+                "query_loaded": len(repo.query) > 0
+            }
+        except Exception as e:
+            debug_info["tests"]["repository_init"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Test 2: Database connection
+        try:
+            repo = EmployeeRepositoryDB()
+            connection_healthy = repo.test_connection()
+            debug_info["tests"]["database_connection"] = {
+                "status": "healthy" if connection_healthy else "unhealthy",
+                "connection_string": repo._get_connection_string()[:50] + "..."
+            }
+        except Exception as e:
+            debug_info["tests"]["database_connection"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Test 3: Employee query with specific gang
+        try:
+            repo = EmployeeRepositoryDB()
+            employees = repo.list(skip=0, limit=10, gang_code=gang_code_clean)
+            debug_info["tests"]["employee_query"] = {
+                "status": "healthy",
+                "employees_found": len(employees),
+                "sample_employees": [
+                    {
+                        "nik": emp.get("nik"),
+                        "nama": emp.get("nama"),
+                        "loc_code": emp.get("loc_code"),
+                        "gang_code": emp.get("gang_code")
+                    }
+                    for emp in employees[:3]
+                ]
+            }
+        except Exception as e:
+            debug_info["tests"]["employee_query"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Test 4: Available gangs
+        try:
+            repo = EmployeeRepositoryDB()
+            available_gangs = repo.get_available_gangs()
+            debug_info["tests"]["available_gangs"] = {
+                "status": "healthy",
+                "count": len(available_gangs),
+                "gang_codes": available_gangs[:20]  # First 20 gangs
+            }
+        except Exception as e:
+            debug_info["tests"]["available_gangs"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Test 5: Query without gang code (all employees)
+        try:
+            repo = EmployeeRepositoryDB()
+            all_employees = repo.list(skip=0, limit=5, gang_code=None)
+            debug_info["tests"]["all_employees_query"] = {
+                "status": "healthy",
+                "employees_found": len(all_employees),
+                "sample_employees": [
+                    {
+                        "nik": emp.get("nik"),
+                        "nama": emp.get("nama"),
+                        "loc_code": emp.get("loc_code")
+                    }
+                    for emp in all_employees[:3]
+                ]
+            }
+        except Exception as e:
+            debug_info["tests"]["all_employees_query"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        return debug_info
+
+    except Exception as e:
+        logger.error(f"Debug employee query failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+@router.get("/debug/employees", response_model=dict)
+async def debug_employees(
+    gang_code: Optional[str] = Query("H1H", description="Gang code to debug"),
+    response: Response = None,
+    user=Depends(get_current_user_from_token)
+):
+    """
+    Debug endpoint to check employee data and database structure
+    """
+    try:
+        from database.services.database import Database
+
+        db = Database.instance()
+        gang_code_clean = str(gang_code).strip().upper()
+
+        debug_info = {
+            "gang_code": gang_code_clean,
+            "timestamp": datetime.now().isoformat(),
+            "checks": {}
+        }
+
+        # Check 1: Employee table exists and has data
+        try:
+            count_query = 'SELECT COUNT(*) FROM "HR_EMPLOYEE"'
+            result = db.query_one(count_query)
+            total_employees = result[0] if result else 0
+            debug_info["checks"]["employee_table"] = {
+                "status": "healthy",
+                "total_employees": total_employees
+            }
+        except Exception as e:
+            debug_info["checks"]["employee_table"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 2: Active employees
+        try:
+            active_query = 'SELECT COUNT(*) FROM "HR_EMPLOYEE" WHERE "Status" = \'A\''
+            result = db.query_one(active_query)
+            active_employees = result[0] if result else 0
+            debug_info["checks"]["active_employees"] = {
+                "status": "healthy",
+                "active_employees": active_employees
+            }
+        except Exception as e:
+            debug_info["checks"]["active_employees"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 3: Check HR_GANGLN table
+        try:
+            gang_table_query = 'SELECT COUNT(*) FROM "HR_GANGLN"'
+            result = db.query_one(gang_table_query)
+            gang_records = result[0] if result else 0
+            debug_info["checks"]["gang_table"] = {
+                "status": "healthy",
+                "total_gang_records": gang_records
+            }
+        except Exception as e:
+            debug_info["checks"]["gang_table"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 4: Find matching gang codes
+        try:
+            gang_search_query = '''
+                SELECT DISTINCT "GangCode" FROM "HR_GANGLN"
+                WHERE UPPER("GangCode") LIKE UPPER(?)
+            '''
+            result = db.query_all(gang_search_query, (f'%{gang_code_clean}%',))
+            found_gangs = [str(row[0]).strip() for row in result] if result else []
+            debug_info["checks"]["gang_search"] = {
+                "status": "healthy",
+                "found_gangs": found_gangs,
+                "search_term": gang_code_clean
+            }
+        except Exception as e:
+            debug_info["checks"]["gang_search"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 5: Test employee query with gang join
+        try:
+            join_query = '''
+                SELECT COUNT(*)
+                FROM "HR_EMPLOYEE" e
+                JOIN "HR_GANGLN" g ON g."GangMember" = e."EmpCode"
+                WHERE UPPER(g."GangCode") = UPPER(?)
+            '''
+            result = db.query_one(join_query, (gang_code_clean,))
+            joined_employees = result[0] if result else 0
+            debug_info["checks"]["join_query"] = {
+                "status": "healthy",
+                "joined_employees": joined_employees
+            }
+        except Exception as e:
+            debug_info["checks"]["join_query"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 6: Test LocCode match
+        try:
+            loc_code_query = '''
+                SELECT COUNT(*) FROM "HR_EMPLOYEE"
+                WHERE UPPER("LocCode") = UPPER(?) AND "Status" = \'A\'
+            '''
+            result = db.query_one(loc_code_query, (gang_code_clean,))
+            loc_code_employees = result[0] if result else 0
+            debug_info["checks"]["loc_code_query"] = {
+                "status": "healthy",
+                "loc_code_employees": loc_code_employees
+            }
+        except Exception as e:
+            debug_info["checks"]["loc_code_query"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 7: Sample employees for the gang
+        try:
+            repo = EmployeeRepositoryDB()
+            sample_employees = repo.list(skip=0, limit=5, gang_code=gang_code_clean)
+            debug_info["checks"]["sample_employees"] = {
+                "status": "healthy",
+                "count": len(sample_employees),
+                "employees": [
+                    {
+                        "nik": emp.get("nik"),
+                        "nama": emp.get("nama"),
+                        "loc_code": emp.get("loc_code"),
+                        "gang_code": emp.get("gang_code")
+                    }
+                    for emp in sample_employees
+                ]
+            }
+        except Exception as e:
+            debug_info["checks"]["sample_employees"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        # Check 8: Get available gang codes
+        try:
+            available_gangs_query = '''
+                SELECT DISTINCT "GangCode" FROM "HR_GANGLN" ORDER BY "GangCode"
+            '''
+            result = db.query_all(available_gangs_query)
+            available_gangs = [str(row[0]).strip() for row in result] if result else []
+            debug_info["checks"]["available_gangs"] = {
+                "status": "healthy",
+                "count": len(available_gangs),
+                "gang_codes": available_gangs[:20]  # First 20 gangs
+            }
+        except Exception as e:
+            debug_info["checks"]["available_gangs"] = {
+                "status": "error",
+                "error": str(e)
+            }
+
+        return debug_info
+
+    except Exception as e:
+        logger.error(f"Debug employees failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug error: {str(e)}"
+        )
+
+@router.get("/health", response_model=dict)
+async def health_check(response: Response = None, user=Depends(get_current_user_from_token)):
+    """
+    Database and system health check endpoint
+    """
+    try:
+        from database.services.database import Database
+
+        start_time = time.perf_counter()
+
+        # Test database connection
+        db = Database.instance()
+        db_healthy = db.test_connection()
+
+        # Test basic query
+        try:
+            test_query = "SELECT COUNT(*) as employee_count FROM HR_EMPLOYEE WHERE Status = 'A'"
+            result = db.query_one(test_query)
+            employee_count = result[0] if result else 0
+            query_healthy = True
+        except Exception as e:
+            employee_count = 0
+            query_healthy = False
+            logger.error(f"Basic query failed: {e}")
+
+        # Test payroll service
+        try:
+            repo = EmployeeRepositoryDB()
+            employees = repo.list(skip=0, limit=1, gang_code="H1H")
+            service_healthy = len(employees) >= 0
+        except Exception as e:
+            service_healthy = False
+            logger.error(f"Payroll service test failed: {e}")
+
+        # Test header service
+        try:
+            headers = header_service.generate_dynamic_headers(month=5, year=2025, gang_code="H1H")
+            header_healthy = headers is not None
+        except Exception as e:
+            header_healthy = False
+            logger.error(f"Header service test failed: {e}")
+
+        health_time = time.perf_counter() - start_time
+
+        overall_healthy = db_healthy and query_healthy and service_healthy and header_healthy
+
+        result = {
+            "status": "healthy" if overall_healthy else "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "checks": {
+                "database_connection": {
+                    "status": "healthy" if db_healthy else "unhealthy",
+                    "response_time_ms": int(health_time * 1000)
+                },
+                "basic_query": {
+                    "status": "healthy" if query_healthy else "unhealthy",
+                    "employee_count": employee_count
+                },
+                "payroll_service": {
+                    "status": "healthy" if service_healthy else "unhealthy"
+                },
+                "header_service": {
+                    "status": "healthy" if header_healthy else "unhealthy"
+                }
+            },
+            "performance": {
+                "total_response_time_ms": int(health_time * 1000)
+            }
+        }
+
+        if response is not None:
+            response.headers["X-Health-Status"] = result["status"]
+            response.headers["X-Response-Time-Ms"] = str(int(health_time * 1000))
+
+        # Return appropriate HTTP status
+        if not overall_healthy:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="One or more health checks failed"
+            )
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Health check error: {str(e)}"
+        )
+
 @router.get("/performance/compare", response_model=dict)
 async def compare_performance(
     gang_code: Optional[str] = Query(None, description="Gang code for testing"),
@@ -616,4 +1021,59 @@ async def compare_performance(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Performance comparison failed: {str(e)}"
+        )
+
+
+@router.get("/report/real", response_model=List[PayrollRow])
+async def report_real_data(
+    gang_code: Optional[str] = Query("H1H"),
+    month: Optional[int] = Query(5),
+    year: Optional[int] = Query(2025),
+    skip: Optional[int] = Query(0, ge=0),
+    limit: Optional[int] = Query(50, ge=1, le=500),
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        logger.info(f"payroll_report_real gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} test_mode={is_test_mode()}")
+        cache = CacheService.instance()
+        cache_key = f"payroll_real:{gang_code}:{month}:{year}:{skip}:{limit}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            logger.info(f"Cache hit for payroll data: {gang_code} ({len(cached_result)} records)")
+            return cached_result
+
+        svc = PayrollService()
+        repo = EmployeeRepositoryDB()
+        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit)
+
+        cache.set(cache_key, rows, ttl=120)
+        logger.info(f"Cached payroll data for gang {gang_code} ({len(rows)} records)")
+        return rows
+    except Exception as e:
+        logger.error(f"Real payroll endpoint failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch real payroll data: {str(e)}"
+        )
+
+@router.get("/report/simple", response_model=List[PayrollRow])
+async def report_simple_data(
+    gang_code: Optional[str] = Query("H1H"),
+    month: Optional[int] = Query(5),
+    year: Optional[int] = Query(2025),
+    skip: Optional[int] = Query(0, ge=0),
+    limit: Optional[int] = Query(10, ge=1, le=50),
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        logger.info(f"payroll_report_simple gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} test_mode={is_test_mode()}")
+        svc = PayrollService()
+        repo = EmployeeRepositoryDB()
+        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit)
+        return rows
+    except Exception as e:
+        logger.error(f"Simple payroll endpoint failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Simple payroll endpoint failed: {str(e)}"
         )

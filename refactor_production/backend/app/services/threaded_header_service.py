@@ -16,7 +16,7 @@ class ThreadedHeaderService:
 
     def __init__(self, max_workers: int = 3):
         self.max_workers = max_workers
-        self.db = Database.instance()
+        self.db = Database.instance(pool_size=20)
         self.queries = Queries()
 
     def generate_optimized_headers_parallel(self, month: int, year: int, gang_code: str) -> Dict[str, Any]:
@@ -193,6 +193,10 @@ class ThreadedHeaderService:
         # Execute query
         result = self.db.query_all(sql, params)
 
+        # Handle case where db.query_all returns None
+        if result is None:
+            result = []
+
         # Cache result
         Cache.instance().set(cache_key, result, ttl)
         logger.info(f"Cached result for {cache_key}")
@@ -211,6 +215,9 @@ class ThreadedHeaderService:
 
         # Get dynamic premium headers
         dynamic_premi_results = results.get('dynamic_premi', [])
+        # Handle case where dynamic_premi_results is None
+        if dynamic_premi_results is None:
+            dynamic_premi_results = []
         dynamic_premi_headers = [str(row[0]).strip() for row in dynamic_premi_results if row and row[0]]
         excluded_lower = {
             'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
@@ -238,6 +245,9 @@ class ThreadedHeaderService:
         # Get report metadata
         report_metadata = results.get('report_metadata', {})
         employee_count_result = results.get('employee_count', [(0,)])
+        # Handle case where employee_count_result is None
+        if employee_count_result is None:
+            employee_count_result = [(0,)]
         employee_count = employee_count_result[0][0] if employee_count_result else 0
 
         # Keep all original premi children; only adjust text for dynamic slot

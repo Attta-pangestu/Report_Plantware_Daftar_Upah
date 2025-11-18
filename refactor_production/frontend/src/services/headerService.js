@@ -42,7 +42,7 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
 
   const config = {
     params,
-    timeout: 15000 // 15 second timeout untuk mencegah tunggu terlalu lama
+    timeout: 45000 // Increased timeout to 45 seconds for database queries
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
@@ -63,8 +63,19 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   } catch (e) {
     console.error('Failed to fetch dynamic headers:', e)
 
-    // No fallback - throw error immediately to prevent simple column display
-    throw new Error(`Failed to load dynamic headers: ${e.message}. Backend API may be down or header structure file missing.`)
+    // Enhanced error logging
+    const errorDetails = {
+      message: e.message,
+      code: e.code,
+      response: e.response?.status,
+      url: '/payroll/headers',
+      params: params,
+      timestamp: new Date().toISOString()
+    }
+    console.error('Header fetch error details:', errorDetails)
+
+    // Direct error - no static fallback, always require database connection
+    throw new Error(`Database connection failed for headers: ${e.message}. Status: ${e.response?.status || 'Network Error'}. Please check database connectivity and try again.`)
   }
 }
 
@@ -84,7 +95,7 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
 
   const config = {
     params,
-    timeout: 15000 // 15 second timeout untuk mencegah tunggu terlalu lama
+    timeout: 45000 // Increased timeout to 45 seconds for database queries
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
@@ -105,8 +116,19 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   } catch (e) {
     console.error('Failed to fetch column definitions:', e)
 
-    // No fallback - throw error to prevent simple column display
-    throw new Error(`Failed to load column definitions: ${e.message}. Backend API may be down or header structure missing.`)
+    // Enhanced error logging
+    const errorDetails = {
+      message: e.message,
+      code: e.code,
+      response: e.response?.status,
+      url: '/payroll/columns',
+      params: params,
+      timestamp: new Date().toISOString()
+    }
+    console.error('Column fetch error details:', errorDetails)
+
+    // Direct error - no static fallback, always require database connection
+    throw new Error(`Database connection failed for column definitions: ${e.message}. Status: ${e.response?.status || 'Network Error'}. Please check database connectivity and try again.`)
   }
 }
 
@@ -153,5 +175,6 @@ export const getMonthName = (monthNumber) => {
   ]
   return months[monthNumber] || ''
 }
+
 
 // Auto-hide by zero totals has been removed; backend now filters dynamic headers

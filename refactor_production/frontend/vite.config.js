@@ -11,20 +11,20 @@ export default defineConfig({
     port: 5174,
     strictPort: false, // Allow other ports if 5174 is occupied
     proxy: isDev ? {
-      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8000', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8000', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8000', changeOrigin: true }
+      '/auth': { target: 'http://localhost:8002', changeOrigin: true },
+      '/employees': { target: 'http://localhost:8002', changeOrigin: true },
+      '/payroll': { target: 'http://localhost:8002', changeOrigin: true },
+      '/reports': { target: 'http://localhost:8002', changeOrigin: true }
     } : {
       '/api/login': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8002',
         changeOrigin: true,
         rewrite: () => '/auth/login'
       },
-      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8000', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8000', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8000', changeOrigin: true }
+      '/auth': { target: 'http://localhost:8002', changeOrigin: true },
+      '/employees': { target: 'http://localhost:8002', changeOrigin: true },
+      '/payroll': { target: 'http://localhost:8002', changeOrigin: true },
+      '/reports': { target: 'http://localhost:8002', changeOrigin: true }
     }
   }
 })

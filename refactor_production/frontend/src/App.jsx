@@ -8,8 +8,8 @@ import { fetchGangs } from './services/gangService'
 import TestModePanel from './components/common/TestModePanel'
 
 // Check if running in development mode
-const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
-const TEST_MODE = DEV_MODE
+const DEV_MODE = import.meta.env.DEV || false
+const TEST_MODE = DEV_MODE && import.meta.env.VITE_DEV_MODE === 'true'
 
 function AppInner() {
   const { token, isAuthenticated, user, loading, error } = useAuth()
@@ -27,56 +27,49 @@ function AppInner() {
 
   useEffect(() => {
     async function bootstrap() {
-      // In dev mode, auto-login with admin credentials
-      if (DEV_MODE && !isAuthenticated) {
-        console.log('[App] Development mode: Auto-login with admin credentials')
-        // Simulate successful login
-        const mockUser = {
-          id: 1,
-          username: 'admin',
-          email: 'admin@payroll.com',
-          full_name: 'Development Admin',
-          role: 'admin',
-          divisions: ['PG1A', 'PG1B', 'PG2A', 'PG2B', 'DME', 'ARA', 'ARB1', 'ARB2', 'INFRA', 'AREC', 'IJL', 'STF-OFFICE', 'SECURITY']
-        }
-        // Auto-login
-        // You might need to update your AuthContext to handle this
-        // For now, let's continue with the regular flow
-      }
-
       if (!isAuthenticated || !user) return
 
       setInitError('')
       try {
         console.log('[App] Starting authenticated bootstrap...')
 
-        // Show filters modal for authenticated users
-        setFiltersOpen(true)
-
-        // In dev mode, set default values
+        // In dev mode, set default values and auto-proceed
         if (DEV_MODE) {
-          console.log('[App] Development mode: Setting default values')
+          console.log('[App] Development mode: Setting default values and auto-proceeding')
           setMonthInput('2025-05') // May 2025
-          setDivision('ARB2')      // ARB2 division
 
-          // Load gangs for ARB2 division
-          const gangsList = await fetchGangs(token || 'dev-token', 'ARB2', null, true)
-          setGangs(gangsList)
+          // Try to load gangs to find H1H, but auto-proceed even if not found
+          try {
+            // Load gangs for a default division
+            const gangsList = await fetchGangs(token, 'ARB2', null, true)
+            setGangs(gangsList)
+            setDivision('ARB2')
 
-          // Look for H1H gang
-          const h1hGang = gangsList.find(g => g.toUpperCase() === 'H1H')
-          if (h1hGang) {
-            setGang(h1hGang)
-            console.log('[App] Development mode: Found H1H gang, auto-submitting filters')
-            // Auto-submit filters in dev mode
-            setTimeout(() => {
-              setFiltersOpen(false)
-              setReady(true)
-            }, 1000)
-          } else {
-            console.log('[App] Development mode: H1H gang not found, showing filters')
+            // Look for H1H gang
+            const h1hGang = gangsList.find(g => g.toUpperCase() === 'H1H')
+            if (h1hGang) {
+              setGang(h1hGang)
+              console.log('[App] Development mode: Found H1H gang, auto-proceeding')
+            } else {
+              console.log('[App] Development mode: H1H gang not found, using fallback')
+              // Use fallback H1H gang since it may not be in the API response
+              setGang('H1H')
+            }
+          } catch (gangError) {
+            console.log('[App] Development mode: Gangs API error, using fallback H1H')
+            setGangs(['H1H', 'A1H', 'A1M', 'A2M'])
+            setDivision('ARB2')
+            setGang('H1H')
           }
+
+          // Auto-proceed in dev mode without showing filters
+          setTimeout(() => {
+            setReady(true)
+          }, 500)
           return
+        } else {
+          // Not in dev mode - show filters modal for authenticated users
+          setFiltersOpen(true)
         }
 
         // Load gangs from API based on user's accessible divisions
