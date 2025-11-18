@@ -83,6 +83,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
             beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
             brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
+            premi_koreksi_jumlah:'premi_koreksi', bpjs_pensiun_pekerja:'pot_bpjs_pensiun_pekerja', bpjs_pensiun_majikan:'pot_bpjs_pensiun_majikan',
             pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
           }
           return m[id] || id
@@ -183,6 +184,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
                 cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
                 beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
                 brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
+                premi_koreksi_jumlah:'premi_koreksi', bpjs_pensiun_pekerja:'pot_bpjs_pensiun_pekerja', bpjs_pensiun_majikan:'pot_bpjs_pensiun_majikan',
                 pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
               }
               return m[id] || id
