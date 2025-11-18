@@ -449,7 +449,11 @@ class HeaderService:
                 'jml_hk': 'jumlah_hk',
                 'gaji_pokok': 'gaji_pokok',
                 'total_tunjangan': 'total_tunjangan',
-                'upah_bersih': 'upah_bersih'
+                'upah_bersih': 'upah_bersih',
+                # Added new fields to ensure they're recognized by the column definitions
+                'premi_koreksi': 'premi_koreksi',
+                'bpjs_pensiun_pekerja': 'pot_bpjs_pensiun_pekerja',
+                'bpjs_pensiun_majikan': 'pot_bpjs_pensiun_majikan'
             }
 
             col_defs = []
