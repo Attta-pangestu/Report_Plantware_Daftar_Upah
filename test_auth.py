@@ -111,7 +111,7 @@ def test_authentication():
 if __name__ == "__main__":
     success = test_authentication()
     if success:
-        print("\n✓ Authentication test completed successfully!")
+        print("\n[SUCCESS] Authentication test completed successfully!")
     else:
-        print("\n✗ Authentication test failed!")
+        print("\n[FAILED] Authentication test failed!")
     sys.exit(0 if success else 1)

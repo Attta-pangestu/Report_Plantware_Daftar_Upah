@@ -133,10 +133,13 @@ class HeaderService:
             mid = time.perf_counter()
 
             # Pre-defined excluded items for better performance
+            # Note: Important deduction columns are NOW INCLUDED - not excluded
             excluded_lower = {
-                'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
-                'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
-                'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
+                # Remove these from exclusion as they should now be visible:
+                # 'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi'
+                'tunjangan jabatan',
+                'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', # Keep 'pph 21' but not 'pph21'
+                'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
                 'tunjangan premi', 'tunjangan beras'
             }
 
@@ -194,16 +197,17 @@ class HeaderService:
         mid = time.perf_counter()
 
         excluded = {
-            'KOREKSI',
-            'POTONGAN PPH21',
-            'POTONGAN SPSI',
+            # Remove important deduction columns from exclusion:
+            # 'KOREKSI',
+            # 'POTONGAN PPH21',
+            # 'POTONGAN SPSI',
+            # 'PPH21',
+            # 'SPSI',
             'TUNJANGAN JABATAN',
             'TUNJANGAN MASA KERJA',
             'PRUNING',
             'BRONDOL',
-            'PPH 21',
-            'PPH21',
-            'SPSI',
+            'PPH 21',  # Keep 'PPH 21' but not 'PPH21'
             'KOREKSI PANEN',
             'POTONGAN KOREKSI',
             'POTONGAN KOREKSI PANEN',
@@ -374,6 +378,10 @@ class HeaderService:
             "premi_harvesting_incentive_jumlah": "premi_harvesting_incentive",
             "premi_pupuk_jumlah": "premi_pupuk",
 
+            # Koreksi column (treated as Premi but actually deduction)
+            "premi_koreksi": "premi_koreksi",
+            "koreksi": "premi_koreksi",
+
             # Potongan columns
             "pph21": "pot_pph21",
             "potongan_kontan": "pot_kontan",
@@ -387,6 +395,16 @@ class HeaderService:
             "total2": "pot_total_2",
             "total3": "pot_total_3",
             "total4": "pot_total_4",
+
+            # Additional potongan columns from reference code
+            "pot_bpjs_kesehatan_pekerja": "pot_bpjs_kesehatan_pekerja",
+            "pot_bpjs_kesehatan_majikan": "pot_bpjs_kesehatan_majikan",
+            "pot_bpjs_pensiun_pekerja": "pot_bpjs_pensiun_pekerja",
+            "pot_bpjs_pensiun_majikan": "pot_bpjs_pensiun_majikan",
+            "pot_bpjs_jumlah": "pot_bpjs_jumlah",
+            "pot_bpjs_pekerja_total": "pot_bpjs_pekerja_total",
+            "pot_spsi": "pot_spsi",
+            "spsi": "pot_spsi",  # Alternative mapping
 
             # Final columns
             "total_tunjangan": "total_tunjangan",
@@ -521,6 +539,54 @@ class HeaderService:
                     found_premi = True
                     break
 
+            # Insert deduction columns after 'Upah Kotor' column
+            upah_kotor_idx = None
+            for idx, c in enumerate(col_defs):
+                if c.get('field') == 'jumlah_upah_kotor':
+                    upah_kotor_idx = idx
+                    break
+
+            if upah_kotor_idx is not None:
+                # Add important deduction columns as separate columns after Upah Kotor
+                deduction_columns = [
+                    {
+                        'field': 'pot_bpjs_kesehatan_pekerja',
+                        'headerName': 'BPJS Kesehatan Pekerja',
+                        'width': self._get_column_width('pot_bpjs_kesehatan_pekerja'),
+                        'type': self._get_column_type('pot_bpjs_kesehatan_pekerja'),
+                        'cellStyle': self._get_cell_style('pot_bpjs_kesehatan_pekerja')
+                    },
+                    {
+                        'field': 'pot_bpjs_pensiun_pekerja',
+                        'headerName': 'BPJS Pensiun Pekerja',
+                        'width': self._get_column_width('pot_bpjs_pensiun_pekerja'),
+                        'type': self._get_column_type('pot_bpjs_pensiun_pekerja'),
+                        'cellStyle': self._get_cell_style('pot_bpjs_pensiun_pekerja')
+                    },
+                    {
+                        'field': 'pot_spsi',
+                        'headerName': 'Iuran SPSI',
+                        'width': self._get_column_width('pot_spsi'),
+                        'type': self._get_column_type('pot_spsi'),
+                        'cellStyle': self._get_cell_style('pot_spsi')
+                    },
+                    {
+                        'field': 'pot_pph21',
+                        'headerName': 'PPh21',
+                        'width': self._get_column_width('pot_pph21'),
+                        'type': self._get_column_type('pot_pph21'),
+                        'cellStyle': self._get_cell_style('pot_pph21')
+                    },
+                    {
+                        'field': 'premi_koreksi',
+                        'headerName': 'Koreksi',
+                        'width': self._get_column_width('premi_koreksi'),
+                        'type': self._get_column_type('premi_koreksi'),
+                        'cellStyle': self._get_cell_style('premi_koreksi')
+                    }
+                ]
+                col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_columns
+
             # Reorder so 'no' and 'nama' are the first two columns
             lead = []
             rest = []
@@ -550,7 +616,11 @@ class HeaderService:
             "upah_dasar": 120, "hari_kerja": 100, "upah_pokok": 120, "jumlah_hk": 80,
             "gaji_pokok": 120, "total_tunjangan": 120, "upah_bersih": 120,
             "beras_rate": 100, "beras_jumlah": 100, "jabatan_rate": 100, "jabatan_jumlah": 100,
-            "masa_kerja_tahun": 100, "masa_kerja_jumlah": 120, "lembur_jam": 80, "lembur_jumlah": 120
+            "masa_kerja_tahun": 100, "masa_kerja_jumlah": 120, "lembur_jam": 80, "lembur_jumlah": 120,
+            # New columns for deduction components
+            "premi_koreksi": 120, "pot_bpjs_pensiun_pekerja": 150, "pot_bpjs_pensiun_majikan": 150,
+            "pot_bpjs_kesehatan_pekerja": 150, "pot_bpjs_kesehatan_majikan": 150,
+            "pot_bpjs_jumlah": 120, "pot_bpjs_pekerja_total": 140, "pot_spsi": 100
         }
         return width_mapping.get(field, 100)
 

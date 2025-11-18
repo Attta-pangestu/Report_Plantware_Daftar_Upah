@@ -57,6 +57,9 @@ class DaftarUpahTemplateEngineFixed:
     def load_template(self, template_file):
         """Load HTML template file"""
         template_path = self.template_dir / template_file
+        if not template_path.existst() : {
+            
+        }
         if not template_path.exists():
             raise FileNotFoundError(f"Template file not found: {template_path}")
 
@@ -251,6 +254,10 @@ class DaftarUpahTemplateEngineFixed:
         template = template.replace('{tahun}', data.get('tahun', ''))
         template = template.replace('{catatan}', data.get('catatan', ''))
         template = template.replace('{upah_dasar}', data.get('upah_dasar', ''))
+        template = template.replace('{total.upah_dasar}', self.format_rupiah_full(totals.get('upah_dasar', 0)))
+        
+        template = template.replace('{total.tunjangan_beras}', self.format_rupiah_full(totals.get('tunjangan_beras', 0)))
+        
 
         # Process employee data rows
         employee_rows = ""
@@ -300,6 +307,7 @@ class DaftarUpahTemplateEngineFixed:
             if output_file is None:
                 period = f"{data.get('bulan', 'unknown')}-{data.get('tahun', 'unknown')}"
                 output_file = f"daftar_upah_fixed_{period.lower()}.html"
+                
 
             print("Saving output...")
             output_path = self.output_dir / output_file

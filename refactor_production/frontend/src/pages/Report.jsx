@@ -309,8 +309,22 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
           cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
           gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
-          premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'), total_premi: agg('total_premi'),
-          jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
+          premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
+          // Koreksi column
+          premi_koreksi: agg('premi_koreksi'),
+          total_premi: agg('total_premi'),
+          jumlah_upah_kotor: agg('jumlah_upah_kotor'),
+          pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
+          // BPJS detailed columns
+          pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
+          pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
+          pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
+          pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
+          pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
+          pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
+          // SPSI column
+          pot_spsi: agg('pot_spsi'),
+          pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
 
         // Proses autohide hanya sekali saat data pertama kali dimuat
@@ -343,8 +357,22 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
               cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
               gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
-              premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'), total_premi: agg('total_premi'),
-              jumlah_upah_kotor: agg('jumlah_upah_kotor'), pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'), pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
+              premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
+              // Koreksi column
+              premi_koreksi: agg('premi_koreksi'),
+              total_premi: agg('total_premi'),
+              jumlah_upah_kotor: agg('jumlah_upah_kotor'),
+              pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
+              // BPJS detailed columns
+              pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
+              pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
+              pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
+              pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
+              pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
+              pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
+              // SPSI column
+              pot_spsi: agg('pot_spsi'),
+              pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
             }] : [])
 
             // Proses autohide hanya sekali saat data pertama kali dimuat (dev mode)
@@ -452,13 +480,41 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     if (!Array.isArray(cols) || !Array.isArray(data)) return cols
 
     const checkColumnHasData = (field) => {
-      // Jangan sembunyikan kolom esensial (no, jenis_kelamin, nik, nama)
-      // Jangan juga sembunyikan kolom yang bisa bernilai negatif/nol seperti koreksi dan bpjs pensiun
-      if (['no', 'jenis_kelamin', 'nik', 'nama', 'premi_koreksi', 'pot_bpjs_pensiun_pekerja', 'pot_bpjs_pensiun_majikan'].includes(field)) {
+      // Jangan sembunyikan kolom esensial dan kolom-kolom potongan/premi penting
+      const essentialColumns = [
+        // Basic essential columns
+        'no', 'jenis_kelamin', 'nik', 'nama',
+        // Payroll summary columns
+        'upah_pokok', 'total_tunjangan', 'upah_bersih',
+        // Koreksi column (treated as premi but actually deduction)
+        'premi_koreksi', 'koreksi',
+        // BPJS columns (should always be visible even if 0)
+        'pot_bpjs_kesehatan_pekerja', 'pot_bpjs_kesehatan_majikan',
+        'pot_bpjs_pensiun_pekerja', 'pot_bpjs_pensiun_majikan',
+        'pot_bpjs_kes', 'pot_bpjs_pek', 'pot_bpjs_maj',
+        'pot_bpjs_jumlah', 'pot_bpjs_pekerja_total',
+        // Other important deductions
+        'pot_spsi', 'spsi', 'pot_pph21', 'pph21',
+        // Important totals
+        'total_premi', 'total_potongan', 'jumlah_upah_kotor'
+      ]
+
+      if (essentialColumns.includes(field)) {
         return true
       }
-      // Untuk kolom lain, cek apakah ada data numeric > 0
-      return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) > 0)
+
+      // Untuk kolom premi lainnya, sembunyikan jika tidak ada data > 0
+      const premiColumns = [
+        'premi_brondol', 'premi_pruning', 'premi_angkut_material',
+        'premi_angkut_tbs', 'premi_harvesting', 'premi_harvesting_incentive', 'premi_pupuk'
+      ]
+
+      if (premiColumns.includes(field)) {
+        return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) > 0)
+      }
+
+      // Untuk kolom lain, sembunyikan jika tidak ada data
+      return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) !== 0)
     }
 
     const processColumn = (col) => {

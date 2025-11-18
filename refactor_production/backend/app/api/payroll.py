@@ -140,8 +140,9 @@ async def get_gangs(
     force: Optional[bool] = Query(False, description="Force refresh from database"),
     user=Depends(get_current_user_from_token)
 ):
-    """Get gang codes with optional division filtering and LIKE search"""
+    """Get gang codes with optional division filtering and LIKE search - UPDATED VERSION"""
     try:
+        print(f"[DEBUG] get_gangs called - division: {division}, search: {search}, force: {force}")
         if not division:
             accessible = gang_service.get_all_divisions() if user.role == 'admin' else user.divisions
             division = accessible[0] if accessible else None
@@ -149,8 +150,10 @@ async def get_gangs(
             if user.role != 'admin' and division not in (user.divisions or []):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Division not accessible")
 
-        # Use new gang service with division and search support
-        gangs = await gang_service.fetch_gangs_from_database(division=division, search=search, force=bool(force))
+        # Use gang service with real database connection
+        print(f"[DEBUG] About to call fetch_gangs_from_database with division: {division}")
+        gangs = gang_service.fetch_gangs_from_database(division=division, search=search, force=bool(force))
+        print(f"[DEBUG] fetch_gangs_from_database returned: {type(gangs)} with {len(gangs)} items")
 
         if division and not gangs:
             raise HTTPException(

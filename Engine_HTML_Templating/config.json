@@ -15,7 +15,8 @@
       "Majikan":  175998 
     },
     "potongan_bpjs": {
-      "gaji_pokok_min": 3876600
+      "gaji_pokok_min": 3876600, 
+      "iuran_spsi": 4000
     }
   }
 }

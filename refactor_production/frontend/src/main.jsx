@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/report.css'
+import './utils/httpSetup'
 
 const mount = document.getElementById('root') || (() => {
   const el = document.createElement('div')

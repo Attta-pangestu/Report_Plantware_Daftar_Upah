@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5174,
-    strictPort: true, // Always use port 5174
+    strictPort: false, // Allow other ports if 5174 is occupied
     proxy: isDev ? {
       '/auth': { target: 'http://localhost:8000', changeOrigin: true },
       '/employees': { target: 'http://localhost:8000', changeOrigin: true },

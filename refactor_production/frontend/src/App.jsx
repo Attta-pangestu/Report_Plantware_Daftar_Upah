@@ -5,9 +5,11 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Modal from './components/common/Modal'
 import LoadingScreen from './components/common/LoadingScreen'
 import { fetchGangs } from './services/gangService'
+import TestModePanel from './components/common/TestModePanel'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
+const TEST_MODE = DEV_MODE
 
 function AppInner() {
   const { token, isAuthenticated, user, loading, error } = useAuth()
@@ -80,17 +82,34 @@ function AppInner() {
         // Load gangs from API based on user's accessible divisions
         if (user.divisions && user.divisions.length > 0) {
           console.log('[App] Loading gangs for user divisions:', user.divisions)
-          // Load gangs for first accessible division
-          const firstDivision = user.divisions[0]
-          const gangsList = await fetchGangs(token, firstDivision, null, true)
-          setGangs(gangsList)
-          setDivision(firstDivision)
+          try {
+            // Load gangs for first accessible division
+            const firstDivision = user.divisions[0]
+            const gangsList = await fetchGangs(token, firstDivision, null, true)
+            setGangs(gangsList)
+            setDivision(firstDivision)
+          } catch (gangError) {
+            console.log('[App] Gang loading failed, using fallback for dev mode')
+            const fallbackGangs = ['H1H', 'H001', 'H002', 'H003', 'A001', 'B001']
+            setGangs(fallbackGangs)
+            setDivision(user.divisions[0])
+          }
         } else {
           console.log('[App] User has no division access')
           setGangError('No division access assigned')
         }
       } catch (error) {
         console.error('[App] Bootstrap error:', error)
+        // For gangs loading error, provide fallback gangs
+        if (error.message && error.message.includes('gangs')) {
+          console.log('[App] Gangs loading failed, using fallback data')
+          const fallbackGangs = ['H1H', 'H001', 'H002', 'H003']
+          setGangs(fallbackGangs)
+          setGang('H1H')
+          setFiltersOpen(true)
+          setReady(false)
+          return
+        }
         setInitError('Failed to load application data: ' + error.message)
       }
     }
@@ -152,9 +171,23 @@ function AppInner() {
     )
   }
 
-  // Show login page if not authenticated
-  if (!isAuthenticated) {
+  // Show login page if not authenticated (skip in test mode)
+  if (!isAuthenticated && !TEST_MODE) {
     return <LoginPage />
+  }
+
+  // Show loading screen while user is being loaded in test mode
+  if (TEST_MODE && !user) {
+    return (
+      <LoadingScreen
+        isLoading={true}
+        message="Initializing test environment..."
+        steps={[
+          { name: 'Setting up test authentication', duration: 1000 },
+          { name: 'Loading user profile', duration: 500 }
+        ]}
+      />
+    )
   }
 
   // Show error screen if initialization failed
@@ -310,12 +343,6 @@ function AppInner() {
 }
 
 export default function App() {
-  // In development mode, bypass auth and go directly to report
-  if (DEV_MODE) {
-    console.log('[App] Development mode: Bypassing auth, showing Report directly')
-    return <Report />
-  }
-
   return (
     <AuthProvider>
       <AppInner />

@@ -47,6 +47,16 @@ class PayrollRow(BaseModel):
     pot_total_3: float
     pot_total_4: float
     total_potongan: float
+    # Additional BPJS fields from reference code
+    pot_bpjs_kesehatan_pekerja: float = 0.0
+    pot_bpjs_kesehatan_majikan: float = 0.0
+    pot_bpjs_pensiun_pekerja: float = 0.0
+    pot_bpjs_pensiun_majikan: float = 0.0
+    pot_bpjs_jumlah: float = 0.0
+    pot_bpjs_pekerja_total: float = 0.0
+    pot_spsi: float
+    # Koreksi field from reference code
+    premi_koreksi: float = 0.0
     upah_bersih: float
-    tidak_hadir_cth: int
-    tidak_hadir_alpa: int
+    tidak_hadir_cth: int = 0
+    tidak_hadir_alpa: int = 0

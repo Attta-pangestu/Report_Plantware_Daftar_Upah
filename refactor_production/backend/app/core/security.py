@@ -1,13 +1,14 @@
 from typing import Optional, List
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from app.core.config import JWT_SECRET, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_DELTA
+from app.core.config import is_test_mode
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+security = HTTPBearer(auto_error=False)
 
 def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
@@ -28,7 +29,18 @@ def decode_token(token: str):
     except JWTError:
         return None
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
+    # TESTING ONLY
+    if is_test_mode():
+        return {
+            "sub": "test",
+            "role": "admin",
+            "divisions": ["PG1A", "PG1B", "PG2A", "PG2B", "DME", "ARA", "ARB1", "ARB2", "INFRA", "AREC", "IJL", "STF-OFFICE", "SECURITY"],
+            "exp": int((datetime.utcnow() + timedelta(days=3650)).timestamp())
+        }
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    token = credentials.credentials
     payload = decode_token(token)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

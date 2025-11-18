@@ -11,7 +11,17 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "mcp__obsidian-mcp-tools__get_server_info",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(npm run dev:test:*)",
+      "Bash(npx vite:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(cmd:*)",
+      "Bash(wmic:*)",
+      "Bash(TEST_MODE=true VITE_DEV_MODE=true python:*)"
     ],
     "deny": [],
     "ask": []

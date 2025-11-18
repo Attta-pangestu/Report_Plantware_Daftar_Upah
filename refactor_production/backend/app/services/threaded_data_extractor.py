@@ -1,6 +1,7 @@
 import threading
 import concurrent.futures
 import time
+import calendar
 from typing import List, Dict, Any, Optional, Tuple
 from database.services.database import Database
 from database.services.queries import Queries
@@ -110,12 +111,10 @@ class ThreadedDataExtractor:
                 SELECT DISTINCT
                     e.EmpCode as nik,
                     e.EmpName as nama,
-                    e.EmpSex as jenis_kelamin,
-                    e.JoinDate as tanggal_join,
-                    e.DeptCode as departemen,
-                    e.Position as jabatan,
+                    e.Gender as jenis_kelamin,
+                    e.LocCode as lokasi_kerja,
                     g.GangCode as gang_code
-                FROM HR_MASTEMPLOYEE e
+                FROM HR_EMPLOYEE e
                 LEFT JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
                 WHERE g.GangCode = ? OR ? = 'ALL'
                 ORDER BY e.EmpCode
@@ -124,24 +123,16 @@ class ThreadedDataExtractor:
         }
 
     def _get_attendance_query(self, gang_code: str, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get attendance data for the period"""
+        """Get attendance data for the period (returns basic structure, HK calculated later)"""
         return {
             'sql': """
-                SELECT
-                    e.EmpCode,
-                    COUNT(CASE WHEN a.Status = 'P' THEN 1 END) as hari_kerja,
-                    COUNT(CASE WHEN a.Status = 'H' THEN 1 END) as hadir,
-                    COUNT(CASE WHEN a.Status = 'L' THEN 1 END) libur,
-                    COUNT(CASE WHEN a.Status = 'S' THEN 1 END) as sakit,
-                    COUNT(CASE WHEN a.Status = 'I' THEN 1 END) as izin
-                FROM HR_MASTEMPLOYEE e
+                SELECT DISTINCT
+                    e.EmpCode
+                FROM HR_EMPLOYEE e
                 LEFT JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
-                LEFT JOIN HR_DAILYATTENDANCE a ON a.EmpCode = e.EmpCode
-                    AND a.AttDate >= ? AND a.AttDate < ?
                 WHERE g.GangCode = ? OR ? = 'ALL'
-                GROUP BY e.EmpCode
             """,
-            'params': [start_date, end_date, gang_code, gang_code.upper()]
+            'params': [gang_code, gang_code.upper()]
         }
 
     def _get_dynamic_premi_headers_query(self, gang_code: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -238,7 +229,7 @@ class ThreadedDataExtractor:
                     COUNT(CASE WHEN c.LeaveType = 'HAID' THEN 1 END) as cuti_haid_hari,
                     COUNT(CASE WHEN c.LeaveType = 'NATIONAL' THEN 1 END) as cuti_nasional_hari,
                     COUNT(CASE WHEN c.LeaveType = 'PERMIT' THEN 1 END) as cuti_izin_hari
-                FROM HR_MASTEMPLOYEE e
+                FROM HR_EMPLOYEE e
                 LEFT JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
                 LEFT JOIN HR_LEAVE c ON c.EmpCode = e.EmpCode
                     AND c.StartDate >= ? AND c.StartDate < ?
@@ -256,7 +247,7 @@ class ThreadedDataExtractor:
                     e.EmpCode,
                     ISNULL(e.BaseSalary, 0) as upah_dasar,
                     ISNULL(e.DailyWage, 0) as upah_harian
-                FROM HR_MASTEMPLOYEE e
+                FROM HR_EMPLOYEE e
                 LEFT JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
                 WHERE g.GangCode = ? OR ? = 'ALL'
             """,
@@ -336,13 +327,16 @@ class ThreadedDataExtractor:
                     'upah_pokok': upah_harian or 0
                 })
 
-        # Merge attendance data
+        # Calculate HK count using calendar (same approach as PayrollService)
+        hk_count = calendar.monthrange(year, month)[1]
+
+        # Set HK for all employees
         for att_row in results.get('attendance_data', []):
-            emp_code, hari_kerja, hadir, libur, sakit, izin = att_row
+            emp_code = att_row[0]  # Only EmpCode is returned now
             if emp_code in employee_data:
                 employee_data[emp_code].update({
-                    'hari_kerja': hadir or 0,
-                    'jumlah_hk': hari_kerja or 0
+                    'hari_kerja': hk_count,  # Will be adjusted later after cuti deductions
+                    'jumlah_hk': hk_count
                 })
 
         # Merge cuti data
@@ -412,7 +406,7 @@ class ThreadedDataExtractor:
                 elif 'BPJS MAJ' in doc_desc_upper:
                     employee_data[emp_code]['pot_bpjs_maj'] = amount or 0
 
-        # Calculate derived values
+        # Calculate derived values using correct formulas from reference code
         for emp_data in employee_data.values():
             # Calculate totals
             # Avoid double-counting: harvesting merged into harvesting_incentive
@@ -437,7 +431,12 @@ class ThreadedDataExtractor:
                 emp_data['pot_total_3'] + emp_data['pot_total_4']
             )
 
-            emp_data['jumlah_upah_kotor'] = emp_data['upah_pokok'] + emp_data['total_tunjangan'] + emp_data['total_premi']
+            # Correct calculation from reference code:
+            # gaji_pokok_jmlhk = hk_count * payrate (where payrate = upah_dasar)
+            # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
+            gaji_pokok_jmlhk = emp_data['jumlah_hk'] * emp_data['upah_dasar'] if emp_data['upah_dasar'] else 0
+            emp_data['gaji_pokok'] = gaji_pokok_jmlhk  # Update gaji_pokok to reflect correct calculation
+            emp_data['jumlah_upah_kotor'] = gaji_pokok_jmlhk + emp_data['total_tunjangan'] + emp_data['total_premi']
             emp_data['upah_bersih'] = emp_data['jumlah_upah_kotor'] - emp_data['total_potongan']
 
         # Convert to list and set sequence numbers

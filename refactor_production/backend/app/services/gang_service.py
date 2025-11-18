@@ -84,25 +84,37 @@ class GangService:
             List of gang codes filtered and searched according to parameters
         """
         try:
+            print(f"[DEBUG] Fetching gangs from database - division: {division}, search: {search}, force: {force}")
+
             # Get all gangs from database
             gangs_data = self.mssql_service.get_all_gangs()
+            print(f"[DEBUG] Got {len(gangs_data)} rows from database")
+
             codes = [gang["GangCode"] for gang in gangs_data if gang.get("GangCode")]
+            print(f"[DEBUG] Extracted {len(codes)} gang codes")
 
             # Apply division filter if specified
             if division:
+                print(f"[DEBUG] Applying division filter for: {division}")
                 codes = self.filter_gangs_by_division(codes, division)
+                print(f"[DEBUG] After division filter: {len(codes)} codes")
 
             # Apply search filter if provided (case-insensitive LIKE)
             if search and codes:
                 search_term = search.upper().strip()
                 # More flexible search - can match anywhere in gang code
                 codes = [c for c in codes if search_term in c.upper()]
+                print(f"[DEBUG] After search filter '{search_term}': {len(codes)} codes")
 
             # Sort results
-            return sorted(codes)
+            result = sorted(codes)
+            print(f"[DEBUG] Final result: {result[:10]}... (showing first 10)")
+            return result
 
         except Exception as e:
-            print(f"Error fetching gangs from database: {e}")
+            print(f"[ERROR] Error fetching gangs from database: {e}")
+            import traceback
+            traceback.print_exc()
             # Fallback to mock data if database fails
             return self.get_mock_gangs_data(division, search)
 

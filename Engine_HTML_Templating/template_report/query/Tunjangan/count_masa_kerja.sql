@@ -8,4 +8,4 @@ SELECT TOP 100
         ELSE DATEDIFF(year, "AppJoinGrpDate", GETDATE())
     END AS YearsSinceAppJoinGrpDate
 FROM "HR_EMPLOYMENT"
-WHERE "EmpCode" = 'H0093';
+WHERE "EmpCode" = '';

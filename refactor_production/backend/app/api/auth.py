@@ -6,7 +6,8 @@ from app.services.auth_service import auth_service
 from app.services.database_service import db_service
 from typing import List
 from datetime import datetime
-from app.core.config import is_test_mode
+from app.core.config import is_test_mode, get_testing_token
+import logging
 
 security = HTTPBearer(auto_error=False)
 
@@ -15,6 +16,9 @@ router = APIRouter(tags=["authentication"])
 # Helper dependency function
 async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     if is_test_mode():
+        # TESTING ONLY
+        if credentials is None:
+            logging.warning("TESTING ONLY: Access without Authorization header; injecting testing admin user")
         now = datetime.now()
         return User(
             id=0,
@@ -43,6 +47,15 @@ async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials 
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+# TESTING ONLY
+@router.get("/test-token")
+async def get_test_token():
+    if not is_test_mode():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not available in production")
+    token = get_testing_token()
+    logging.warning("TESTING ONLY: Issuing permanent test token")
+    return {"access_token": token, "token_type": "bearer", "expires": "never"}
 
 # Pydantic models for API
 class UserRegister(BaseModel):
