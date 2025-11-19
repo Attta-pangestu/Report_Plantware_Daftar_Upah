@@ -1,5 +1,23 @@
 import axios from 'axios'
 
+async function wait(ms) { return new Promise(res => setTimeout(res, ms)) }
+
+async function requestWithRetry(url, config, retries = 2, delayMs = 300, timeoutMs = 10000) {
+  let lastErr
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await axios.get(url, { timeout: timeoutMs, ...config })
+      return r
+    } catch (err) {
+      lastErr = err
+      if (attempt === retries) break
+      await wait(delayMs)
+      delayMs = Math.min(delayMs * 2, 2000)
+    }
+  }
+  throw lastErr
+}
+
 export async function fetchReportRows(token, { month, year, gang_code, fields, skip, limit, benchmark = false, monitor = false }) {
   const params = {}
   if (month) params.month = month
@@ -12,7 +30,7 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
   if (monitor) params.monitor = true
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
-  const r = await axios.get('/payroll/report', config)
+  const r = await requestWithRetry('/payroll/report', config)
   return r.data
 }
 
@@ -33,20 +51,41 @@ export async function fetchReportRowsSimple(token, { month, year, gang_code, ski
 
   try {
     console.log('[PayrollService] Using optimized real endpoint for best performance')
-    const r = await axios.get('/payroll/report/real', config)
+    const r = await requestWithRetry('/payroll/report/real', config)
     return r.data
   } catch (error) {
     console.error('[PayrollService] Real endpoint failed, falling back to simple endpoint:', error)
     // Fallback to simple endpoint if real endpoint fails
     try {
-      const r = await axios.get('/payroll/report/simple', config)
+      const r = await requestWithRetry('/payroll/report/simple', config)
       return r.data
     } catch (fallbackError) {
-      console.error('[PayrollService] All endpoints failed, using regular endpoint:', fallbackError)
-      // Last resort - use regular endpoint with minimal fields
-      return await fetchReportRows(token, { month, year, gang_code, fields: ['nik', 'nama', 'jenis_kelamin', 'upah_dasar', 'upah_pokok'], skip, limit })
+      console.error('[PayrollService] All endpoints failed:', fallbackError)
+      return []
     }
   }
+}
+
+export async function fetchReportAggregate(token, { month, year, gang_code }) {
+  const params = {}
+  if (month) params.month = month
+  if (year) params.year = year
+  if (gang_code) params.gang_code = gang_code
+  const config = { params }
+  if (token) config.headers = { Authorization: `Bearer ${token}` }
+  const r = await requestWithRetry('/payroll/report/aggregate', config, 1, 500, 60000)
+  return r.data
+}
+
+export async function fetchReportCount(token, { month, year, gang_code }) {
+  const params = {}
+  if (month) params.month = month
+  if (year) params.year = year
+  if (gang_code) params.gang_code = gang_code
+  const config = { params }
+  if (token) config.headers = { Authorization: `Bearer ${token}` }
+  const r = await requestWithRetry('/payroll/report/count', config, 2, 300, 5000)
+  return r.data
 }
 
 /**

@@ -27,8 +27,7 @@ class EmployeeRepositoryDB:
         self.config_file = Path(__file__).parent.parent.parent / "config.json"
         self.query = self._load_query()
         self.db_config = self._load_config()
-        # Use the database service for connection pooling
-        self.db = Database.instance(pool_size=20)
+        self.db = Database.instance()
 
     def _load_query(self) -> str:
         """Load SQL query from file - same as reference engine"""
@@ -97,52 +96,7 @@ class EmployeeRepositoryDB:
             rows = self.db.query_all(self.query, (gang_code.strip().upper() if gang_code else None,))
             print(f"[EmployeeRepo] Found {len(rows)} employee records")
 
-            # Development Mode Fallback: If no records found, try broader search
-            if len(rows) == 0 and gang_code:
-                print(f"[EmployeeRepo] No results, trying fallback query with broader search")
-                fallback_query = '''
-                    SELECT
-                        e."EmpCode" AS nik,
-                        e."EmpName" AS nama,
-                        CASE
-                            WHEN e."Gender" = 1 THEN 'L'
-                            WHEN e."Gender" = 2 THEN 'P'
-                            ELSE 'L'
-                        END AS jenis_kelamin,
-                        e."LocCode" AS loc_code,
-                        COALESCE(g."GangCode", e."LocCode") AS gang_code
-                    FROM "HR_EMPLOYEE" e
-                    LEFT JOIN "HR_GANGLN" g ON g."GangMember" = e."EmpCode"
-                    WHERE e."EmpCode" IS NOT NULL
-                        AND e."EmpName" IS NOT NULL
-                        AND (g."GangCode" = ? OR e."LocCode" = ? OR e."EmpCode" LIKE ?)
-                    ORDER BY e."EmpName"
-                '''
-                gang_code_clean = str(gang_code).strip().upper()
-                wildcard_param = f"%{gang_code_clean}%"
-                rows = self.db.query_all(fallback_query, (gang_code_clean, gang_code_clean, wildcard_param))
-                print(f"[EmployeeRepo] Fallback query found {len(rows)} employee records")
-
-                # Ultimate fallback: Get any employees if still no results
-                if len(rows) == 0:
-                    print(f"[EmployeeRepo] Still no results, getting sample employees for development")
-                    ultimate_fallback_query = '''
-                        SELECT TOP 10
-                            e."EmpCode" AS nik,
-                            e."EmpName" AS nama,
-                            CASE
-                                WHEN e."Gender" = 1 THEN 'L'
-                                WHEN e."Gender" = 2 THEN 'P'
-                                ELSE 'L'
-                            END AS jenis_kelamin,
-                            COALESCE(e."LocCode", 'DEV') AS loc_code,
-                            ? AS gang_code
-                        FROM "HR_EMPLOYEE" e
-                        WHERE e."EmpCode" IS NOT NULL AND e."EmpName" IS NOT NULL
-                        ORDER BY e."EmpName"
-                    '''
-                    rows = self.db.query_all(ultimate_fallback_query, (gang_code_clean,))
-                    print(f"[EmployeeRepo] Ultimate fallback found {len(rows)} employee records")
+            
 
             # Convert to dictionary format
             employees = []

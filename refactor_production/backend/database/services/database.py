@@ -2,6 +2,7 @@ import threading
 import queue
 import pyodbc
 import time
+import os
 from typing import Any, Iterable, Optional, Tuple, List
 from .logger import get_logger
 from ..config.settings import connection_string
@@ -10,11 +11,27 @@ class Database:
     _instance = None
     _lock = threading.Lock()
 
-    def __init__(self, pool_size: int = 20):  # Increased pool size for 50+ users
+    def __init__(self, pool_size: int = 20):
         self._logger = get_logger()
-        self._pool = queue.Queue(maxsize=pool_size)
-        self._pool_size = pool_size
-        self._connection_timeout = 60  # Increased timeout for complex queries
+        env_pool = os.getenv('DB_POOL_SIZE')
+        try:
+            effective_pool = int(env_pool) if env_pool else pool_size
+        except Exception:
+            effective_pool = pool_size
+        self._pool = queue.Queue(maxsize=effective_pool)
+        self._pool_size = effective_pool
+        try:
+            self._connection_timeout = int(os.getenv('DB_CONN_TIMEOUT', '60'))
+        except Exception:
+            self._connection_timeout = 60
+        try:
+            self._query_timeout = int(os.getenv('DB_QUERY_TIMEOUT', '30'))
+        except Exception:
+            self._query_timeout = 30
+        try:
+            self._query_retries = int(os.getenv('DB_QUERY_RETRIES', '2'))
+        except Exception:
+            self._query_retries = 2
         self._initialize_pool()
 
     def _initialize_pool(self):
@@ -33,7 +50,12 @@ class Database:
     def instance(cls, pool_size: int = 20):
         with cls._lock:
             if cls._instance is None:
-                cls._instance = Database(pool_size)
+                env_pool = os.getenv('DB_POOL_SIZE')
+                try:
+                    effective_pool = int(env_pool) if env_pool else pool_size
+                except Exception:
+                    effective_pool = pool_size
+                cls._instance = Database(effective_pool)
             return cls._instance
 
     def _create_conn(self):
@@ -190,45 +212,73 @@ class Database:
 
     def query_all(self, sql: str, params: Optional[Iterable[Any]] = None) -> List[Tuple]:
         cur = None
-        try:
-            with self.get_connection_context() as conn:
-                cur = conn.cursor()
-                if params:
-                    cur.execute(sql, *params)
-                else:
-                    cur.execute(sql)
-                rows = cur.fetchall()
-                return rows
-        except Exception as e:
-            self._logger.error(f"Query all failed: {e}")
-            raise
-        finally:
-            if cur:
-                try:
-                    cur.close()
-                except:
-                    pass
+        attempt = 0
+        delay = 0.5
+        while attempt <= getattr(self, '_query_retries', 2):
+            try:
+                with self.get_connection_context() as conn:
+                    cur = conn.cursor()
+                    try:
+                        cur.timeout = getattr(self, '_query_timeout', 30)
+                    except Exception:
+                        pass
+                    if params:
+                        cur.execute(sql, *params)
+                    else:
+                        cur.execute(sql)
+                    rows = cur.fetchall()
+                    return rows
+            except pyodbc.OperationalError as e:
+                self._logger.error(f"Query all operational error (attempt {attempt + 1}): {e}")
+                if attempt >= getattr(self, '_query_retries', 2):
+                    raise
+                time.sleep(delay)
+                delay = min(delay * 2, 2.0)
+                attempt += 1
+            except Exception as e:
+                self._logger.error(f"Query all failed: {e}")
+                raise
+            finally:
+                if cur:
+                    try:
+                        cur.close()
+                    except:
+                        pass
 
     def query_one(self, sql: str, params: Optional[Iterable[Any]] = None) -> Optional[Tuple]:
         cur = None
-        try:
-            with self.get_connection_context() as conn:
-                cur = conn.cursor()
-                if params:
-                    cur.execute(sql, *params)
-                else:
-                    cur.execute(sql)
-                row = cur.fetchone()
-                return row
-        except Exception as e:
-            self._logger.error(f"Query one failed: {e}")
-            raise
-        finally:
-            if cur:
-                try:
-                    cur.close()
-                except:
-                    pass
+        attempt = 0
+        delay = 0.5
+        while attempt <= getattr(self, '_query_retries', 2):
+            try:
+                with self.get_connection_context() as conn:
+                    cur = conn.cursor()
+                    try:
+                        cur.timeout = getattr(self, '_query_timeout', 30)
+                    except Exception:
+                        pass
+                    if params:
+                        cur.execute(sql, *params)
+                    else:
+                        cur.execute(sql)
+                    row = cur.fetchone()
+                    return row
+            except pyodbc.OperationalError as e:
+                self._logger.error(f"Query one operational error (attempt {attempt + 1}): {e}")
+                if attempt >= getattr(self, '_query_retries', 2):
+                    raise
+                time.sleep(delay)
+                delay = min(delay * 2, 2.0)
+                attempt += 1
+            except Exception as e:
+                self._logger.error(f"Query one failed: {e}")
+                raise
+            finally:
+                if cur:
+                    try:
+                        cur.close()
+                    except:
+                        pass
 
     class _Tx:
         def __init__(self, db: 'Database'):

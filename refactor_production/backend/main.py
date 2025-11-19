@@ -55,4 +55,9 @@ async def log_requests(request: Request, call_next):
     return response
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8002)
+    workers = 1
+    try:
+        workers = int(os.getenv("UVICORN_WORKERS", "1"))
+    except Exception:
+        workers = 1
+    uvicorn.run("main:app", host="0.0.0.0", port=8002, workers=workers)

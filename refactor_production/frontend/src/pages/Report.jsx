@@ -3,7 +3,7 @@ import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
-import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple } from '../services/payrollService'
+import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple, fetchReportAggregate, fetchReportCount } from '../services/payrollService'
 import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
@@ -38,6 +38,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const [referenceHtml, setReferenceHtml] = useState('')
   const [validationResult, setValidationResult] = useState(null)
   const gridRef = useRef(null)
+  const aggCacheRef = useRef(new Map())
+  const useInfinite = true
+  const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 200)
+  const fpsRef = useRef({ last: performance.now(), frames: 0 })
   useEffect(() => {
     async function loadHeaders() {
       setHeaderLoading(true)
@@ -322,33 +326,30 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         console.log('[Report] Fetching data with fields:', leafFields.length, 'fields')
 
-        // Enhanced data fetching with optimized strategy
-        let data = []
-        // Always use the optimized real endpoint for better performance and data accuracy
-        console.log('[Report] Using optimized real endpoint for production performance')
-        data = await fetchReportRowsSimple(finalToken, {
-          month: monthValue,
-          year: yearValue,
-          gang_code: finalGangCode,
-          skip: 0,
-          limit: 50
-        })
-
-        // If real endpoint returns no data, try fallback
-        if (!data || data.length === 0) {
-          console.warn('[Report] No data from optimized endpoint, trying fallback')
-          data = await fetchReportRows(finalToken, {
-            month: monthValue,
-            year: yearValue,
-            gang_code: finalGangCode,
-            fields: leafFields.slice(0, 10), // Only essential fields
-            benchmark: true,
-            monitor: false
-          })
+        let safe = []
+        if (useInfinite) {
+          const key = `${finalGangCode}:${yearValue}:${monthValue}`
+          const existing = aggCacheRef.current.get(key)
+          if (existing) {
+            const pinned0 = { no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL' }
+            const assign0 = (k) => { pinned0[k] = Math.round(Number(existing[k] || 0)) }
+            assign0('upah_pokok'); assign0('beras_jumlah'); assign0('jabatan_jumlah'); assign0('masa_kerja_jumlah'); assign0('lembur_jumlah'); assign0('total_tunjangan'); assign0('total_premi'); assign0('jumlah_upah_kotor'); assign0('pot_bpjs_jumlah'); assign0('total_potongan'); assign0('upah_bersih')
+            setPinnedBottom([pinned0])
+          }
+          fetchReportAggregate(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+            .then(totals => {
+              aggCacheRef.current.set(key, totals)
+              const pinned = { no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL' }
+              const assign = (k) => { pinned[k] = Math.round(Number(totals[k] || 0)) }
+              assign('upah_pokok'); assign('beras_jumlah'); assign('jabatan_jumlah'); assign('masa_kerja_jumlah'); assign('lembur_jumlah'); assign('total_tunjangan'); assign('total_premi'); assign('jumlah_upah_kotor'); assign('pot_bpjs_jumlah'); assign('total_potongan'); assign('upah_bersih')
+              setPinnedBottom([pinned])
+            })
+            .catch(() => {})
+        } else {
+          const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+          setRows(Array.isArray(data) ? data : [])
+          safe = Array.isArray(data) ? data : []
         }
-
-        setRows(data)
-        const safe = Array.isArray(data) ? data : []
         
         // Debug: Tampilkan data baris pertama di console
         if (safe.length > 0) {
@@ -474,6 +475,23 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       run()
     }
   }, [finalToken, finalMonth, finalYear, finalGangCode, columnDefs])
+
+  useEffect(() => {
+    let rafId = 0
+    const loop = (t) => {
+      fpsRef.current.frames += 1
+      const dt = t - fpsRef.current.last
+      if (dt >= 1000) {
+        const fps = Math.round((fpsRef.current.frames * 1000) / dt)
+        console.log('[Perf] FPS:', fps)
+        fpsRef.current.last = t
+        fpsRef.current.frames = 0
+      }
+      rafId = requestAnimationFrame(loop)
+    }
+    rafId = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafId)
+  }, [])
 
   const baseCol = {
     resizable: true,
@@ -805,7 +823,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     </div>
   )
 
-  if (!rows || rows.length === 0) return (
+  if (!useInfinite && (!rows || rows.length === 0)) return (
     <div style={{
       display: 'flex',
       justifyContent: 'center',
@@ -876,18 +894,20 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           ref={gridRef}
           columnDefs={enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)}
           rowData={rows}
+          rowModelType={'infinite'}
+          cacheBlockSize={INFINITE_BATCH_SIZE}
+          maxBlocksInCache={5}
+          getRowId={params => params.data?.nik || params.data?.NIK || params.data?.no}
           defaultColDef={baseCol}
           rowClassRules={rowClassRules}
           pinnedBottomRowData={pinnedBottom}
           rowSelection={'single'}
-          pagination={true}
-          paginationPageSize={20}
-          paginationPageSizeSelector={[10, 20, 50, 100]}
+          pagination={false}
           rowBuffer={20}
           enableRangeSelection={true}
           suppressRowClickSelection={true}
           animateRows={true}
-          domLayout='autoHeight'
+          domLayout='normal'
           sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
           getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
           onGridReady={params => {
@@ -899,6 +919,32 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             console.log('[AG Grid] Grid ready with columns:', activeColumnDefs.length)
             console.log('[AG Grid] Rows loaded:', rows.length)
             console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)
+            const datasource = {
+              getRows: async rq => {
+                const start = rq.startRow
+                const end = rq.endRow
+                const monthValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[1], 10) : finalMonth
+                const yearValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[0], 10) : finalYear
+                const batch = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: start, limit: end - start })
+                let rowCount = undefined
+                try {
+                  const key = `${finalGangCode}:${yearValue}:${monthValue}`
+                  const cached = aggCacheRef.current.get(key)
+                  if (cached && typeof cached.count === 'number') {
+                    rowCount = Number(cached.count)
+                  } else {
+                    const c = await fetchReportCount(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+                    if (c && typeof c.count === 'number') {
+                      rowCount = Number(c.count)
+                      const existing = aggCacheRef.current.get(key) || {}
+                      aggCacheRef.current.set(key, { ...existing, count: rowCount })
+                    }
+                  }
+                } catch {}
+                rq.successCallback(batch || [], rowCount)
+              }
+            }
+            params.api.setDatasource(datasource)
           }}
         />
       </div>

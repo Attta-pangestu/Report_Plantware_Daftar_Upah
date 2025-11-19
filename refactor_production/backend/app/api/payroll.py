@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status, Response
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime
+import asyncio
+import os
 from app.models.user import User
 from app.services.payroll_service import PayrollService
 from app.services.gang_service import GangService
@@ -225,19 +227,27 @@ async def get_dynamic_headers(
 
         if use_threading:
             # Use optimized threaded service
-            headers = threaded_header_service.generate_optimized_headers_parallel(
-                month=month,
-                year=year,
-                gang_code=gang_code
-            )
+            try:
+                headers = await asyncio.wait_for(asyncio.to_thread(
+                    threaded_header_service.generate_optimized_headers_parallel,
+                    month=month,
+                    year=year,
+                    gang_code=gang_code
+                ), timeout=int(os.getenv('REQUEST_TIMEOUT_SEC','30')))
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Header generation timed out")
             processing_type = "threaded"
         else:
             # Use original service
-            headers = header_service.generate_dynamic_headers(
-                month=month,
-                year=year,
-                gang_code=gang_code
-            )
+            try:
+                headers = await asyncio.wait_for(asyncio.to_thread(
+                    header_service.generate_dynamic_headers,
+                    month=month,
+                    year=year,
+                    gang_code=gang_code
+                ), timeout=int(os.getenv('REQUEST_TIMEOUT_SEC','30')))
+            except asyncio.TimeoutError:
+                raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Header generation timed out")
             processing_type = "sequential"
 
         execution_time = time.perf_counter() - start_time
@@ -1044,9 +1054,34 @@ async def report_real_data(
 
         svc = PayrollService()
         repo = EmployeeRepositoryDB()
-        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit)
+        timeout_sec = int(os.getenv('REQUEST_TIMEOUT_SEC', '30'))
+        retries = 2
+        delay = 0.5
+        last_exc = None
+        for attempt in range(retries + 1):
+            try:
+                rows = await asyncio.wait_for(
+                    svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit),
+                    timeout=timeout_sec
+                )
+                break
+            except asyncio.TimeoutError as te:
+                last_exc = te
+                logger.error(f"report_real_data timeout (attempt {attempt + 1})")
+                if attempt == retries:
+                    raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Request timed out")
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 2.0)
+            except Exception as exc:
+                last_exc = exc
+                logger.error(f"report_real_data error (attempt {attempt + 1}): {exc}")
+                if attempt == retries:
+                    raise
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 2.0)
 
-        cache.set(cache_key, rows, ttl=120)
+        ttl = int(os.getenv('CACHE_TTL_SECONDS', '120'))
+        cache.set(cache_key, rows, ttl=ttl)
         logger.info(f"Cached payroll data for gang {gang_code} ({len(rows)} records)")
         return rows
     except Exception as e:
@@ -1067,9 +1102,37 @@ async def report_simple_data(
 ):
     try:
         logger.info(f"payroll_report_simple gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} test_mode={is_test_mode()}")
+        cache = CacheService.instance()
+        cache_key = f"payroll_simple:{gang_code}:{month}:{year}:{skip}:{limit}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
         svc = PayrollService()
         repo = EmployeeRepositoryDB()
-        rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit)
+        timeout_sec = int(os.getenv('REQUEST_TIMEOUT_SEC', '30'))
+        retries = 2
+        delay = 0.5
+        for attempt in range(retries + 1):
+            try:
+                rows = await asyncio.wait_for(
+                    svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit),
+                    timeout=timeout_sec
+                )
+                break
+            except asyncio.TimeoutError:
+                logger.error(f"report_simple_data timeout (attempt {attempt + 1})")
+                if attempt == retries:
+                    raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Request timed out")
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 2.0)
+            except Exception as exc:
+                logger.error(f"report_simple_data error (attempt {attempt + 1}): {exc}")
+                if attempt == retries:
+                    raise
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 2.0)
+        ttl = int(os.getenv('CACHE_TTL_SECONDS', '120'))
+        cache.set(cache_key, rows, ttl=ttl)
         return rows
     except Exception as e:
         logger.error(f"Simple payroll endpoint failed: {e}")
@@ -1077,3 +1140,88 @@ async def report_simple_data(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Simple payroll endpoint failed: {str(e)}"
         )
+
+@router.get("/report/aggregate")
+async def report_aggregate(
+    gang_code: Optional[str] = Query("H1H"),
+    month: Optional[int] = Query(5),
+    year: Optional[int] = Query(2025),
+):
+    try:
+        logger.info(f"payroll_report_aggregate gang_code={gang_code} month={month} year={year}")
+        cache = CacheService.instance()
+        cache_key = f"payroll_aggregate:{gang_code}:{month}:{year}"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+
+        svc = PayrollService()
+        repo = EmployeeRepositoryDB()
+        timeout_sec = int(os.getenv('REQUEST_TIMEOUT_SEC', '30'))
+        page_size = 200
+        offset = 0
+        totals: Dict[str, float] = {
+            'count': 0,
+            'upah_pokok': 0.0,
+            'beras_jumlah': 0.0,
+            'jabatan_jumlah': 0.0,
+            'masa_kerja_jumlah': 0.0,
+            'lembur_jumlah': 0.0,
+            'total_tunjangan': 0.0,
+            'total_premi': 0.0,
+            'jumlah_upah_kotor': 0.0,
+            'pot_bpjs_jumlah': 0.0,
+            'total_potongan': 0.0,
+            'upah_bersih': 0.0,
+        }
+        while True:
+            rows = await asyncio.wait_for(
+                svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=offset, limit=page_size),
+                timeout=timeout_sec
+            )
+            if not rows:
+                break
+            for r in rows:
+                totals['count'] += 1
+                totals['upah_pokok'] += float(getattr(r, 'upah_pokok', 0) or 0)
+                totals['beras_jumlah'] += float(getattr(r, 'beras_jumlah', 0) or 0)
+                totals['jabatan_jumlah'] += float(getattr(r, 'jabatan_jumlah', 0) or 0)
+                totals['masa_kerja_jumlah'] += float(getattr(r, 'masa_kerja_jumlah', 0) or 0)
+                totals['lembur_jumlah'] += float(getattr(r, 'lembur_jumlah', 0) or 0)
+                totals['total_tunjangan'] += float(getattr(r, 'total_tunjangan', 0) or 0)
+                totals['total_premi'] += float(getattr(r, 'total_premi', 0) or 0)
+                totals['jumlah_upah_kotor'] += float(getattr(r, 'jumlah_upah_kotor', 0) or 0)
+                totals['pot_bpjs_jumlah'] += float(getattr(r, 'pot_bpjs_jumlah', 0) or 0)
+                totals['total_potongan'] += float(getattr(r, 'total_potongan', 0) or 0)
+                totals['upah_bersih'] += float(getattr(r, 'upah_bersih', 0) or 0)
+            offset += page_size
+
+        ttl = int(os.getenv('CACHE_TTL_SECONDS', '120'))
+        cache.set(cache_key, totals, ttl=ttl)
+        return totals
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Aggregation timed out")
+    except Exception as e:
+        logger.error(f"Aggregate payroll endpoint failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/report/count")
+async def report_count(
+    gang_code: Optional[str] = Query("H1H"),
+    month: Optional[int] = Query(5),
+    year: Optional[int] = Query(2025),
+):
+    try:
+        from database.services.database import Database
+        db = Database.instance()
+        sql = """
+            SELECT COUNT(DISTINCT g.GangMember)
+            FROM HR_GANGLN g
+            WHERE g.GangCode = ? OR ? = 'ALL'
+        """
+        row = db.query_one(sql, (gang_code, str(gang_code).upper()))
+        count = int(row[0]) if row and row[0] is not None else 0
+        return {"count": count}
+    except Exception as e:
+        logger.error(f"Count endpoint failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

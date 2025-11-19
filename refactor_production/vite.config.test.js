@@ -12,20 +12,20 @@ export default defineConfig({
     port: 5175,  // Ganti ke port 5175 agar sesuai dengan URL Anda
     strictPort: false, // Allow other ports if 5175 is occupied
     proxy: isDev ? {
-      '/auth': { target: 'http://localhost:8002', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8002', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8002', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8002', changeOrigin: true }
+      '/auth': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/employees': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/payroll': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/reports': { target: 'http://127.0.0.1:8002', changeOrigin: true }
     } : {
       '/api/login': {
         target: 'http://localhost:8002',
         changeOrigin: true,
         rewrite: () => '/auth/login'
       },
-      '/auth': { target: 'http://localhost:8002', changeOrigin: true },
-      '/employees': { target: 'http://localhost:8002', changeOrigin: true },
-      '/payroll': { target: 'http://localhost:8002', changeOrigin: true },
-      '/reports': { target: 'http://localhost:8002', changeOrigin: true }
+      '/auth': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/employees': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/payroll': { target: 'http://127.0.0.1:8002', changeOrigin: true },
+      '/reports': { target: 'http://127.0.0.1:8002', changeOrigin: true }
     }
   }
 })

@@ -65,11 +65,14 @@ cd frontend
 # Install dependencies
 npm install
 
-# Run development server
+# Run development server (default port 5173)
 npm run dev
 
-# Run with development mode enabled
+# Run with development mode enabled (port 5175)
 npm run dev:test
+
+# Run on alternative port 5175
+npm run dev:5175
 
 # Build for production
 npm run build
@@ -83,6 +86,14 @@ npm run preview
 # Test database connection
 cd backend
 python -c "from database.services.database import Database; print('Connection healthy' if Database.instance().test_connection() else 'Connection failed')"
+
+# Initialize database with connection pooling
+cd backend
+python -c "from database.services.database import Database; db = Database.instance(pool_size=5); print('Database initialized')"
+
+# Run database queries
+cd backend
+python -c "from database.services.database import Database; db = Database.instance(); results = db.query_all('SELECT * FROM employees', []); print(results)"
 ```
 
 ## Configuration
@@ -149,8 +160,8 @@ Database configuration is loaded from `../Explore_database/config.json` with fal
 ### Running the Full Application
 1. Start the backend server: `cd backend && python main.py`
 2. Start the frontend development server: `cd frontend && npm run dev:test`
-3. Access the application at `http://localhost:5174`
-4. Backend API available at `http://localhost:8000`
+3. Access the application at `http://localhost:5175`
+4. Backend API available at `http://localhost:8002`
 
 ### Testing Performance
 - Use `/payroll/performance/compare` endpoint to benchmark threaded vs sequential processing
@@ -186,9 +197,40 @@ AG-Grid is configured with:
 - Frontend supports mock authentication in development mode
 - Database connection pooling handles concurrent requests efficiently
 
+## Database Module
+
+The database module provides centralized database access with connection pooling and error handling:
+
+### Structure
+- `backend/database/config/` - Database configuration settings
+- `backend/database/models/` - Database model definitions
+- `backend/database/queries/` - SQL query definitions (JSON format, group-based)
+- `backend/database/services/` - Core database services (pooling, transactions, logging)
+
+### Features
+- Connection pooling with configurable pool sizes
+- Automatic error handling and logging
+- Transaction support with context managers
+- Query organization using JSON files with `?` placeholders
+- Support for multiple database environments
+
+### Usage Patterns
+```python
+# Initialize database connection pool
+db = Database.instance(pool_size=5)
+
+# Execute queries
+results = db.query_all(sql, params)
+
+# Use transactions
+with db.transaction() as cur:
+    cur.execute("INSERT INTO table VALUES (?, ?)", [value1, value2])
+```
+
 ## Performance Considerations
 
 - Threaded processing can improve performance by 2-3x for large datasets
 - Memory monitoring available for data extraction operations
 - Pagination recommended for reports with >1000 rows
 - Connection pooling prevents database connection exhaustion
+- Database queries use parameterized statements with `?` placeholders for security
