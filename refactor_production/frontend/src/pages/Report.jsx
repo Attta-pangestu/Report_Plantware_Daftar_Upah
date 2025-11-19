@@ -59,23 +59,23 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         const headersData = await fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode)
         setHeaders(headersData)
 
-        // Extract hierarchy headers for 3-level header structure
+        // Use hierarchy section to preserve the 3-level header structure
         if (headersData) {
           const tableStructure = headersData.table_structure || {}
-          const generatedHeaders = tableStructure.generated_headers || {}
+          const hierarchy = tableStructure.hierarchy || {}
           setHierarchyHeaders({
-            level1: generatedHeaders.level_1?.columns || [],
-            level2: generatedHeaders.level_2?.columns || [],
-            level3: generatedHeaders.level_3?.columns || []
+            level1: hierarchy.level_1?.columns || [],
+            level2: hierarchy.level_2?.columns || [],
+            level3: hierarchy.level_3?.columns || []
           })
         } else {
           setHierarchyHeaders({ level1: [], level2: [], level3: [] })
         }
 
-        const gen = headersData?.table_structure?.generated_headers || {}
-        const l1 = gen?.level_1?.columns || []
-        const l2 = gen?.level_2?.columns || []
-        const l3 = gen?.level_3?.columns || []
+        const hier = headersData?.table_structure?.hierarchy || {}
+        const l1 = hier?.level_1?.columns || []
+        const l2 = hier?.level_2?.columns || []
+        const l3 = hier?.level_3?.columns || []
         const l2ByParent = {}
         l2.forEach(c => { const p = c.parent; if (!l2ByParent[p]) l2ByParent[p] = []; l2ByParent[p].push(c) })
         const l3ByParent = {}
@@ -91,23 +91,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           }
           return m[id] || id
         }
-        const built = []
-        const leftColumns = []
-        const otherColumns = []
-
-        l1.forEach(c1 => {
+        const built = l1.map(c1 => {
           const childrenIds = c1.children || []
           if (!childrenIds || childrenIds.length === 0) {
             const field = mapField(c1.id)
-            if (field) {
-              const colDef = { field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined }
-              if (['no','nama'].includes(field)) {
-                leftColumns.push(colDef)
-              } else {
-                otherColumns.push(colDef)
-              }
-            }
-            return
+            return field ? { field, headerName: c1.text } : null
           }
           const group2 = (l2ByParent[c1.id] || []).map(c2 => {
             const isPremiHI = String(c2.text || '').toUpperCase().includes('PREMI HARVESTING') && String(c2.text || '').toUpperCase().includes('INCENTIVE')
@@ -117,37 +105,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             }
             return { headerName: c2.text, children: leaves }
           })
-          otherColumns.push({ headerName: c1.text, children: group2 })
-        })
-
-        // Pastikan kolom utama (no, gender, nik, name) berada di paling kiri dan selalu tampil
-        const essentialColumns = []
-        const remainingLeftColumns = []
-
-        leftColumns.forEach(col => {
-          if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(col.field)) {
-            essentialColumns.push(col)
-          } else {
-            remainingLeftColumns.push(col)
-          }
-        })
-
-        // Urutkan essential columns: no, gender, nik, nama
-        const orderedEssential = []
-        if (essentialColumns.some(c => c.field === 'no')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'no'))
-        }
-        if (essentialColumns.some(c => c.field === 'jenis_kelamin')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'jenis_kelamin'))
-        }
-        if (essentialColumns.some(c => c.field === 'nik')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'nik'))
-        }
-        if (essentialColumns.some(c => c.field === 'nama')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'nama'))
-        }
-
-        built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
+          return { headerName: c1.text, children: group2 }
+        }).filter(Boolean)
         const chosen = headersData ? built : []
         const leafFields = []
         const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
@@ -767,27 +726,29 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       </div>
 
       <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
-        <AgGridReact
-          ref={gridRef}
-          columnDefs={enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)}
-          rowData={rows}
-          rowModelType={'infinite'}
-          cacheBlockSize={INFINITE_BATCH_SIZE}
-          maxBlocksInCache={5}
-          getRowId={params => params.data?.nik || params.data?.NIK || params.data?.no}
-          defaultColDef={baseCol}
-          rowClassRules={rowClassRules}
-          pinnedBottomRowData={pinnedBottom}
-          rowSelection={'single'}
-          pagination={false}
-          rowBuffer={20}
-          enableRangeSelection={true}
-          suppressRowClickSelection={true}
-          animateRows={true}
-          domLayout='normal'
-          sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
-          getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
-          onGridReady={params => {
+          <AgGridReact
+            ref={gridRef}
+            columnDefs={enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)}
+            rowData={rows}
+            rowModelType={'infinite'}
+            cacheBlockSize={INFINITE_BATCH_SIZE}
+            maxBlocksInCache={5}
+            getRowId={params => params.data?.nik || params.data?.NIK || params.data?.no}
+            defaultColDef={baseCol}
+            rowClassRules={rowClassRules}
+            pinnedBottomRowData={pinnedBottom}
+            rowSelection={'single'}
+            pagination={false}
+            rowBuffer={20}
+            enableRangeSelection={true}
+            suppressRowClickSelection={true}
+            animateRows={true}
+            domLayout='normal'
+            headerHeight={32}
+            groupHeaderHeight={32}
+            sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
+            getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
+            onGridReady={params => {
             if (rows.length > 0) {
               params.api.ensureIndexVisible(0, 'top')
             }
