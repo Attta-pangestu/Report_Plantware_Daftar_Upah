@@ -249,6 +249,23 @@ class HeaderService:
 
         # Process each level
         level_1_columns = hierarchy.get('level_1', {}).get('columns', [])
+        try:
+            premi_idx = None
+            tunj_idx = None
+            for i, c in enumerate(level_1_columns):
+                cid = (c.get('id') or '').strip().lower()
+                txt = (c.get('text') or '').strip().upper()
+                if cid == 'premi' or txt == 'PREMI':
+                    premi_idx = i
+                if cid == 'tunjangan' or txt == 'TUNJANGAN':
+                    tunj_idx = i
+            if premi_idx is not None and tunj_idx is not None and premi_idx != tunj_idx + 1:
+                col = level_1_columns.pop(premi_idx)
+                insert_at = min(tunj_idx + 1, len(level_1_columns))
+                level_1_columns.insert(insert_at, col)
+                hierarchy.get('level_1', {})['columns'] = level_1_columns
+        except Exception:
+            pass
         level_2_columns = hierarchy.get('level_2', {}).get('columns', [])
         level_3_columns = hierarchy.get('level_3', {}).get('columns', [])
 
@@ -386,9 +403,9 @@ class HeaderService:
             "premi_harvesting_incentive_jumlah": "premi_harvesting_incentive",
             "premi_pupuk_jumlah": "premi_pupuk",
 
-            # Koreksi column (treated as Premi but actually deduction)
-            "premi_koreksi": "premi_koreksi",
-            "koreksi": "premi_koreksi",
+            # Koreksi mapped as Potongan instead of Premi
+            "premi_koreksi": "pot_koreksi",
+            "koreksi": "pot_koreksi",
 
             # Potongan columns
             "pph21": "pot_pph21",
@@ -502,33 +519,92 @@ class HeaderService:
                     continue
 
                 level2_cols = l2_by_parent.get(c1_id, [])
-                group2_defs = []
-                for c2 in level2_cols:
-                    t2 = (c2.get('text') or '').strip().upper()
-                    c1_text_upper = (c1.get('text') or '').strip().upper()
-                    if 'PREMI' in c1_text_upper and t2 in {'TOTAL PREMI', 'UPAH KOTOR'}:
-                        continue
-                    c2_id = c2.get('id')
-                    level3_cols = l3_by_parent.get(c2_id, [])
-                    leaf_defs = []
-                    for c3 in level3_cols:
-                        field = self._map_to_data_field(c3.get('id'))
-                        leaf_defs.append({
-                            'field': field,
-                            'headerName': c3.get('text'),
-                            'width': self._get_column_width(field),
-                            'type': self._get_column_type(field),
-                            'cellStyle': self._get_cell_style(field)
-                        })
-                    group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
-                col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                c1_text_upper = (c1.get('text') or '').strip().upper()
+                if 'PREMI' in c1_text_upper:
+                    dyn = self._compute_dynamic_premi_headers_db(month or 0, year or 0, gang_code or '')
+                    fixed = []
+                    dynamic_slots = []
+                    for c2 in level2_cols:
+                        t2 = (c2.get('text') or '').strip().upper()
+                        if 'BRONDOL' in t2 or 'PRUNING' in t2:
+                            fixed.append(c2)
+                        else:
+                            # Exclude Koreksi from Premi group
+                            if 'KOREKSI' in t2:
+                                continue
+                            dynamic_slots.append(c2)
+                    group2_defs = []
+                    for c2 in fixed:
+                        c2_id = c2.get('id')
+                        level3_cols = l3_by_parent.get(c2_id, [])
+                        leaf_defs = []
+                        for c3 in level3_cols:
+                            field = self._map_to_data_field(c3.get('id'))
+                            leaf_defs.append({
+                                'field': field,
+                                'headerName': c3.get('text'),
+                                'width': self._get_column_width(field),
+                                'type': self._get_column_type(field),
+                                'cellStyle': self._get_cell_style(field)
+                            })
+                        group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                    for i, c2 in enumerate(dynamic_slots):
+                        if i >= len(dyn):
+                            continue
+                        c2_id = c2.get('id')
+                        level3_cols = l3_by_parent.get(c2_id, [])
+                        leaf_defs = []
+                        for c3 in level3_cols:
+                            field = self._map_to_data_field(c3.get('id'))
+                            leaf_defs.append({
+                                'field': field,
+                                'headerName': c3.get('text'),
+                                'width': self._get_column_width(field),
+                                'type': self._get_column_type(field),
+                                'cellStyle': self._get_cell_style(field)
+                            })
+                        group2_defs.append({ 'headerName': dyn[i], 'children': leaf_defs })
+                    col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                else:
+                    group2_defs = []
+                    for c2 in level2_cols:
+                        c2_id = c2.get('id')
+                        level3_cols = l3_by_parent.get(c2_id, [])
+                        leaf_defs = []
+                        for c3 in level3_cols:
+                            field = self._map_to_data_field(c3.get('id'))
+                            leaf_defs.append({
+                                'field': field,
+                                'headerName': c3.get('text'),
+                                'width': self._get_column_width(field),
+                                'type': self._get_column_type(field),
+                                'cellStyle': self._get_cell_style(field)
+                            })
+                        group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                    col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
-            # Insert summary columns after top-level 'PREMI' (only once)
+            # Insert 'Upah Kotor' right after 'Total Tunjangan' at level 1
+            tunj_idx = None
+            for idx, c in enumerate(col_defs):
+                if c.get('field') == 'total_tunjangan':
+                    tunj_idx = idx
+                    break
+            if tunj_idx is not None:
+                col_defs[tunj_idx+1:tunj_idx+1] = [
+                    {
+                        'field': 'jumlah_upah_kotor',
+                        'headerName': 'Upah Kotor',
+                        'width': self._get_column_width('jumlah_upah_kotor'),
+                        'type': self._get_column_type('jumlah_upah_kotor'),
+                        'cellStyle': self._get_cell_style('jumlah_upah_kotor')
+                    }
+                ]
+
+            # Insert 'Total Premi' as a summary column right after top-level 'PREMI'
             found_premi = False
             for idx, c in enumerate(col_defs):
                 c_name = (c.get('headerName') or '').strip().upper()
                 if c_name == 'PREMI' and not found_premi:
-                    # Insert Total Premi and Upah Kotor as level 1 columns after PREMI
                     col_defs[idx+1:idx+1] = [
                         {
                             'field': 'total_premi',
@@ -536,13 +612,6 @@ class HeaderService:
                             'width': self._get_column_width('total_premi'),
                             'type': self._get_column_type('total_premi'),
                             'cellStyle': self._get_cell_style('total_premi')
-                        },
-                        {
-                            'field': 'jumlah_upah_kotor',
-                            'headerName': 'Upah Kotor',
-                            'width': self._get_column_width('jumlah_upah_kotor'),
-                            'type': self._get_column_type('jumlah_upah_kotor'),
-                            'cellStyle': self._get_cell_style('jumlah_upah_kotor')
                         }
                     ]
                     found_premi = True
@@ -629,6 +698,18 @@ class HeaderService:
                                 'headerName': 'JUMLAH',
                                 'field': 'pot_bpjs_pekerja_total',
                                 'width': 100,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                            }
+                        ]
+                    },
+                    {
+                        'headerName': 'KOREKSI',
+                        'children': [
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_koreksi',
+                                'width': 120,
                                 'type': 'numericColumn',
                                 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
                             }

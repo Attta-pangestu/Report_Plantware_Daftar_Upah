@@ -47,32 +47,35 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
   try {
-    console.log(`Fetching dynamic headers for: ${gangCode || 'all'} ${month}-${year}`)
+    console.log(`[Headers API] Fetching dynamic headers for: ${gangCode || 'all'} ${month}-${year}`)
+    console.log(`[Headers API] Request: GET /payroll/headers with params:`, JSON.stringify(params, null, 2))
     const startTime = Date.now()
 
     const response = await axios.get('/payroll/headers', config)
     const data = response.data
 
     const fetchTime = Date.now() - startTime
-    console.log(`Dynamic headers fetched in ${fetchTime}ms`)
+    console.log(`[Headers API] Response received in ${fetchTime}ms`)
+    console.log(`[Headers API] Header structure:`, data ? '✅ Valid' : '❌ Empty')
 
     // Cache the response
     setCache(headerCache, cacheKey, data)
 
     return data
   } catch (e) {
-    console.error('Failed to fetch dynamic headers:', e)
+    console.error('[Headers API] Failed to fetch dynamic headers:', e)
 
     // Enhanced error logging
     const errorDetails = {
       message: e.message,
       code: e.code,
       response: e.response?.status,
+      responseText: e.response?.data?.detail || e.response?.data,
       url: '/payroll/headers',
       params: params,
       timestamp: new Date().toISOString()
     }
-    console.error('Header fetch error details:', errorDetails)
+    console.error('[Headers API] Error details:', JSON.stringify(errorDetails, null, 2))
 
     // Direct error - no static fallback, always require database connection
     throw new Error(`Database connection failed for headers: ${e.message}. Status: ${e.response?.status || 'Network Error'}. Please check database connectivity and try again.`)

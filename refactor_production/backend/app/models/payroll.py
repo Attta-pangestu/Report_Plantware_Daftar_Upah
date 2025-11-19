@@ -57,6 +57,7 @@ class PayrollRow(BaseModel):
     pot_spsi: float
     # Koreksi field from reference code
     premi_koreksi: float = 0.0
+    pot_koreksi: float = 0.0
     upah_bersih: float
     tidak_hadir_cth: int = 0
     tidak_hadir_alpa: int = 0

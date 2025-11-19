@@ -42,9 +42,9 @@ app.add_middleware(
 # Add development mode info
 @app.get("/dev-mode")
 async def get_dev_mode():
-    from app.core.config import TEST_MODE, DEFAULT_GANG, DEFAULT_MONTH, DEFAULT_YEAR, get_testing_token
+    from app.core.config import TEST_MODE, DEFAULT_GANG, DEFAULT_MONTH, DEFAULT_YEAR, get_testing_token, is_test_mode
     return {
-        "dev_mode": DEV_MODE,
+        "dev_mode": is_test_mode(),
         "test_mode": is_test_mode(),
         "test_mode_hardcoded": TEST_MODE,
         "default_gang": DEFAULT_GANG,

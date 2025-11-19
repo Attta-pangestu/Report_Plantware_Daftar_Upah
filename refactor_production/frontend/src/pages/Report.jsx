@@ -4,7 +4,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
 import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple, fetchReportAggregate, fetchReportCount } from '../services/payrollService'
-import { fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
+import { fetchDynamicHeaders, fetchColumnDefinitions, formatCurrency, formatNumber } from '../services/headerService'
 import { fetchReferenceHtml } from '../services/validationService'
 import LoadingScreen from '../components/common/LoadingScreen'
 
@@ -26,10 +26,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const [columnDefs, setColumnDefs] = useState([])
   const [headers, setHeaders] = useState(null)
   const [hierarchyHeaders, setHierarchyHeaders] = useState(null)
-  const [enhancedColumnDefs, setEnhancedColumnDefs] = useState([]) // Cache hasil enhancement
-  const [autohideProcessed, setAutohideProcessed] = useState(false) // Flag untuk mencegah proses ulang
   const [loading, setLoading] = useState(false)
   const [headerLoading, setHeaderLoading] = useState(false)
+  const [loadingStatus, setLoadingStatus] = useState('Initializing...')
+  const [currentEndpoint, setCurrentEndpoint] = useState('')
   const [error, setError] = useState('')
   const [showValidation, setShowValidation] = useState(false)
   const [referenceHtml, setReferenceHtml] = useState('')
@@ -42,6 +42,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   useEffect(() => {
     async function loadHeaders() {
       setHeaderLoading(true)
+      setLoadingStatus('Loading report headers...')
+      setCurrentEndpoint('/payroll/headers')
       setError('')
       try {
         // Parse month if it's a string in YYYY-MM format
@@ -56,10 +58,13 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
 
+        setLoadingStatus(`Fetching headers for Gang ${finalGangCode}...`)
         const headersData = await fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode)
+        setLoadingStatus('Processing header structure...')
         setHeaders(headersData)
 
         // Extract hierarchy headers for 3-level header structure
+        setLoadingStatus('Building 3-level header hierarchy...')
         if (headersData) {
           const tableStructure = headersData.table_structure || {}
           const generatedHeaders = tableStructure.generated_headers || {}
@@ -72,97 +77,16 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           setHierarchyHeaders({ level1: [], level2: [], level3: [] })
         }
 
-        const gen = headersData?.table_structure?.generated_headers || {}
-        const l1 = gen?.level_1?.columns || []
-        const l2 = gen?.level_2?.columns || []
-        const l3 = gen?.level_3?.columns || []
-        const l2ByParent = {}
-        l2.forEach(c => { const p = c.parent; if (!l2ByParent[p]) l2ByParent[p] = []; l2ByParent[p].push(c) })
-        const l3ByParent = {}
-        l3.forEach(c => { const p = c.parent; if (!l3ByParent[p]) l3ByParent[p] = []; l3ByParent[p].push(c) })
-        const mapField = (id) => {
-          const m = {
-            no:'no', gender:'jenis_kelamin', nik:'nik', name:'nama', upah_dasar:'upah_dasar', hari_kerja:'hari_kerja', upah_pokok:'upah_pokok', jml_hk:'jumlah_hk', gaji_pokok:'gaji_pokok', total_tunjangan:'total_tunjangan', upah_bersih:'upah_bersih',
-            cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
-            beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
-            brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
-            premi_koreksi_jumlah:'premi_koreksi', bpjs_pensiun_pekerja:'pot_bpjs_pensiun_pekerja', bpjs_pensiun_majikan:'pot_bpjs_pensiun_majikan',
-            pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
-          }
-          return m[id] || id
-        }
-        const built = []
-        const leftColumns = []
-        const otherColumns = []
-
-        l1.forEach(c1 => {
-          const childrenIds = c1.children || []
-          if (!childrenIds || childrenIds.length === 0) {
-            const field = mapField(c1.id)
-            if (field) {
-              const colDef = { field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined }
-              if (['no','nama'].includes(field)) {
-                leftColumns.push(colDef)
-              } else {
-                otherColumns.push(colDef)
-              }
-            }
-            return
-          }
-          const group2 = (l2ByParent[c1.id] || []).map(c2 => {
-            const isPremiHI = String(c2.text || '').toUpperCase().includes('PREMI HARVESTING') && String(c2.text || '').toUpperCase().includes('INCENTIVE')
-            let leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
-            if (isPremiHI) {
-              leaves = leaves.map(leaf => ({ ...leaf, field: 'premi_harvesting_incentive' }))
-            }
-            return { headerName: c2.text, children: leaves }
-          })
-          otherColumns.push({ headerName: c1.text, children: group2 })
-        })
-
-        // Pastikan kolom utama (no, gender, nik, name) berada di paling kiri dan selalu tampil
-        const essentialColumns = []
-        const remainingLeftColumns = []
-
-        leftColumns.forEach(col => {
-          if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(col.field)) {
-            essentialColumns.push(col)
-          } else {
-            remainingLeftColumns.push(col)
-          }
-        })
-
-        // Urutkan essential columns: no, gender, nik, nama
-        const orderedEssential = []
-        if (essentialColumns.some(c => c.field === 'no')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'no'))
-        }
-        if (essentialColumns.some(c => c.field === 'jenis_kelamin')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'jenis_kelamin'))
-        }
-        if (essentialColumns.some(c => c.field === 'nik')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'nik'))
-        }
-        if (essentialColumns.some(c => c.field === 'nama')) {
-          orderedEssential.push(essentialColumns.find(c => c.field === 'nama'))
-        }
-
-        built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
-        const chosen = headersData ? built : []
-        const leafFields = []
-        const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
-        chosen.forEach(walk)
-        const dupFields = leafFields.filter((f, i, a) => a.indexOf(f) !== i)
-        console.log('[Columns] Leaf fields count:', leafFields.length)
-        if (dupFields.length > 0) {
-          console.warn('[Columns] Duplicate fields detected:', dupFields)
-        }
-        setColumnDefs(chosen)
+        setLoadingStatus('Finalizing column definitions...')
+        const cols = await fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
+        setColumnDefs(cols)
       } catch (e) {
         console.error('Failed to load headers:', e)
         setError('Failed to load dynamic headers')
       } finally {
         setHeaderLoading(false)
+        setLoadingStatus('Headers loaded successfully')
+        setCurrentEndpoint('')
       }
     }
 
@@ -171,7 +95,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
   useEffect(() => {
     async function run() {
-      setLoading(true); setError('')
+      setLoading(true);
+      setLoadingStatus('Loading payroll data...')
+      setCurrentEndpoint('/payroll/report')
+      setError('')
       try {
         // Parse month if it's a string in YYYY-MM format
         let monthValue = finalMonth
@@ -184,6 +111,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         console.log('[Report] Loading data rows for:', { monthValue, yearValue, finalGangCode })
+
+        setLoadingStatus(`Fetching payroll data for Gang ${finalGangCode}...`)
 
         // Validate column definitions before proceeding
         if (!columnDefs || columnDefs.length === 0) {
@@ -264,19 +193,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
 
-        // Proses autohide hanya sekali saat data pertama kali dimuat
-        if (!autohideProcessed && safe.length > 0) {
-          console.log('[AutoHide] Processing column auto-hide for', safe.length, 'rows')
-          const enhanced = enhanceColumnsRecursive(columnDefs)
-          const hiddenColumns = hideEmptyPremiColumns(enhanced, safe)
-          setEnhancedColumnDefs(hiddenColumns)
-          setAutohideProcessed(true)
-          console.log('[AutoHide] Column auto-hide completed. Columns before:', enhanced.length, 'after:', hiddenColumns.length)
-        } else if (autohideProcessed) {
-          console.log('[AutoHide] Skipping auto-hide - already processed')
-        }
-
-        // Frontend no longer auto-hides columns; backend filters dynamic headers
+        setLoadingStatus('Table ready')
       } catch (e) {
         if (DEV_MODE && !finalToken) {
           try {
@@ -321,18 +238,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
             }] : [])
 
-            // Proses autohide hanya sekali saat data pertama kali dimuat (dev mode)
-            const AUTO_HIDE_PREMI = import.meta.env.VITE_AUTO_HIDE_PREMI === 'true'
-            if (!autohideProcessed && safe.length > 0 && AUTO_HIDE_PREMI) {
-              console.log('[AutoHide] Processing column auto-hide for', safe.length, 'rows (dev mode)')
-              const enhanced = enhanceColumnsRecursive(columnDefs)
-              const hiddenColumns = hideEmptyPremiColumns(enhanced, safe)
-              setEnhancedColumnDefs(hiddenColumns)
-              setAutohideProcessed(true)
-              console.log('[AutoHide] Column auto-hide completed. Columns before:', enhanced.length, 'after:', hiddenColumns.length)
-            } else if (autohideProcessed) {
-              console.log('[AutoHide] Skipping auto-hide - already processed (dev mode)')
-            }
+            
           } catch (e2) {
             setError('Failed to load report data')
             setRows([])
@@ -345,6 +251,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
       } finally {
         setLoading(false)
+        setLoadingStatus('')
+        setCurrentEndpoint('')
         if (typeof onLoad === 'function') onLoad()
       }
     }
@@ -439,101 +347,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     return cfg
   }
 
-  // Auto-hide kolom premi yang tidak ada data sama sekali
-  const hideEmptyPremiColumns = (cols, data) => {
-    if (!Array.isArray(cols) || !Array.isArray(data)) return cols
-
-    const checkColumnHasData = (field) => {
-      // Jangan sembunyikan kolom esensial dan kolom-kolom potongan/premi penting
-      const essentialColumns = [
-        // Basic essential columns
-        'no', 'jenis_kelamin', 'nik', 'nama',
-        // Payroll summary columns
-        'upah_pokok', 'total_tunjangan', 'upah_bersih',
-        // Koreksi column (treated as premi but actually deduction)
-        'premi_koreksi', 'koreksi',
-        // BPJS columns (should always be visible even if 0)
-        'pot_bpjs_kesehatan_pekerja', 'pot_bpjs_kesehatan_majikan',
-        'pot_bpjs_pensiun_pekerja', 'pot_bpjs_pensiun_majikan',
-        'pot_bpjs_kes', 'pot_bpjs_pek', 'pot_bpjs_maj',
-        'pot_bpjs_jumlah', 'pot_bpjs_pekerja_total',
-        // Other important deductions
-        'pot_spsi', 'spsi', 'pot_pph21', 'pph21',
-        // Important totals
-        'total_premi', 'total_potongan', 'jumlah_upah_kotor'
-      ]
-
-      if (essentialColumns.includes(field)) {
-        return true
-      }
-
-      // Untuk kolom premi lainnya, sembunyikan jika tidak ada data > 0
-      const premiColumns = [
-        'premi_brondol', 'premi_pruning', 'premi_angkut_material',
-        'premi_angkut_tbs', 'premi_harvesting', 'premi_harvesting_incentive', 'premi_pupuk'
-      ]
-
-      if (premiColumns.includes(field)) {
-        return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) > 0)
-      }
-
-      // Untuk kolom lain, sembunyikan jika tidak ada data
-      return data.some(row => row[field] != null && row[field] !== '' && Number(row[field]) !== 0)
-    }
-
-    const checkGroupHasData = (group) => {
-      // For grouped columns, check if any leaf column has data
-      if (group.children && Array.isArray(group.children)) {
-        return group.children.some(child => {
-          if (child.children) {
-            return checkGroupHasData(child)
-          } else if (child.field) {
-            return checkColumnHasData(child.field)
-          }
-          return false
-        })
-      } else if (group.field) {
-        return checkColumnHasData(group.field)
-      }
-      return true // Always show headers without fields
-    }
-
-    const processColumn = (col) => {
-      if (col.children && Array.isArray(col.children)) {
-        // Process level 2 header dengan children level 3
-        const processedChildren = col.children.map(child => {
-          if (child.children && Array.isArray(child.children)) {
-            // Level 3 children - periksa apakah ada data
-            const visibleChildren = child.children.filter(leaf => {
-              if (!leaf.field) return true
-              return checkColumnHasData(leaf.field)
-            })
-            return {
-              ...child,
-              children: visibleChildren,
-              hide: visibleChildren.length === 0
-            }
-          }
-          return child
-        }).filter(child => !child.hide)
-
-        return {
-          ...col,
-          children: processedChildren,
-          hide: !checkGroupHasData(col) // Use group data check instead of children length
-        }
-      } else if (col.field) {
-        // Leaf column - periksa apakah ada data
-        return {
-          ...col,
-          hide: !checkColumnHasData(col.field)
-        }
-      }
-      return col
-    }
-
-    return cols.map(processColumn).filter(col => !col.hide)
-  }
+  
 
   const enhanceColumnsRecursive = (cols) => cols.map(c => {
     if (c.children && Array.isArray(c.children)) {
@@ -562,7 +376,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         cols.forEach(walk)
         return out
       }
-      const columnDefsToUse = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+      const columnDefsToUse = enhanceColumnsRecursive(columnDefs)
       const gridHeaders = getLeafHeaders(columnDefsToUse)
 
       const theadMatch = html.match(/<thead[\s\S]*?<\/thead>/i)
@@ -592,7 +406,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           const refNums = cells.map(num).filter(v => v !== null)
           const treeLeaves = []
           const collect = (c) => { if (c.children) c.children.forEach(collect); else treeLeaves.push(c) }
-          const columnDefsToUse = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+          const columnDefsToUse = enhanceColumnsRecursive(columnDefs)
           columnDefsToUse.forEach(collect)
           const gridFields = treeLeaves.map(l => l.field).filter(f => f && typeof pinnedBottom[0]?.[f] !== 'undefined')
           const gridNums = gridFields.map(f => Number(pinnedBottom[0][f] || 0))
@@ -646,25 +460,45 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     }
   }
 
-  if (headerLoading || loading) return (
+  // Only show loading when headers are being loaded or when both headers and data are loading
+  if (headerLoading || (loading && !headers)) return (
     <LoadingScreen
       isLoading={true}
-      message={headerLoading ? 'Loading report configuration...' : 'Analyzing payroll data...'}
+      message={loadingStatus || (headerLoading ? 'Loading report configuration...' : 'Analyzing payroll data...')}
       gangCode={finalGangCode}
       month={finalMonth}
       year={finalYear}
       logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
       steps={headerLoading ? [
-        { name: `Loading headers for Gang ${finalGangCode}`, duration: 1800 },
+        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : `Loading headers for Gang ${finalGangCode}`, duration: 1800 },
         { name: `Fetching dynamic columns for ${finalGangCode}`, duration: 2200 },
-        { name: 'Building column hierarchy', duration: 1500 }
+        { name: loadingStatus || 'Building column hierarchy', duration: 1500 }
       ] : [
-        { name: 'Connecting to payroll database', duration: 1500 },
-        { name: `Loading rows for Gang ${finalGangCode}`, duration: 2800 },
+        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Connecting to payroll database', duration: 1500 },
+        { name: loadingStatus || `Loading rows for Gang ${finalGangCode}`, duration: 2800 },
         { name: `Aggregating ${typeof finalMonth==='string' ? finalMonth : finalMonth+'/'+finalYear}`, duration: 2500 }
       ]}
     />
   )
+  // Don't render table until headers are loaded and available
+  if (!headers || !headers.table_structure || !headers.table_structure.generated_headers) {
+    return (
+      <LoadingScreen
+        isLoading={true}
+        message={loadingStatus || 'Loading Header Structure...'}
+        gangCode={finalGangCode}
+        month={finalMonth}
+        year={finalYear}
+        logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
+        steps={[
+          { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Waiting for header API response', duration: 1800 },
+          { name: loadingStatus || 'Processing header structure...', duration: 2200 },
+          { name: 'Building table columns', duration: 1500 }
+        ]}
+      />
+    )
+  }
+
   if (error) return (
     <div style={{
       display: 'flex',
@@ -698,6 +532,20 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         Retry
       </button>
     </div>
+  )
+
+  // Render loading screen until backend headers and column definitions are ready
+  if (headerLoading || !headers || !columnDefs || columnDefs.length === 0) return (
+    <LoadingScreen
+      month={finalMonth}
+      year={finalYear}
+      logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
+      steps={[
+        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Waiting for header API response', duration: 1600 },
+        { name: loadingStatus || 'Processing header structure...', duration: 2000 },
+        { name: 'Building table columns', duration: 1400 }
+      ]}
+    />
   )
 
   if (!useInfinite && (!rows || rows.length === 0)) return (
@@ -769,7 +617,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
         <AgGridReact
           ref={gridRef}
-          columnDefs={enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)}
+          // Always use enhanced column definitions with auto-hide logic applied
+          columnDefs={enhanceColumnsRecursive(columnDefs)}
           rowData={rows}
           rowModelType={'infinite'}
           cacheBlockSize={INFINITE_BATCH_SIZE}
@@ -787,12 +636,13 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           domLayout='normal'
           sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
           getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
+          onFirstDataRendered={() => {}}
           onGridReady={params => {
             if (rows.length > 0) {
               params.api.ensureIndexVisible(0, 'top')
             }
             // Log grid ready state for debugging
-            const activeColumnDefs = enhancedColumnDefs.length > 0 ? enhancedColumnDefs : enhanceColumnsRecursive(columnDefs)
+            const activeColumnDefs = enhanceColumnsRecursive(columnDefs)
             console.log('[AG Grid] Grid ready with columns:', activeColumnDefs.length)
             console.log('[AG Grid] Rows loaded:', rows.length)
             console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)

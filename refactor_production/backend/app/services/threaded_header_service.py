@@ -250,8 +250,32 @@ class ThreadedHeaderService:
             employee_count_result = [(0,)]
         employee_count = employee_count_result[0][0] if employee_count_result else 0
 
-        # Keep all original premi children; only adjust text for dynamic slot
-        hierarchy.get('level_2', {})['columns'] = level2
+        other_level2 = [c for c in level2 if c.get('parent') != 'premi']
+        updated_dynamic = []
+        for i, c in enumerate(dynamic_slots):
+            if i < len(dynamic_premi_headers):
+                c['text'] = dynamic_premi_headers[i]
+                updated_dynamic.append(c)
+        hierarchy.get('level_2', {})['columns'] = other_level2 + fixed_premi + updated_dynamic
+
+        try:
+            l1_cols = hierarchy.get('level_1', {}).get('columns', [])
+            premi_idx = None
+            tunj_idx = None
+            for i, c in enumerate(l1_cols):
+                cid = (c.get('id') or '').strip().lower()
+                txt = (c.get('text') or '').strip().upper()
+                if cid == 'premi' or txt == 'PREMI':
+                    premi_idx = i
+                if cid == 'tunjangan' or txt == 'TUNJANGAN':
+                    tunj_idx = i
+            if premi_idx is not None and tunj_idx is not None and premi_idx != tunj_idx + 1:
+                moved = l1_cols.pop(premi_idx)
+                insert_at = min(tunj_idx + 1, len(l1_cols))
+                l1_cols.insert(insert_at, moved)
+                hierarchy.get('level_1', {})['columns'] = l1_cols
+        except Exception:
+            pass
 
         # Build complete header hierarchy
         headers = self._build_header_hierarchy(table_structure)
@@ -395,6 +419,7 @@ class ThreadedHeaderService:
             "premi_angkut_material_jumlah": "premi_angkut_material", "premi_angkut_tbs_jumlah": "premi_angkut_tbs",
             "premi_harvesting_jumlah": "premi_harvesting", "premi_harvesting_incentive_jumlah": "premi_harvesting_incentive",
             "premi_pupuk_jumlah": "premi_pupuk",
+            "premi_koreksi": "pot_koreksi", "koreksi": "pot_koreksi",
 
             # Potongan columns
             "pph21": "pot_pph21", "potongan_kontan": "pot_kontan", "thr": "pot_thr", "pinjam": "pot_pinjam",

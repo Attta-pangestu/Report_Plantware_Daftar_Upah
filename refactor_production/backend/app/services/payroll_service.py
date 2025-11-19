@@ -449,10 +449,12 @@ class PayrollService:
                     # Koreksi harus ditampilkan sebagai nilai negatif (pengurangan)
                     koreksi_amount = -abs(total_koreksi)
 
+            pot_koreksi = abs(koreksi_amount)
+
             # Avoid double-counting: harvesting is merged into harvesting_incentive
             total_premi = sum([
                 premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
-                premi_harvesting_incentive, premi_pupuk, koreksi_amount  # Add koreksi to total premi
+                premi_harvesting_incentive, premi_pupuk
             ])
 
             # Correct calculation from reference code:
@@ -503,13 +505,13 @@ class PayrollService:
             # Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21
             # Note: Only employee portions are counted in total potongan (from reference engine)
             total_potongan = (pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
-                             pot_kontan + pot_thr + pot_pinjam + pot_kl)
+                             pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_koreksi)
 
             # Simplified for the predefined fields
             pot_total_1 = pot_bpjs_kesehatan_pekerja  # BPJS Kesehatan Pekerja
             pot_total_2 = pot_bpjs_pensiun_pekerja      # BPJS Pensiun Pekerja
             pot_total_3 = pot_bpjs_pensiun_majikan      # BPJS Pensiun Majikan
-            pot_total_4 = pot_pph21 + pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_spsi + pot_bpjs_pek + pot_bpjs_maj
+            pot_total_4 = pot_pph21 + pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_spsi + pot_koreksi + pot_bpjs_pek + pot_bpjs_maj
 
             upah_bersih = jumlah_upah_kotor - total_potongan
 
@@ -567,6 +569,7 @@ class PayrollService:
                 pot_total_4=pot_total_4,
                 total_potongan=total_potongan,
                 pot_spsi=pot_spsi,
+                pot_koreksi=pot_koreksi,
                 upah_bersih=upah_bersih,
                 tidak_hadir_cth=0,
                 tidak_hadir_alpa=0,

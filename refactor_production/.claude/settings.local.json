@@ -38,7 +38,8 @@
       "Bash(start http://localhost:5174)",
       "Bash(start http://localhost:5175)",
       "Bash(uvicorn:*)",
-      "Bash(nul:*)"
+      "Bash(nul:*)",
+      "Bash(TEST_MODE=true DEV_MODE=true VITE_DEV_MODE=true python:*)"
     ],
     "deny": [],
     "ask": []
