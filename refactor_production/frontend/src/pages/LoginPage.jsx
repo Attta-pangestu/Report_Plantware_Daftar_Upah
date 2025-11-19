@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 
 const LoginPage = () => {
   const { login, loading, error } = useAuth()
+  const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
+  const autoRef = useRef(false)
   const [isLoginMode, setIsLoginMode] = useState(true)
   const [formData, setFormData] = useState({
     username: '',
@@ -15,7 +17,13 @@ const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  
+  // In test mode, auto-fill admin credentials and auto-submit
+  useEffect(() => {
+    if (!TEST_MODE || autoRef.current) return
+    autoRef.current = true
+    setFormData(prev => ({ ...prev, username: 'admin', password: 'admin' }))
+    ;(async () => { try { await login('admin', 'admin') } catch (_) {} })()
+  }, [])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -335,3 +343,4 @@ const LoginPage = () => {
 }
 
 export default LoginPage
+  const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')

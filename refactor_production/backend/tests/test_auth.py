@@ -31,30 +31,37 @@ def test_dev_mode_endpoint(client):
     assert "test_mode" in data
 
 def test_auth_required_endpoints_in_test_mode(client, mock_test_mode):
-    """Test that auth endpoints work in test mode"""
-    # With test mode enabled, should return mock user info
-    response = client.get("/auth/me")
-    assert response.status_code == 200
-    data = response.json()
+    """Test that auth endpoints require token in test mode"""
+    login_res = client.post("/auth/login", json={"username": "admin", "password": "admin"})
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+    me_res = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_res.status_code == 200
+    data = me_res.json()
     assert "username" in data
-    assert data["username"] == "test"  # Default test user
+    assert data["username"] == "admin"
 
 def test_get_accessible_divisions_in_test_mode(client, mock_test_mode):
-    """Test getting accessible divisions with test mode"""
-    response = client.get("/auth/accessible-divisions")
+    """Test getting accessible divisions with valid token in test mode"""
+    login_res = client.post("/auth/login", json={"username": "admin", "password": "admin"})
+    assert login_res.status_code == 200
+    token = login_res.json()["access_token"]
+    response = client.get("/auth/accessible-divisions", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     data = response.json()
-    # Should return a list of divisions
     assert isinstance(data, list)
-    assert len(data) > 0  # Should have some divisions
+    assert len(data) > 0
 
 def test_auth_test_token_endpoint_in_test_mode(client, mock_test_mode):
-    """Test getting test token in test mode"""
+    """Test test-token can be used to access protected endpoint"""
     response = client.get("/auth/test-token")
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
+    token = data["access_token"]
+    me_res = client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_res.status_code == 200
 
 def test_login_endpoint(client):
     """Test the login endpoint responds properly"""

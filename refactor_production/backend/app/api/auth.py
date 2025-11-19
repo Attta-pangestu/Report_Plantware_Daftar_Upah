@@ -15,24 +15,6 @@ router = APIRouter(tags=["authentication"])
 
 # Helper dependency function
 async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials = Security(security)):
-    if is_test_mode():
-        if credentials is None:
-            logging.warning("test_mode_auth_inject without Authorization header")
-        else:
-            logging.warning("test_mode_auth_inject with Authorization header present")
-        now = datetime.now()
-        return User(
-            id=0,
-            username="test",
-            email="test@example.com",
-            full_name="Test User",
-            role=UserRole.ADMIN,
-            divisions=["PG1A", "PG1B", "PG2A", "PG2B", "DME", "ARA", "ARB1", "ARB2", "INFRA", "AREC", "IJL", "STF-OFFICE", "SECURITY"],
-            is_active=True,
-            password_hash="",
-            created_at=now,
-            updated_at=now
-        )
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -55,9 +37,12 @@ async def get_current_user_from_token(credentials: HTTPAuthorizationCredentials 
 async def get_test_token():
     if not is_test_mode():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not available in production")
-    token = get_testing_token()
+    admin = db_service.get_user_by_username("admin")
+    if not admin:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Admin user not initialized")
+    out = auth_service.create_user_token(admin)
     logging.warning("test_mode_issue_permanent_token")
-    return {"access_token": token, "token_type": "bearer", "expires": "never"}
+    return {"access_token": out["access_token"], "token_type": out.get("token_type", "bearer"), "expires": "never"}
 
 # Pydantic models for API
 class UserRegister(BaseModel):

@@ -33,44 +33,7 @@ function AppInner() {
       try {
         console.log('[App] Starting authenticated bootstrap...')
 
-        // In dev mode, set default values and auto-proceed
-        if (DEV_MODE) {
-          console.log('[App] Development mode: Setting default values and auto-proceeding')
-          setMonthInput('2025-05') // May 2025
-
-          // Try to load gangs to find H1H, but auto-proceed even if not found
-          try {
-            // Load gangs for a default division
-            const gangsList = await fetchGangs(token, 'ARB2', null, true)
-            setGangs(gangsList)
-            setDivision('ARB2')
-
-            // Look for H1H gang
-            const h1hGang = gangsList.find(g => g.toUpperCase() === 'H1H')
-            if (h1hGang) {
-              setGang(h1hGang)
-              console.log('[App] Development mode: Found H1H gang, auto-proceeding')
-            } else {
-              console.log('[App] Development mode: H1H gang not found, using fallback')
-              // Use fallback H1H gang since it may not be in the API response
-              setGang('H1H')
-            }
-          } catch (gangError) {
-            console.log('[App] Development mode: Gangs API error, using fallback H1H')
-            setGangs(['H1H', 'A1H', 'A1M', 'A2M'])
-            setDivision('ARB2')
-            setGang('H1H')
-          }
-
-          // Auto-proceed in dev mode without showing filters
-          setTimeout(() => {
-            setReady(true)
-          }, 500)
-          return
-        } else {
-          // Not in dev mode - show filters modal for authenticated users
-          setFiltersOpen(true)
-        }
+        setFiltersOpen(true)
 
         // Load gangs from API based on user's accessible divisions
         if (user.divisions && user.divisions.length > 0) {
@@ -149,35 +112,20 @@ function AppInner() {
     setReady(true)
   }
 
-  // Show loading screen during authentication
+  // Always show login page if not authenticated; keep it visible even while submitting
+  if (!isAuthenticated) {
+    return <LoginPage />
+  }
+
+  // Show loading screen only after authentication for background tasks
   if (loading) {
     return (
       <LoadingScreen
         isLoading={true}
-        message="Authenticating..."
+        message="Initializing..."
         steps={[
-          { name: 'Connecting to authentication server', duration: 1500 },
-          { name: 'Verifying credentials', duration: 1000 },
-          { name: 'Loading user profile', duration: 1000 }
-        ]}
-      />
-    )
-  }
-
-  // Show login page if not authenticated (skip in test mode)
-  if (!isAuthenticated && !TEST_MODE) {
-    return <LoginPage />
-  }
-
-  // Show loading screen while user is being loaded in test mode
-  if (TEST_MODE && !user) {
-    return (
-      <LoadingScreen
-        isLoading={true}
-        message="Initializing test environment..."
-        steps={[
-          { name: 'Setting up test authentication', duration: 1000 },
-          { name: 'Loading user profile', duration: 500 }
+          { name: 'Preparing report workspace', duration: 1000 },
+          { name: 'Loading configuration', duration: 1000 }
         ]}
       />
     )

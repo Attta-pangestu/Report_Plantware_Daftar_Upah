@@ -16,9 +16,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   // In development mode, use default values if props are not provided
   const [authToken, setAuthToken] = useState(token || null)
   const devToken = DEV_MODE ? (authToken || token) : token
-  const devMonth = DEV_MODE ? (month || '2025-05') : month
-  const devYear = DEV_MODE ? (year || 2025) : year
-  const devGangCode = DEV_MODE ? (gang_code || 'H1H') : gang_code
+  const devMonth = DEV_MODE ? (month || undefined) : month
+  const devYear = DEV_MODE ? (year || undefined) : year
+  const devGangCode = DEV_MODE ? (gang_code || undefined) : gang_code
   
   const finalToken = devToken || token
   const finalMonth = devMonth || month

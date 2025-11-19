@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles/report.css'
 import './utils/httpSetup'
+import 'ag-grid-enterprise'
 
 const mount = document.getElementById('root') || (() => {
   const el = document.createElement('div')

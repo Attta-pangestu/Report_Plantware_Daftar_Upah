@@ -52,9 +52,6 @@ async def report_grid(
 ):
     try:
         if is_test_mode():
-            gang_code = gang_code or DEFAULT_GANG
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
 
@@ -217,9 +214,6 @@ async def get_dynamic_headers(
     """Generate dynamic headers based on real data with optional threading optimization"""
     try:
         if is_test_mode():
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
-            gang_code = gang_code or DEFAULT_GANG
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
 
@@ -283,9 +277,6 @@ async def get_column_definitions(
 ):
     try:
         if is_test_mode():
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
-            gang_code = gang_code or DEFAULT_GANG
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
         column_defs = header_service.get_column_definitions(month=month, year=year, gang_code=gang_code)
@@ -314,14 +305,9 @@ async def export_html(
         sys.path.insert(0, str(engine_dir))
         from daftar_upah_engine_real_database import DaftarUpahEngineRealFixed
 
-        if is_test_mode():
-            m = str(DEFAULT_MONTH).zfill(2)
-            y = str(DEFAULT_YEAR)
-            gc = gang_code or DEFAULT_GANG
-        else:
-            m = str((month or datetime.now().month)).zfill(2)
-            y = str(year or datetime.now().year)
-            gc = gang_code or 'H1H'
+        m = str((month or datetime.now().month)).zfill(2)
+        y = str(year or datetime.now().year)
+        gc = gang_code
 
         engine = DaftarUpahEngineRealFixed(month=m, year=y)
         out_path = engine.generate_report_from_real_database(
@@ -436,10 +422,6 @@ async def validate_html(
         # Get live rows from the system
         svc = PayrollService()
         repo = EmployeeRepositoryDB()
-        if TEST_MODE:
-            gang_code = gang_code or DEFAULT_GANG
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
         live_rows = await svc.generate_rows(repo, gang_code=gang_code, month=month, year=year)
         live_dict = { row.nik.strip(): row for row in live_rows }
 
@@ -498,8 +480,6 @@ async def report_single_row(
 ):
     try:
         if is_test_mode():
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
         repo = EmployeeRepositoryDB()
@@ -531,9 +511,6 @@ async def report_single_column(
 ):
     try:
         if is_test_mode():
-            gang_code = gang_code or DEFAULT_GANG
-            month = month or DEFAULT_MONTH
-            year = year or DEFAULT_YEAR
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
         svc = PayrollService()
@@ -1036,9 +1013,9 @@ async def compare_performance(
 
 @router.get("/report/real", response_model=List[PayrollRow])
 async def report_real_data(
-    gang_code: Optional[str] = Query("H1H"),
-    month: Optional[int] = Query(5),
-    year: Optional[int] = Query(2025),
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
     skip: Optional[int] = Query(0, ge=0),
     limit: Optional[int] = Query(50, ge=1, le=500),
     user=Depends(get_current_user_from_token)
@@ -1093,9 +1070,9 @@ async def report_real_data(
 
 @router.get("/report/simple", response_model=List[PayrollRow])
 async def report_simple_data(
-    gang_code: Optional[str] = Query("H1H"),
-    month: Optional[int] = Query(5),
-    year: Optional[int] = Query(2025),
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
     skip: Optional[int] = Query(0, ge=0),
     limit: Optional[int] = Query(10, ge=1, le=50),
     user=Depends(get_current_user_from_token)
@@ -1143,9 +1120,9 @@ async def report_simple_data(
 
 @router.get("/report/aggregate")
 async def report_aggregate(
-    gang_code: Optional[str] = Query("H1H"),
-    month: Optional[int] = Query(5),
-    year: Optional[int] = Query(2025),
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
 ):
     try:
         logger.info(f"payroll_report_aggregate gang_code={gang_code} month={month} year={year}")
@@ -1207,9 +1184,9 @@ async def report_aggregate(
 
 @router.get("/report/count")
 async def report_count(
-    gang_code: Optional[str] = Query("H1H"),
-    month: Optional[int] = Query(5),
-    year: Optional[int] = Query(2025),
+    gang_code: Optional[str] = Query(None),
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
 ):
     try:
         from database.services.database import Database
