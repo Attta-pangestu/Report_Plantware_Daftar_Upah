@@ -133,12 +133,9 @@ class HeaderService:
             mid = time.perf_counter()
 
             # Pre-defined excluded items for better performance
-            # Note: Important deduction columns are NOW INCLUDED - not excluded
             excluded_lower = {
-                # Remove these from exclusion as they should now be visible:
-                # 'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi'
-                'tunjangan jabatan',
-                'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', # Keep 'pph 21' but not 'pph21'
+                'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
+                'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21',
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
                 'tunjangan premi', 'tunjangan beras'
             }
@@ -526,11 +523,15 @@ class HeaderService:
                     dynamic_slots = []
                     for c2 in level2_cols:
                         t2 = (c2.get('text') or '').strip().upper()
-                        if 'BRONDOL' in t2 or 'PRUNING' in t2:
+                        if (
+                            'BRONDOL' in t2 or 'PRUNING' in t2 or
+                            ('ANGKUT' in t2 and 'MATERIAL' in t2) or 'ANGKUT TBS' in t2 or
+                            'HARVEST' in t2 or 'PANEN' in t2 or 'INCENTIVE' in t2 or 'PUPUK' in t2
+                        ):
                             fixed.append(c2)
                         else:
-                            # Exclude Koreksi from Premi group
-                            if 'KOREKSI' in t2:
+                            # Exclude deduction-like children from Premi group
+                            if ('KOREKSI' in t2) or ('POTONGAN' in t2) or ('PPH' in t2) or ('SPSI' in t2):
                                 continue
                             dynamic_slots.append(c2)
                     group2_defs = []
@@ -555,7 +556,11 @@ class HeaderService:
                         level3_cols = l3_by_parent.get(c2_id, [])
                         leaf_defs = []
                         for c3 in level3_cols:
-                            field = self._map_to_data_field(c3.get('id'))
+                            cid3 = (c3.get('id') or '').strip().lower()
+                            if 'jumlah' in cid3:
+                                field = f"premi_dynamic_{i+1}"
+                            else:
+                                field = f"premi_dynamic_rate_{i+1}"
                             leaf_defs.append({
                                 'field': field,
                                 'headerName': c3.get('text'),

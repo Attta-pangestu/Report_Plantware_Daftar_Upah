@@ -235,9 +235,15 @@ class ThreadedHeaderService:
         dynamic_slots = []
         for c in premi_children:
             t = (c.get('text') or '').upper()
-            if 'BRONDOL' in t or 'PRUNING' in t:
+            if (
+                'BRONDOL' in t or 'PRUNING' in t or
+                ('ANGKUT' in t and 'MATERIAL' in t) or 'ANGKUT TBS' in t or
+                'HARVEST' in t or 'PANEN' in t or 'INCENTIVE' in t or 'PUPUK' in t
+            ):
                 fixed_premi.append(c)
             else:
+                if ('KOREKSI' in t) or ('POTONGAN' in t) or ('PPH' in t) or ('SPSI' in t):
+                    continue
                 dynamic_slots.append(c)
 
         # Keep static header texts; dynamic headers are exposed for reference only

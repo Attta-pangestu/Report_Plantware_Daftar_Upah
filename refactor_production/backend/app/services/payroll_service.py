@@ -310,6 +310,38 @@ class PayrollService:
                 'harvesting_incentive': self._premi_map(db, emp_codes, s, e, '%INCENTIVE%PANEN%'),
                 'pupuk': self._premi_map(db, emp_codes, s, e, '%PUPUK%'),
             }
+
+            # Dynamic premi headers (excluding known deductions and static premi we already map)
+            try:
+                from database.services.queries import Queries
+                q = Queries().get('premi', 'dynamic_headers_by_gang_month')
+                dyn_headers: List[str] = []
+                if q and 'sql' in q and gang_code:
+                    start_date = f"{year}-{str(month).zfill(2)}-01"
+                    end_date = f"{year+1}-01-01" if int(month) == 12 else f"{year}-{str(int(month)+1).zfill(2)}-01"
+                    rows_dyn = db.query_all(q['sql'], [gang_code, start_date, end_date])
+                    excluded_lower = {
+                        'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
+                        'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21', 'spsi',
+                        'koreksi panen', 'potongan koreksi', 'potongan koreksi panen', 'tunjangan premi', 'tunjangan beras'
+                    }
+                    for r in rows_dyn or []:
+                        if not r or r[0] is None:
+                            continue
+                        htxt = str(r[0]).strip()
+                        if htxt and htxt.strip().lower() not in excluded_lower:
+                            dyn_headers.append(htxt)
+                    # Keep up to 7 dynamic items
+                    dyn_headers = dyn_headers[:7]
+                else:
+                    dyn_headers = []
+            except Exception:
+                dyn_headers = []
+
+            dyn_maps: List[Dict[str, float]] = []
+            for h in dyn_headers:
+                pattern = f"%{h}%"
+                dyn_maps.append(self._premi_map(db, emp_codes, s, e, pattern))
         cuti_maps: Dict[str, Dict[str, int]] = {}
         if want_all or any([want('cuti_tahunan_hari'), want('cuti_sakit_haid_hari'), want('cuti_minggu_hari'), want('cuti_nasional_hari'), want('hari_kerja'), want('jumlah_hk')]):
             cuti_maps = self._cuti_maps(db, emp_codes, s, e, cuti_tah_raw, cuti_sakit_raw, hk_minggu_raw, hk_nas_raw)
@@ -452,10 +484,15 @@ class PayrollService:
             pot_koreksi = abs(koreksi_amount)
 
             # Avoid double-counting: harvesting is merged into harvesting_incentive
+            # Dynamic premi amounts
+            dyn_vals: List[float] = []
+            if want_all or any([want(f'premi_dynamic_{i+1}') for i in range(7)]) or want('total_premi'):
+                for i in range(min(7, len(dyn_maps))):
+                    dyn_vals.append(float(dyn_maps[i].get(nik, 0.0)))
             total_premi = sum([
                 premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
                 premi_harvesting_incentive, premi_pupuk
-            ])
+            ] + dyn_vals)
 
             # Correct calculation from reference code:
             # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
@@ -546,6 +583,13 @@ class PayrollService:
                 premi_harvesting=0.0,
                 premi_harvesting_incentive=premi_harvesting_incentive,
                 premi_pupuk=premi_pupuk,
+                premi_dynamic_1=(dyn_vals[0] if len(dyn_vals) > 0 else 0.0),
+                premi_dynamic_2=(dyn_vals[1] if len(dyn_vals) > 1 else 0.0),
+                premi_dynamic_3=(dyn_vals[2] if len(dyn_vals) > 2 else 0.0),
+                premi_dynamic_4=(dyn_vals[3] if len(dyn_vals) > 3 else 0.0),
+                premi_dynamic_5=(dyn_vals[4] if len(dyn_vals) > 4 else 0.0),
+                premi_dynamic_6=(dyn_vals[5] if len(dyn_vals) > 5 else 0.0),
+                premi_dynamic_7=(dyn_vals[6] if len(dyn_vals) > 6 else 0.0),
                 premi_koreksi=koreksi_amount,
                 total_premi=total_premi,
                 jumlah_upah_kotor=jumlah_upah_kotor,
