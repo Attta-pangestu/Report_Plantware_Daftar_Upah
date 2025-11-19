@@ -4,8 +4,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
 import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple, fetchReportAggregate, fetchReportCount } from '../services/payrollService'
-import { fetchColumnDefinitions, fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
-import { login } from '../services/authService'
+import { fetchDynamicHeaders, formatCurrency, formatNumber } from '../services/headerService'
 import { fetchReferenceHtml } from '../services/validationService'
 import LoadingScreen from '../components/common/LoadingScreen'
 
@@ -14,13 +13,11 @@ const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV
 
 export default function Report({ token, month, year, gang_code, onLoad }) {
   // In development mode, use default values if props are not provided
-  const [authToken, setAuthToken] = useState(token || null)
-  const devToken = DEV_MODE ? (authToken || token) : token
   const devMonth = DEV_MODE ? (month || undefined) : month
   const devYear = DEV_MODE ? (year || undefined) : year
   const devGangCode = DEV_MODE ? (gang_code || undefined) : gang_code
   
-  const finalToken = devToken || token
+  const finalToken = token
   const finalMonth = devMonth || month
   const finalYear = devYear || year
   const finalGangCode = devGangCode || gang_code
@@ -59,23 +56,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
 
-        // Enhanced error handling with individual Promise.allSettled
-        const [headersResult, columnsResult] = await Promise.allSettled([
-          fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode),
-          fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
-        ])
-
-        let headersData = null
-        let columnDefsData = null
-
-        if (headersResult.status === 'fulfilled') {
-          headersData = headersResult.value
-          setHeaders(headersData)
-        }
-
-        if (columnsResult.status === 'fulfilled') {
-          columnDefsData = columnsResult.value
-        }
+        const headersData = await fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode)
+        setHeaders(headersData)
 
         // Extract hierarchy headers for 3-level header structure
         if (headersData) {
@@ -166,14 +148,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         }
 
         built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
-        let chosen = null
-        if (Array.isArray(columnDefsData) && columnDefsData.length > 0) {
-          chosen = columnDefsData
-        } else if (headersData) {
-          chosen = built
-        } else {
-          throw new Error('No header or column definitions available')
-        }
+        const chosen = headersData ? built : []
         const leafFields = []
         const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
         chosen.forEach(walk)
@@ -183,110 +158,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           console.warn('[Columns] Duplicate fields detected:', dupFields)
         }
         setColumnDefs(chosen)
-        try {
-          await fetchReportRows(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: ['nik'], limit: 1, benchmark: false, monitor: false })
-        } catch (prefetchErr) {}
       } catch (e) {
         console.error('Failed to load headers:', e)
-        if (DEV_MODE && !finalToken) {
-          try {
-            const res = await login('admin', 'admin')
-            setAuthToken(res.access_token)
-            const [headersData, columnDefsData] = await Promise.all([
-              fetchDynamicHeaders(res.access_token, monthValue, yearValue, finalGangCode),
-              fetchColumnDefinitions(res.access_token, monthValue, yearValue, finalGangCode)
-            ])
-            setHeaders(headersData)
-            const gen = headersData?.table_structure?.generated_headers || {}
-            const l1 = gen?.level_1?.columns || []
-            const l2 = gen?.level_2?.columns || []
-            const l3 = gen?.level_3?.columns || []
-            const l2ByParent = {}
-            l2.forEach(c => { const p = c.parent; if (!l2ByParent[p]) l2ByParent[p] = []; l2ByParent[p].push(c) })
-            const l3ByParent = {}
-            l3.forEach(c => { const p = c.parent; if (!l3ByParent[p]) l3ByParent[p] = []; l3ByParent[p].push(c) })
-            const mapField = (id) => {
-              const m = {
-                no:'no', gender:'jenis_kelamin', nik:'nik', name:'nama', upah_dasar:'upah_dasar', hari_kerja:'hari_kerja', upah_pokok:'upah_pokok', jml_hk:'jumlah_hk', gaji_pokok:'gaji_pokok', total_tunjangan:'total_tunjangan', upah_bersih:'upah_bersih',
-                cuti_tahunan_unit:'cuti_tahunan_hari', cuti_sakit_haid_unit:'cuti_sakit_haid_hari', cuti_minggu_unit:'cuti_minggu_hari', cuti_nasional_unit:'cuti_nasional_hari', cuti_izin_unit:'cuti_izin_hari',
-                beras_rate:'beras_rate', beras_jumlah:'beras_jumlah', jabatan_rate:'jabatan_rate', jabatan_jumlah:'jabatan_jumlah', masa_kerja_lama:'masa_kerja_tahun', masa_kerja_jumlah:'masa_kerja_jumlah', lembur_jam:'lembur_jam', lembur_jumlah:'lembur_jumlah',
-                brondol_jumlah:'premi_brondol', pruning_jumlah:'premi_pruning', premi_angkut_material_jumlah:'premi_angkut_material', premi_angkut_tbs_jumlah:'premi_angkut_tbs', premi_harvesting_jumlah:'premi_harvesting', premi_harvesting_incentive_jumlah:'premi_harvesting_incentive', premi_pupuk_jumlah:'premi_pupuk',
-                premi_koreksi_jumlah:'premi_koreksi', bpjs_pensiun_pekerja:'pot_bpjs_pensiun_pekerja', bpjs_pensiun_majikan:'pot_bpjs_pensiun_majikan',
-                pph21:'pot_pph21', potongan_kontan:'pot_kontan', thr:'pot_thr', pinjam:'pot_pinjam', kl:'pot_kl', bpjs_kes:'pot_bpjs_kes', bpjs_pek:'pot_bpjs_pek', bpjs_maj:'pot_bpjs_maj', total1:'pot_total_1', total2:'pot_total_2', total3:'pot_total_3', total4:'pot_total_4', cth:'tidak_hadir_cth', alpa:'tidak_hadir_alpa'
-              }
-              return m[id] || id
-            }
-            const built = []
-            const leftColumns = []
-            const otherColumns = []
-
-            l1.forEach(c1 => {
-              const childrenIds = c1.children || []
-              if (!childrenIds || childrenIds.length === 0) {
-                const field = mapField(c1.id)
-                if (field) {
-                  const colDef = { field, headerName: c1.text, pinned: ['no','nama'].includes(field) ? 'left' : undefined }
-                  if (['no','nama'].includes(field)) {
-                    leftColumns.push(colDef)
-                  } else {
-                    otherColumns.push(colDef)
-                  }
-                }
-                return
-              }
-              const group2 = (l2ByParent[c1.id] || []).map(c2 => {
-                const leaves = (l3ByParent[c2.id] || []).map(c3 => ({ field: mapField(c3.id), headerName: c3.text }))
-                return { headerName: c2.text, children: leaves }
-              })
-              otherColumns.push({ headerName: c1.text, children: group2 })
-            })
-
-            // Pastikan kolom utama (no, gender, nik, name) berada di paling kiri dan selalu tampil
-            const essentialColumns = []
-            const remainingLeftColumns = []
-
-            leftColumns.forEach(col => {
-              if (['no', 'jenis_kelamin', 'nik', 'nama'].includes(col.field)) {
-                essentialColumns.push(col)
-              } else {
-                remainingLeftColumns.push(col)
-              }
-            })
-
-            // Urutkan essential columns: no, gender, nik, nama
-            const orderedEssential = []
-            if (essentialColumns.some(c => c.field === 'no')) {
-              orderedEssential.push(essentialColumns.find(c => c.field === 'no'))
-            }
-            if (essentialColumns.some(c => c.field === 'jenis_kelamin')) {
-              orderedEssential.push(essentialColumns.find(c => c.field === 'jenis_kelamin'))
-            }
-            if (essentialColumns.some(c => c.field === 'nik')) {
-              orderedEssential.push(essentialColumns.find(c => c.field === 'nik'))
-            }
-            if (essentialColumns.some(c => c.field === 'nama')) {
-              orderedEssential.push(essentialColumns.find(c => c.field === 'nama'))
-            }
-
-            // Pastikan kolom 'no' dan 'nama' berada di paling kiri
-            built.push(...orderedEssential, ...remainingLeftColumns, ...otherColumns)
-            const hasChildren = Array.isArray(columnDefsData) && columnDefsData.some(c => c.children)
-            const chosen = hasChildren ? columnDefsData : built
-            const leafFields = []
-            const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
-            chosen.forEach(walk)
-            const dupFields = leafFields.filter((f, i, a) => a.indexOf(f) !== i)
-            console.log('[Columns] Leaf fields count:', leafFields.length)
-            if (dupFields.length > 0) {
-              console.warn('[Columns] Duplicate fields detected:', dupFields)
-            }
-            setColumnDefs(chosen)
-          } catch (e2) {
-            setError('Failed to load dynamic headers')
-          }
-        } else {
-          setError('Failed to load dynamic headers')
-        }
+        setError('Failed to load dynamic headers')
       } finally {
         setHeaderLoading(false)
       }
@@ -345,11 +219,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               setPinnedBottom([pinned])
             })
             .catch(() => {})
-
-          // Always fetch initial batch of rows for display in infinite mode
-          const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
-          setRows(Array.isArray(data) ? data : [])
-          safe = Array.isArray(data) ? data : []
+          // In infinite mode, rely on grid datasource to fetch the first block
+          safe = []
         } else {
           const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
           setRows(Array.isArray(data) ? data : [])
