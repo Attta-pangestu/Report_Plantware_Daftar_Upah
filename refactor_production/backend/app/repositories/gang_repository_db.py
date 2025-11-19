@@ -36,6 +36,21 @@ class GangRepositoryDB:
         except Exception:
             return []
 
+    def list_codes_by_loc_code(self, loc_code: str, force: bool = False) -> List[str]:
+        key = f"gangs_loc:{(loc_code or '').upper()}"
+        if not force:
+            cached = self.cache.get(key)
+            if cached is not None:
+                return cached
+        try:
+            q = self.queries.get('gangs', 'gangs_by_loc_code')
+            rows = self.db.query_all(q['sql'], (str(loc_code or '').upper(),))
+            codes = [str(r[0]).strip() for r in rows]
+            self.cache.set(key, codes, ttl=300)
+            return codes
+        except Exception:
+            return []
+
     def list(self, division: Optional[str] = None) -> List[dict]:
         try:
             if division:

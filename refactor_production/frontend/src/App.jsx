@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 import Report from './pages/Report'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Modal from './components/common/Modal'
 import LoadingScreen from './components/common/LoadingScreen'
 import { fetchGangs } from './services/gangService'
+import { fetchReportRowsSimple } from './services/payrollService'
 import TestModePanel from './components/common/TestModePanel'
 
 // Check if running in development mode
@@ -24,6 +26,20 @@ function AppInner() {
   const [gangError, setGangError] = useState('')
   const [initError, setInitError] = useState('')
   const [gangSearch, setGangSearch] = useState('')  // State untuk search gang
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        await axios.get('/dev-mode', { timeout: 5000 })
+      } catch (e) {
+        if (!cancelled) {
+          setInitError('Backend not reachable: ' + (e.message || 'Network error'))
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     async function bootstrap() {
@@ -273,7 +289,6 @@ function AppInner() {
             { name: 'Loading dynamic headers', duration: 2000 },
             { name: 'Fetching employee data from database', duration: 3000 },
             { name: 'Processing payroll calculations', duration: 2500 },
-            { name: 'Auto-hiding empty columns', duration: 1000 },
             { name: 'Finalizing report layout', duration: 1500 }
           ]}
         />

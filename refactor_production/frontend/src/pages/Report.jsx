@@ -345,6 +345,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               setPinnedBottom([pinned])
             })
             .catch(() => {})
+
+          // Always fetch initial batch of rows for display in infinite mode
+          const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+          setRows(Array.isArray(data) ? data : [])
+          safe = Array.isArray(data) ? data : []
         } else {
           const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
           setRows(Array.isArray(data) ? data : [])
@@ -446,7 +451,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             }] : [])
 
             // Proses autohide hanya sekali saat data pertama kali dimuat (dev mode)
-            if (!autohideProcessed && safe.length > 0) {
+            const AUTO_HIDE_PREMI = import.meta.env.VITE_AUTO_HIDE_PREMI === 'true'
+            if (!autohideProcessed && safe.length > 0 && AUTO_HIDE_PREMI) {
               console.log('[AutoHide] Processing column auto-hide for', safe.length, 'rows (dev mode)')
               const enhanced = enhanceColumnsRecursive(columnDefs)
               const hiddenColumns = hideEmptyPremiColumns(enhanced, safe)

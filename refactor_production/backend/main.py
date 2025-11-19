@@ -11,15 +11,32 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI()
-# Configure CORS middleware
+
+# Configure CORS with explicit allowed origins to avoid browser cancellations
+def _allowed_origins():
+    env_origins = os.getenv("CORS_ALLOW_ORIGINS")
+    if env_origins:
+        try:
+            items = [o.strip() for o in env_origins.split(",") if o.strip()]
+            if items:
+                return items
+        except Exception:
+            pass
+    return [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    # Add exposed headers to ensure all response headers are accessible
-    expose_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"]
 )
 
 # Add development mode info
@@ -52,6 +69,11 @@ async def log_requests(request: Request, call_next):
     response = await call_next(request)
     duration_ms = int((time.perf_counter() - start) * 1000)
     request_logger.info(f"{request.method} {request.url.path}?{request.url.query} {response.status_code} {duration_ms}ms test_mode={is_test_mode()}")
+    # Ensure Referrer-Policy is set to avoid noisy browser warnings; does not affect auth
+    try:
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    except Exception:
+        pass
     return response
 
 if __name__ == "__main__":

@@ -171,3 +171,14 @@ class GangService:
             "prefix": gang_code[0] if gang_code else None,
             "is_security": gang_code.upper().startswith('SEC') if gang_code else False
         }
+
+    def fetch_gangs_by_loc_code(self, loc_code: str, force: bool = False) -> List[str]:
+        """Fetch gangs strictly by LocCode using HR_GANG table"""
+        try:
+            from app.repositories.gang_repository_db import GangRepositoryDB
+            repo = GangRepositoryDB()
+            codes = repo.list_codes_by_loc_code(loc_code=loc_code, force=force)
+            return sorted(codes)
+        except Exception as e:
+            print(f"[ERROR] fetch_gangs_by_loc_code failed: {e}")
+            return []

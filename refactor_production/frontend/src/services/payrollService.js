@@ -30,7 +30,7 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
   if (monitor) params.monitor = true
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
-  const r = await requestWithRetry('/payroll/report', config)
+  const r = await requestWithRetry('/payroll/report', config, 2, 300, 45000)
   return r.data
 }
 
@@ -51,13 +51,13 @@ export async function fetchReportRowsSimple(token, { month, year, gang_code, ski
 
   try {
     console.log('[PayrollService] Using optimized real endpoint for best performance')
-    const r = await requestWithRetry('/payroll/report/real', config)
+    const r = await requestWithRetry('/payroll/report/real', config, 1, 500, 45000)
     return r.data
   } catch (error) {
     console.error('[PayrollService] Real endpoint failed, falling back to simple endpoint:', error)
     // Fallback to simple endpoint if real endpoint fails
     try {
-      const r = await requestWithRetry('/payroll/report/simple', config)
+      const r = await requestWithRetry('/payroll/report/simple', config, 1, 500, 45000)
       return r.data
     } catch (fallbackError) {
       console.error('[PayrollService] All endpoints failed:', fallbackError)

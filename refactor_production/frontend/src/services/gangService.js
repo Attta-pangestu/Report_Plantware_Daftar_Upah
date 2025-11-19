@@ -1,14 +1,16 @@
 import axios from 'axios'
 
-export async function fetchGangs(token, division = null, search = null, force = false) {
+export async function fetchGangs(token, division = null, search = null, force = false, locCode = null) {
   const params = {}
   if (division) params.division = division
   if (search) params.search = search
   if (force) params.force = force
-  const r = await axios.get('/payroll/gangs', {
-    headers: { Authorization: `Bearer ${token}` },
-    params
-  })
+  const headers = { Authorization: `Bearer ${token}` }
+  if (locCode) {
+    const r = await axios.get('/payroll/gangs/by-loc', { headers, params: { loc_code: locCode, force } })
+    return r.data
+  }
+  const r = await axios.get('/payroll/gangs', { headers, params })
   return r.data
 }
 

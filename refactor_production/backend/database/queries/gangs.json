@@ -10,5 +10,9 @@
   "gangs_with_desc_by_prefix": {
     "sql": "SELECT g.\"GangCode\", g.\"Description\" FROM \"HR_GANG\" g JOIN (SELECT DISTINCT \"GangCode\" FROM \"HR_GANGLN\") ln ON ln.\"GangCode\" = g.\"GangCode\" WHERE g.\"GangCode\" LIKE ? ORDER BY g.\"GangCode\"",
     "description": "List gang code and description filtered by code prefix"
+  },
+  "gangs_by_loc_code": {
+    "sql": "SELECT g.\"GangCode\", g.\"Description\" FROM \"HR_GANG\" g WHERE UPPER(g.\"LocCode\") = UPPER(?) ORDER BY g.\"GangCode\"",
+    "description": "List gang codes by exact LocCode from HR_GANG"
   }
 }

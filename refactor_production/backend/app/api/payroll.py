@@ -181,6 +181,45 @@ async def get_gangs(
             detail=f"Failed to fetch gangs: {str(e)}"
         )
 
+@router.get("/gangs/by-loc", response_model=List[str])
+async def get_gangs_by_loc(
+    loc_code: str = Query(..., description="Exact LocCode to filter gangs (e.g., AB2)"),
+    force: Optional[bool] = Query(False, description="Force refresh from database"),
+    user=Depends(get_current_user_from_token)
+):
+    """Get gang codes by LocCode using HR_GANG table"""
+    try:
+        codes = gang_service.fetch_gangs_by_loc_code(loc_code=loc_code, force=bool(force))
+        try:
+            logger.info(f"gangs_by_loc loc_code={loc_code} count={len(codes)}")
+        except Exception:
+            pass
+        if not codes:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No gangs found for locCode {loc_code}")
+        return codes
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch gangs by locCode: {str(e)}")
+
+@router.get("/gangs/codes", response_model=List[str])
+async def get_gang_codes(
+    force: Optional[bool] = Query(False, description="Force refresh from database"),
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        repo = GangRepositoryDB()
+        codes = repo.list_codes(division=None, force=bool(force))
+        try:
+            logger.info(f"gang_codes count={len(codes)}")
+        except Exception:
+            pass
+        if not codes:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No gang codes found")
+        return codes
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch gang codes: {str(e)}")
+
 @router.get("/gang/{gang_code}/info", response_model=dict)
 async def get_gang_info(gang_code: str, user=Depends(get_current_user_from_token)):
     """Get detailed information about a specific gang"""
