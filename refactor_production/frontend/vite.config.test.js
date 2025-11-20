@@ -7,6 +7,9 @@ const isDev = process.env.DEV_MODE === 'true' || process.env.VITE_DEV_MODE === '
 export default defineConfig({
   appType: 'spa',
   plugins: [react()],
+  resolve: {
+    dedupe: ['react', 'react-dom'],
+  },
   server: {
     host: '0.0.0.0',
     port: 5175,  // Ganti ke port 5175 agar sesuai dengan URL Anda

@@ -164,12 +164,20 @@ class GangService:
     def get_gang_info(self, gang_code: str) -> dict:
         """Get detailed information about a specific gang"""
         division = self.get_divisions_for_prefix(gang_code)
+        try:
+            from app.repositories.gang_repository_db import GangRepositoryDB
+            repo = GangRepositoryDB()
+            details = repo.get_details(gang_code) or {}
+        except Exception:
+            details = {}
 
         return {
             "gang_code": gang_code,
             "division": division,
             "prefix": gang_code[0] if gang_code else None,
-            "is_security": gang_code.upper().startswith('SEC') if gang_code else False
+            "is_security": gang_code.upper().startswith('SEC') if gang_code else False,
+            "description": details.get("description", ""),
+            "loc_code": details.get("loc_code", "")
         }
 
     def fetch_gangs_by_loc_code(self, loc_code: str, force: bool = False) -> List[str]:

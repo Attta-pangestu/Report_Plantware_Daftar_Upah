@@ -65,3 +65,13 @@ class GangRepositoryDB:
             return [{"code": r[0], "description": r[1]} for r in rows]
         except Exception:
             return []
+
+    def get_details(self, gang_code: str) -> Optional[dict]:
+        try:
+            sql = 'SELECT g."GangCode", g."Description", g."LocCode" FROM "HR_GANG" g WHERE UPPER(g."GangCode") = UPPER(?)'
+            row = self.db.query_one(sql, (str(gang_code or '').strip(),))
+            if not row:
+                return None
+            return {"gang_code": str(row[0]).strip(), "description": str(row[1]).strip() if row[1] is not None else '', "loc_code": str(row[2]).strip() if row[2] is not None else ''}
+        except Exception:
+            return None

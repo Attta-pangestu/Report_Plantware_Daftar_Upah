@@ -8,12 +8,6 @@
 .col-total-potongan { background: #e3f2fd; color: #0d47a1; font-weight: 700; }
 .row-odd .ag-cell { background: #ffffff; }
 .row-even .ag-cell { background: #fff8e1; }
-.first-row .ag-cell {
-  background: #e8f5e8 !important;
-  font-weight: 600 !important;
-  border: 1px solid #4caf50 !important;
-  color: #1b5e20 !important;
-}
 .grand-total .ag-cell { background: #f0f0f0; font-weight: 700; }
 .ag-row-pinned .ag-cell { background: #ffffcc; font-weight: 700; }
 .ag-row-selected .ag-cell { outline: 2px solid #ff7043; }

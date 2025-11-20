@@ -13,6 +13,25 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('')
   const [loginInProgress, setLoginInProgress] = useState(false) // Prevent multiple login attempts
 
+  useEffect(() => {
+    try {
+      const t = document.cookie.split('; ').find(x => x.startsWith('auth_token='))
+      const tok = t ? decodeURIComponent(t.split('=')[1]) : ''
+      if (tok) {
+        setToken(tok)
+        axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
+        ;(async () => {
+          try {
+            const u = await getMe(tok)
+            setUser(u)
+          } catch (e) {
+            setError('Failed to restore session')
+          }
+        })()
+      }
+    } catch (_) {}
+  }, [])
+
   // Auto-login moved to LoginPage in test mode to show the login UI while submitting automatically
 
   async function login(username, password) {
@@ -47,6 +66,12 @@ export function AuthProvider({ children }) {
         console.log('[Auth] Login successful, setting authentication state')
         setToken(tok)
         setUser(usr)
+        try {
+          const secure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:'
+          const flags = `path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax` + (secure ? '; Secure' : '')
+          document.cookie = `auth_token=${encodeURIComponent(tok)}; ${flags}`
+          axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
+        } catch (_) {}
         return true
       }
       throw new Error('Missing token or user')
@@ -80,8 +105,17 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const logout = () => {
+    try {
+      document.cookie = 'auth_token=; Max-Age=0; path=/'
+      delete axios.defaults.headers.common['Authorization']
+    } catch (_) {}
+    setToken('')
+    setUser(null)
+  }
+
   const isAuthenticated = !!token
-  return <AuthCtx.Provider value={{ token, isAuthenticated, user, login, loading, error }}>{children}</AuthCtx.Provider>
+  return <AuthCtx.Provider value={{ token, isAuthenticated, user, login, logout, loading, error }}>{children}</AuthCtx.Provider>
 }
 
 export function useAuth() {

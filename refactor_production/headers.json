@@ -1,0 +1,297 @@
+{
+    "report_info":  {
+                        "title":  "DAFTAR UPAH - November 2025",
+                        "generated_date":  "2025-11-20_11-16-23",
+                        "gang":  "H1H",
+                        "database":  "ARC",
+                        "description":  "Laporan daftar upah dengan header dinamis berdasarkan data real",
+                        "month":  11,
+                        "year":  2025
+                    },
+    "table_structure":  {
+                            "total_columns":  21,
+                            "header_rows":  3,
+                            "data_rows":  "employee_data",
+                            "hierarchy":  {
+                                              "level_1":  {
+                                                              "row":  1,
+                                                              "description":  "Main header categories dengan colspan dan rowspan",
+                                                              "columns":  [
+                                                                              "@{id=no; text=NO; rowspan=3; colspan=1; class=header-cell col-no main-header; children=System.Object[]}",
+                                                                              "@{id=gender; text=L/P; rowspan=3; colspan=1; class=header-cell col-gender main-header; children=System.Object[]}",
+                                                                              "@{id=nik; text=NIK; rowspan=3; colspan=1; class=header-cell col-nik main-header; children=System.Object[]}",
+                                                                              "@{id=name; text=NAMA; rowspan=3; colspan=1; class=header-cell col-name main-header text-left; children=System.Object[]}",
+                                                                              "@{id=upah_dasar; text=UPAH DASAR; rowspan=3; colspan=1; class=header-cell col-upah-dasar main-header; children=System.Object[]}",
+                                                                              "@{id=hari_kerja; text=HARI KERJA; rowspan=3; colspan=1; class=header-cell col-hari-kerja main-header; children=System.Object[]}",
+                                                                              "@{id=upah_pokok; text=UPAH POKOK; rowspan=3; colspan=1; class=header-cell col-upah-pokok main-header; children=System.Object[]}",
+                                                                              "@{id=cuti_libur; text=Cuti/Libur; rowspan=1; colspan=5; class=header-cell section-header; children=System.Object[]}",
+                                                                              "@{id=jml_hk; text=JML HK; rowspan=3; colspan=1; class=header-cell col-hk main-header; children=System.Object[]}",
+                                                                              "@{id=gaji_pokok; text=GAJI POKOK; rowspan=3; colspan=1; class=header-cell col-gaji-pokok main-header; children=System.Object[]}",
+                                                                              "@{id=tunjangan; text=TUNJANGAN; rowspan=1; colspan=8; class=header-cell section-header; children=System.Object[]}",
+                                                                              "@{id=premi; text=PREMI; rowspan=1; colspan=7; class=header-cell section-header; children=System.Object[]}",
+                                                                              "@{id=total_tunjangan; text=TOTAL TUNJANGAN; rowspan=3; colspan=1; class=header-cell col-total-tunjangan main-header; children=System.Object[]}",
+                                                                              "@{id=potongan; text=POTONGAN; rowspan=1; colspan=13; class=header-cell section-header; children=System.Object[]}",
+                                                                              "@{id=upah_bersih; text=UPAH BERSIH; rowspan=3; colspan=1; class=header-cell col-upah main-header; children=System.Object[]}",
+                                                                              "@{id=tidak_hadir; text=TIDAK HADIR; rowspan=1; colspan=2; class=header-cell col-tidak-hadir section-header; children=System.Object[]}"
+                                                                          ]
+                                                          },
+                                              "level_2":  {
+                                                              "row":  2,
+                                                              "description":  "Sub-header detail types",
+                                                              "columns":  [
+                                                                              "@{id=cuti_tahunan; text=TAHUNAN (Izin); parent=cuti_libur; class=header-cell col-cuti; children=System.Object[]}",
+                                                                              "@{id=cuti_sakit_haid; text=SAKIT + HAID; parent=cuti_libur; class=header-cell col-cuti; children=System.Object[]}",
+                                                                              "@{id=cuti_minggu; text=MINGGU; parent=cuti_libur; class=header-cell col-cuti; children=System.Object[]}",
+                                                                              "@{id=cuti_nasional; text=NASIONAL; parent=cuti_libur; class=header-cell col-cuti; children=System.Object[]}",
+                                                                              "@{id=cuti_izin; text=IZIN; parent=cuti_libur; class=header-cell col-cuti; children=System.Object[]}",
+                                                                              "@{id=beras; text=BERAS; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; children=System.Object[]}",
+                                                                              "@{id=jabatan; text=JABATAN; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; children=System.Object[]}",
+                                                                              "@{id=masa_kerja; text=MASA KERJA; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; children=System.Object[]}",
+                                                                              "@{id=lembur; text=LEMBUR; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; children=System.Object[]}",
+                                                                              "@{id=pph21; text=PPH21; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=potongan_kontan; text=Kontan; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=thr; text=THR; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=pinjam; text=Pinjam; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=kl; text=KL; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=bpjs_kes; text=BPJS Kes; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=bpjs_pek; text=BPJS Pek; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=bpjs_maj; text=BPJS Maj; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=bpjs_pensiun_pekerja; text=BPJS Pensiun Pekerja; parent=potongan; class=header-cell col-potongan; children=System.Object[]; type=data_column; field=pot_bpjs_pensiun_pekerja}",
+                                                                              "@{id=bpjs_pensiun_majikan; text=BPJS Pensiun Majikan; parent=potongan; class=header-cell col-potongan; children=System.Object[]; type=data_column; field=pot_bpjs_pensiun_majikan}",
+                                                                              "@{id=total1; text=Total; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=total2; text=Total; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=total3; text=Total; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=total4; text=Total; parent=potongan; class=header-cell col-potongan; children=System.Object[]}",
+                                                                              "@{id=cth; text=CTH; parent=tidak_hadir; class=header-cell col-tidak-hadir; children=System.Object[]}",
+                                                                              "@{id=alpa; text=ALPA; parent=tidak_hadir; class=header-cell col-tidak-hadir; children=System.Object[]}",
+                                                                              "@{id=brondol; text=BRONDOL; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=pruning; text=PRUNING; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=premi_angkut_material; text=PREMI ANGKUT MATERIAL; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=premi_angkut_tbs; text=PREMI ANGKUT TBS; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=premi_harvesting; text=PREMI HARVESTING; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=premi_harvesting_incentive; text=PREMI HARVESTING +INVCENTIVE PANEN; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}",
+                                                                              "@{id=premi_pupuk; text=PREMI PUPUK; parent=premi; class=header-cell sub-header-premi; children=System.Object[]}"
+                                                                          ]
+                                                          },
+                                              "level_3":  {
+                                                              "row":  3,
+                                                              "description":  "Unit columns (Rate, Jumlah, Lama, Jam, etc)",
+                                                              "columns":  [
+                                                                              "@{id=cuti_tahunan_unit; text=H; parent=cuti_tahunan; class=header-cell col-cuti}",
+                                                                              "@{id=cuti_sakit_haid_unit; text=H; parent=cuti_sakit_haid; class=header-cell col-cuti}",
+                                                                              "@{id=cuti_minggu_unit; text=H; parent=cuti_minggu; class=header-cell col-cuti}",
+                                                                              "@{id=cuti_nasional_unit; text=H; parent=cuti_nasional; class=header-cell col-cuti}",
+                                                                              "@{id=cuti_izin_unit; text=H; parent=cuti_izin; class=header-cell col-cuti}",
+                                                                              "@{id=beras_rate; text=Rate (Rp); parent=beras; class=header-cell col-tunjangan}",
+                                                                              "@{id=beras_jumlah; text=Jumlah; parent=beras; class=header-cell col-tunjangan}",
+                                                                              "@{id=jabatan_rate; text=Rate (Rp); parent=jabatan; class=header-cell col-tunjangan}",
+                                                                              "@{id=jabatan_jumlah; text=Jumlah; parent=jabatan; class=header-cell col-tunjangan}",
+                                                                              "@{id=masa_kerja_lama; text=Lama (Thn); parent=masa_kerja; class=header-cell col-tunjangan}",
+                                                                              "@{id=masa_kerja_jumlah; text=Jumlah (Rp); parent=masa_kerja; class=header-cell col-tunjangan}",
+                                                                              "@{id=lembur_jam; text=Jam; parent=lembur; class=header-cell col-tunjangan}",
+                                                                              "@{id=lembur_jumlah; text=Jumlah (Rp); parent=lembur; class=header-cell col-tunjangan}",
+                                                                              "@{id=brondol_jumlah; text=Jumlah (Rp); parent=brondol; class=header-cell col-premi}",
+                                                                              "@{id=pruning_jumlah; text=Jumlah (Rp); parent=pruning; class=header-cell col-premi}",
+                                                                              "@{id=premi_angkut_material_jumlah; text=Jumlah (Rp); parent=premi_angkut_material; class=header-cell col-premi}",
+                                                                              "@{id=premi_angkut_tbs_jumlah; text=Jumlah (Rp); parent=premi_angkut_tbs; class=header-cell col-premi}",
+                                                                              "@{id=premi_harvesting_jumlah; text=Jumlah (Rp); parent=premi_harvesting; class=header-cell col-premi}",
+                                                                              "@{id=premi_harvesting_incentive_jumlah; text=Jumlah (Rp); parent=premi_harvesting_incentive; class=header-cell col-premi}",
+                                                                              "@{id=premi_koreksi_jumlah; text=Jumlah (Rp); parent=premi_koreksi; class=header-cell col-premi; type=data_column; field=premi_koreksi}",
+                                                                              "@{id=premi_pupuk_jumlah; text=Jumlah (Rp); parent=premi_pupuk; class=header-cell col-premi}"
+                                                                          ]
+                                                          }
+                                          },
+                            "column_mapping":  {
+                                                   "static_columns":  [
+                                                                          "no",
+                                                                          "gender",
+                                                                          "nik",
+                                                                          "name",
+                                                                          "upah_dasar",
+                                                                          "hari_kerja",
+                                                                          "upah_pokok",
+                                                                          "jml_hk",
+                                                                          "gaji_pokok",
+                                                                          "total_tunjangan",
+                                                                          "upah_bersih"
+                                                                      ],
+                                                   "cuti_libur_columns":  [
+                                                                              "cuti_tahunan_unit",
+                                                                              "cuti_sakit_haid_unit",
+                                                                              "cuti_minggu_unit",
+                                                                              "cuti_nasional_unit",
+                                                                              "cuti_izin_unit"
+                                                                          ],
+                                                   "tunjangan_columns":  [
+                                                                             "beras_rate",
+                                                                             "beras_jumlah",
+                                                                             "jabatan_rate",
+                                                                             "jabatan_jumlah",
+                                                                             "masa_kerja_lama",
+                                                                             "masa_kerja_jumlah",
+                                                                             "lembur_jam",
+                                                                             "lembur_jumlah"
+                                                                         ],
+                                                   "premi_columns":  [
+                                                                         "brondol_jumlah",
+                                                                         "pruning_jumlah",
+                                                                         "premi_angkut_material_jumlah",
+                                                                         "premi_angkut_tbs_jumlah",
+                                                                         "premi_harvesting_jumlah",
+                                                                         "premi_harvesting_incentive_jumlah",
+                                                                         "premi_koreksi_jumlah",
+                                                                         "premi_pupuk_jumlah"
+                                                                     ],
+                                                   "potongan_columns":  [
+                                                                            "pph21",
+                                                                            "potongan_kontan",
+                                                                            "thr",
+                                                                            "pinjam",
+                                                                            "kl",
+                                                                            "bpjs_kes",
+                                                                            "bpjs_pek",
+                                                                            "bpjs_maj",
+                                                                            "bpjs_pensiun_pekerja",
+                                                                            "bpjs_pensiun_majikan",
+                                                                            "total1",
+                                                                            "total2",
+                                                                            "total3",
+                                                                            "total4"
+                                                                        ],
+                                                   "tidak_hadir_columns":  [
+                                                                               "cth",
+                                                                               "alpa"
+                                                                           ]
+                                               },
+                            "css_classes":  {
+                                                "main_headers":  [
+                                                                     "header-cell",
+                                                                     "main-header"
+                                                                 ],
+                                                "section_headers":  [
+                                                                        "header-cell",
+                                                                        "section-header"
+                                                                    ],
+                                                "sub_headers":  [
+                                                                    "header-cell",
+                                                                    "sub-header-tunjangan",
+                                                                    "sub-header-premi"
+                                                                ],
+                                                "detail_headers":  [
+                                                                       "header-cell",
+                                                                       "col-cuti",
+                                                                       "col-tunjangan",
+                                                                       "col-premi",
+                                                                       "col-potongan",
+                                                                       "col-tidak-hadir"
+                                                                   ]
+                                            },
+                            "generated_headers":  {
+                                                      "level_1":  {
+                                                                      "row":  1,
+                                                                      "columns":  [
+                                                                                      "@{id=no; text=NO; rowspan=3; colspan=1; class=header-cell col-no main-header; type=main_header}",
+                                                                                      "@{id=gender; text=L/P; rowspan=3; colspan=1; class=header-cell col-gender main-header; type=main_header}",
+                                                                                      "@{id=nik; text=NIK; rowspan=3; colspan=1; class=header-cell col-nik main-header; type=main_header}",
+                                                                                      "@{id=name; text=NAMA; rowspan=3; colspan=1; class=header-cell col-name main-header text-left; type=main_header}",
+                                                                                      "@{id=upah_dasar; text=UPAH DASAR; rowspan=3; colspan=1; class=header-cell col-upah-dasar main-header; type=main_header}",
+                                                                                      "@{id=hari_kerja; text=HARI KERJA; rowspan=3; colspan=1; class=header-cell col-hari-kerja main-header; type=main_header}",
+                                                                                      "@{id=upah_pokok; text=UPAH POKOK; rowspan=3; colspan=1; class=header-cell col-upah-pokok main-header; type=main_header}",
+                                                                                      "@{id=cuti_libur; text=Cuti/Libur; rowspan=1; colspan=5; class=header-cell section-header; type=main_header}",
+                                                                                      "@{id=jml_hk; text=JML HK; rowspan=3; colspan=1; class=header-cell col-hk main-header; type=main_header}",
+                                                                                      "@{id=gaji_pokok; text=GAJI POKOK; rowspan=3; colspan=1; class=header-cell col-gaji-pokok main-header; type=main_header}",
+                                                                                      "@{id=tunjangan; text=TUNJANGAN; rowspan=1; colspan=8; class=header-cell section-header; type=main_header}",
+                                                                                      "@{id=premi; text=PREMI; rowspan=1; colspan=7; class=header-cell section-header; type=main_header}",
+                                                                                      "@{id=total_tunjangan; text=TOTAL TUNJANGAN; rowspan=3; colspan=1; class=header-cell col-total-tunjangan main-header; type=main_header}",
+                                                                                      "@{id=potongan; text=POTONGAN; rowspan=1; colspan=13; class=header-cell section-header; type=main_header}",
+                                                                                      "@{id=upah_bersih; text=UPAH BERSIH; rowspan=3; colspan=1; class=header-cell col-upah main-header; type=main_header}",
+                                                                                      "@{id=tidak_hadir; text=TIDAK HADIR; rowspan=1; colspan=2; class=header-cell col-tidak-hadir section-header; type=main_header}"
+                                                                                  ]
+                                                                  },
+                                                      "level_2":  {
+                                                                      "row":  2,
+                                                                      "columns":  [
+                                                                                      "@{id=cuti_tahunan; text=TAHUNAN (Izin); parent=cuti_libur; colspan=1; class=header-cell col-cuti; type=sub_header}",
+                                                                                      "@{id=cuti_sakit_haid; text=SAKIT + HAID; parent=cuti_libur; colspan=1; class=header-cell col-cuti; type=sub_header}",
+                                                                                      "@{id=cuti_minggu; text=MINGGU; parent=cuti_libur; colspan=1; class=header-cell col-cuti; type=sub_header}",
+                                                                                      "@{id=cuti_nasional; text=NASIONAL; parent=cuti_libur; colspan=1; class=header-cell col-cuti; type=sub_header}",
+                                                                                      "@{id=cuti_izin; text=IZIN; parent=cuti_libur; colspan=1; class=header-cell col-cuti; type=sub_header}",
+                                                                                      "@{id=beras; text=BERAS; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; type=sub_header}",
+                                                                                      "@{id=jabatan; text=JABATAN; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; type=sub_header}",
+                                                                                      "@{id=masa_kerja; text=MASA KERJA; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; type=sub_header}",
+                                                                                      "@{id=lembur; text=LEMBUR; parent=tunjangan; colspan=2; class=header-cell sub-header-tunjangan; type=sub_header}",
+                                                                                      "@{id=pph21; text=PPH21; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=potongan_kontan; text=Kontan; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=thr; text=THR; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=pinjam; text=Pinjam; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=kl; text=KL; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=bpjs_kes; text=BPJS Kes; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=bpjs_pek; text=BPJS Pek; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=bpjs_maj; text=BPJS Maj; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=bpjs_pensiun_pekerja; text=BPJS Pensiun Pekerja; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=bpjs_pensiun_majikan; text=BPJS Pensiun Majikan; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=total1; text=Total; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=total2; text=Total; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=total3; text=Total; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=total4; text=Total; parent=potongan; colspan=1; class=header-cell col-potongan; type=sub_header}",
+                                                                                      "@{id=cth; text=CTH; parent=tidak_hadir; colspan=1; class=header-cell col-tidak-hadir; type=sub_header}",
+                                                                                      "@{id=alpa; text=ALPA; parent=tidak_hadir; colspan=1; class=header-cell col-tidak-hadir; type=sub_header}",
+                                                                                      "@{id=brondol; text=BRONDOL; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=pruning; text=PRUNING; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=premi_angkut_material; text=PREMI ANGKUT MATERIAL; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=premi_angkut_tbs; text=PREMI ANGKUT TBS; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=premi_harvesting; text=PREMI HARVESTING; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=premi_harvesting_incentive; text=PREMI HARVESTING +INVCENTIVE PANEN; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}",
+                                                                                      "@{id=premi_pupuk; text=PREMI PUPUK; parent=premi; colspan=1; class=header-cell sub-header-premi; type=sub_header}"
+                                                                                  ]
+                                                                  },
+                                                      "level_3":  {
+                                                                      "row":  3,
+                                                                      "columns":  [
+                                                                                      "@{id=cuti_tahunan_unit; text=H; parent=cuti_tahunan; class=header-cell col-cuti; type=data_column; field=cuti_tahunan_hari}",
+                                                                                      "@{id=cuti_sakit_haid_unit; text=H; parent=cuti_sakit_haid; class=header-cell col-cuti; type=data_column; field=cuti_sakit_haid_hari}",
+                                                                                      "@{id=cuti_minggu_unit; text=H; parent=cuti_minggu; class=header-cell col-cuti; type=data_column; field=cuti_minggu_hari}",
+                                                                                      "@{id=cuti_nasional_unit; text=H; parent=cuti_nasional; class=header-cell col-cuti; type=data_column; field=cuti_nasional_hari}",
+                                                                                      "@{id=cuti_izin_unit; text=H; parent=cuti_izin; class=header-cell col-cuti; type=data_column; field=cuti_izin_hari}",
+                                                                                      "@{id=beras_rate; text=Rate (Rp); parent=beras; class=header-cell col-tunjangan; type=data_column; field=beras_rate}",
+                                                                                      "@{id=beras_jumlah; text=Jumlah; parent=beras; class=header-cell col-tunjangan; type=data_column; field=beras_jumlah}",
+                                                                                      "@{id=jabatan_rate; text=Rate (Rp); parent=jabatan; class=header-cell col-tunjangan; type=data_column; field=jabatan_rate}",
+                                                                                      "@{id=jabatan_jumlah; text=Jumlah; parent=jabatan; class=header-cell col-tunjangan; type=data_column; field=jabatan_jumlah}",
+                                                                                      "@{id=masa_kerja_lama; text=Lama (Thn); parent=masa_kerja; class=header-cell col-tunjangan; type=data_column; field=masa_kerja_tahun}",
+                                                                                      "@{id=masa_kerja_jumlah; text=Jumlah (Rp); parent=masa_kerja; class=header-cell col-tunjangan; type=data_column; field=masa_kerja_jumlah}",
+                                                                                      "@{id=lembur_jam; text=Jam; parent=lembur; class=header-cell col-tunjangan; type=data_column; field=lembur_jam}",
+                                                                                      "@{id=lembur_jumlah; text=Jumlah (Rp); parent=lembur; class=header-cell col-tunjangan; type=data_column; field=lembur_jumlah}",
+                                                                                      "@{id=brondol_jumlah; text=Jumlah (Rp); parent=brondol; class=header-cell col-premi; type=data_column; field=premi_brondol}",
+                                                                                      "@{id=pruning_jumlah; text=Jumlah (Rp); parent=pruning; class=header-cell col-premi; type=data_column; field=premi_pruning}",
+                                                                                      "@{id=premi_angkut_material_jumlah; text=Jumlah (Rp); parent=premi_angkut_material; class=header-cell col-premi; type=data_column; field=premi_angkut_material}",
+                                                                                      "@{id=premi_angkut_tbs_jumlah; text=Jumlah (Rp); parent=premi_angkut_tbs; class=header-cell col-premi; type=data_column; field=premi_angkut_tbs}",
+                                                                                      "@{id=premi_harvesting_jumlah; text=Jumlah (Rp); parent=premi_harvesting; class=header-cell col-premi; type=data_column; field=premi_harvesting}",
+                                                                                      "@{id=premi_harvesting_incentive_jumlah; text=Jumlah (Rp); parent=premi_harvesting_incentive; class=header-cell col-premi; type=data_column; field=premi_harvesting_incentive}",
+                                                                                      "@{id=premi_koreksi_jumlah; text=Jumlah (Rp); parent=premi_koreksi; class=header-cell col-premi; type=data_column; field=premi_koreksi_jumlah}",
+                                                                                      "@{id=premi_pupuk_jumlah; text=Jumlah (Rp); parent=premi_pupuk; class=header-cell col-premi; type=data_column; field=premi_pupuk}"
+                                                                                  ]
+                                                                  }
+                                                  },
+                            "data_source":  "real_database",
+                            "employee_count":  29,
+                            "dynamic_premi_count":  0,
+                            "dynamic_docdesc":  [
+
+                                                ]
+                        },
+    "performance_metrics":  {
+                                "total_execution_time_ms":  206.72459999332204,
+                                "task_execution_times":  {
+                                                             "static_structure":  0.028300011763349175,
+                                                             "report_metadata":  0.019000013708136976,
+                                                             "employee_count":  0.01309999788645655,
+                                                             "dynamic_premi":  0.016999998479150236
+                                                         },
+                                "parallel_workers_used":  3
+                            },
+    "performance_info":  {
+                             "processing_type":  "threaded",
+                             "execution_time_ms":  221,
+                             "threading_enabled":  true
+                         }
+}

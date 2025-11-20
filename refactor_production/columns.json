@@ -135,66 +135,6 @@
                                                                 "cellStyle":  "@{textAlign=right}"
                                                             }
                                                         ]
-                                       },
-                                       {
-                                           "headerName":  "ANGKUT MATERIAL",
-                                           "children":  [
-                                                            {
-                                                                "headerName":  "JUMLAH",
-                                                                "field":  "premi_angkut_material",
-                                                                "width":  100,
-                                                                "type":  "numericColumn",
-                                                                "cellStyle":  "@{textAlign=right}"
-                                                            }
-                                                        ]
-                                       },
-                                       {
-                                           "headerName":  "ANGKUT TBS",
-                                           "children":  [
-                                                            {
-                                                                "headerName":  "JUMLAH",
-                                                                "field":  "premi_angkut_tbs",
-                                                                "width":  100,
-                                                                "type":  "numericColumn",
-                                                                "cellStyle":  "@{textAlign=right}"
-                                                            }
-                                                        ]
-                                       },
-                                       {
-                                           "headerName":  "HARVESTING",
-                                           "children":  [
-                                                            {
-                                                                "headerName":  "JUMLAH",
-                                                                "field":  "premi_harvesting",
-                                                                "width":  100,
-                                                                "type":  "numericColumn",
-                                                                "cellStyle":  "@{textAlign=right}"
-                                                            }
-                                                        ]
-                                       },
-                                       {
-                                           "headerName":  "HARVESTING INCENTIVE",
-                                           "children":  [
-                                                            {
-                                                                "headerName":  "JUMLAH",
-                                                                "field":  "premi_harvesting_incentive",
-                                                                "width":  100,
-                                                                "type":  "numericColumn",
-                                                                "cellStyle":  "@{textAlign=right}"
-                                                            }
-                                                        ]
-                                       },
-                                       {
-                                           "headerName":  "PUPUK",
-                                           "children":  [
-                                                            {
-                                                                "headerName":  "JUMLAH",
-                                                                "field":  "premi_pupuk",
-                                                                "width":  100,
-                                                                "type":  "numericColumn",
-                                                                "cellStyle":  "@{textAlign=right}"
-                                                            }
-                                                        ]
                                        }
                                    ]
                   },
@@ -210,12 +150,7 @@
                                       "type":  "sum",
                                       "fields":  [
                                                      "premi_pruning",
-                                                     "premi_brondol",
-                                                     "premi_angkut_material",
-                                                     "premi_angkut_tbs",
-                                                     "premi_harvesting",
-                                                     "premi_harvesting_incentive",
-                                                     "premi_pupuk"
+                                                     "premi_brondol"
                                                  ],
                                       "match_prefix":  "premi_dynamic_"
                                   }

@@ -527,10 +527,8 @@ class HeaderService:
 
                 level2_cols = l2_by_parent.get(c1_id, [])
                 c1_text_upper = (c1.get('text') or '').strip().upper()
-                # Hide TUNJANGAN breakdown group; only show Total Tunjangan as top-level
                 c1_id_lower = (c1.get('id') or '').strip().lower()
                 if c1_id_lower == 'tunjangan' or 'TUNJANGAN' in c1_text_upper:
-                    # Skip building TUNJANGAN children; calculation is preserved via total_tunjangan
                     continue
                 if 'PREMI' in c1_text_upper:
                     dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
@@ -578,8 +576,8 @@ class HeaderService:
                             }]
                         })
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                    continue
                 else:
-                    # Special-case: rebuild PREMI as dynamic (only BRONDOL & PRUNING fixed + dynamic headers)
                     c1_text = (c1.get('text') or '').strip().upper()
                     c1_id = (c1.get('id') or '').strip().lower()
                     if c1_text == 'PREMI' or c1_id == 'premi':
@@ -609,6 +607,7 @@ class HeaderService:
                                 }]
                             })
                         col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                        continue
                     else:
                         group2_defs = []
                         for c2 in level2_cols:
@@ -647,7 +646,39 @@ class HeaderService:
                     }
                 ]
 
-            # Insert 'Total Premi' as a summary column right after top-level 'PREMI'
+            try:
+                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                for c in col_defs:
+                    if (c.get('headerName') or '').strip().upper() == 'PREMI':
+                        new_children = []
+                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
+                            new_children.append({
+                                'headerName': t,
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': f,
+                                    'width': self._get_column_width(f),
+                                    'type': self._get_column_type(f),
+                                    'cellStyle': self._get_cell_style(f)
+                                }]
+                            })
+                        for i, name in enumerate(dyn[:7]):
+                            field = f"premi_dynamic_{i+1}"
+                            new_children.append({
+                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                }]
+                            })
+                        c['children'] = new_children
+                        break
+            except Exception:
+                pass
+
             found_premi = False
             for idx, c in enumerate(col_defs):
                 c_name = (c.get('headerName') or '').strip().upper()
@@ -665,7 +696,6 @@ class HeaderService:
                     found_premi = True
                     break
 
-            # Insert structured deduction groups after 'Upah Kotor' column based on HTML template
             upah_kotor_idx = None
             for idx, c in enumerate(col_defs):
                 if c.get('field') == 'jumlah_upah_kotor':
@@ -673,7 +703,6 @@ class HeaderService:
                     break
 
             if upah_kotor_idx is not None:
-                # Create structured deduction groups matching HTML template hierarchy
                 deduction_groups = [
                     {
                         'headerName': 'CARUMAN ASTEK',
@@ -806,7 +835,6 @@ class HeaderService:
                 ]
                 col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
 
-            # Ensure 'PREMI' group exists even if missing from JSON hierarchy
             has_premi = any([(c.get('headerName') or '').strip().upper() == 'PREMI' for c in col_defs])
             if not has_premi:
                 dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
@@ -861,7 +889,6 @@ class HeaderService:
                     }
                 ]
 
-            # Remove duplicate 'upah_bersih' fields - keep only the one in deduction_groups
             filtered_col_defs = []
             upah_bersih_found = False
             for c in col_defs:
@@ -874,7 +901,6 @@ class HeaderService:
                 else:
                     filtered_col_defs.append(c)
 
-            # Reorder so 'no' and 'nama' are the first two columns
             lead = []
             rest = []
             for c in filtered_col_defs:
@@ -883,7 +909,6 @@ class HeaderService:
                     lead.append(c)
                 else:
                     rest.append(c)
-            # Ensure order: no, then nama
             lead_sorted = []
             no_col = next((c for c in lead if c.get('field') == 'no'), None)
             nama_col = next((c for c in lead if c.get('field') == 'nama'), None)
@@ -894,6 +919,38 @@ class HeaderService:
             final_defs = lead_sorted + rest
             if not final_defs:
                 return self._get_fallback_column_defs()
+            try:
+                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                for c in final_defs:
+                    if (c.get('headerName') or '').strip().upper() == 'PREMI':
+                        new_children = []
+                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
+                            new_children.append({
+                                'headerName': t,
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': f,
+                                    'width': self._get_column_width(f),
+                                    'type': self._get_column_type(f),
+                                    'cellStyle': self._get_cell_style(f)
+                                }]
+                            })
+                        for i, name in enumerate(dyn[:7]):
+                            field = f"premi_dynamic_{i+1}"
+                            new_children.append({
+                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                }]
+                            })
+                        c['children'] = new_children
+                        break
+            except Exception:
+                pass
             return final_defs
 
         except Exception as e:

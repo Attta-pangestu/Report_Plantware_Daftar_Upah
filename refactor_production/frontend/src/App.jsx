@@ -14,7 +14,7 @@ const DEV_MODE = import.meta.env.DEV || false
 const TEST_MODE = DEV_MODE && import.meta.env.VITE_DEV_MODE === 'true'
 
 function AppInner() {
-  const { token, isAuthenticated, user, loading, error } = useAuth()
+  const { token, isAuthenticated, user, loading, error, logout } = useAuth()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [monthInput, setMonthInput] = useState('')
   const [gangs, setGangs] = useState([])
@@ -26,6 +26,7 @@ function AppInner() {
   const [gangError, setGangError] = useState('')
   const [initError, setInitError] = useState('')
   const [gangSearch, setGangSearch] = useState('')  // State untuk search gang
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -171,6 +172,18 @@ function AppInner() {
 
   return (
     <>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', borderBottom:'1px solid #eee', background:'#fafafa' }}>
+        <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+          <div style={{ fontSize:16, fontWeight:700, color:'#2c3e50' }}>Daftar Upah Reporting</div>
+          <div style={{ fontSize:12, color:'#666' }}>Division: {division || '-'} | Gang: {gang || '-'}</div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ fontSize:13, color:'#333' }}>{user.full_name} ({user.username})</div>
+          <button onClick={() => setProfileOpen(true)} style={{ padding:'4px 10px' }}>Profile</button>
+          <button onClick={() => { logout(); }} style={{ padding:'4px 10px', background:'#d32f2f', color:'#fff', border:'none', borderRadius:4 }}>Logout</button>
+          <button onClick={() => setFiltersOpen(true)} style={{ padding:'4px 10px' }}>Filters</button>
+        </div>
+      </div>
       <Modal open={filtersOpen} title="Select Month & Gang" onClose={() => setFiltersOpen(false)}>
         <div style={{ display:'grid', gap:12, minWidth: 400 }}>
           <div>
@@ -277,6 +290,14 @@ function AppInner() {
           </div>
         </div>
       </Modal>
+      <Modal open={profileOpen} title="User Profile" onClose={() => setProfileOpen(false)}>
+        <div style={{ display:'grid', gap:8, minWidth:360 }}>
+          <div><strong>Name:</strong> {user.full_name}</div>
+          <div><strong>Username:</strong> {user.username}</div>
+          <div><strong>Role:</strong> {user.role}</div>
+          <div><strong>Divisions:</strong> {Array.isArray(user.divisions) ? user.divisions.join(', ') : '-'}</div>
+        </div>
+      </Modal>
       {applyLoading && (
         <LoadingScreen
           isLoading={true}
@@ -293,7 +314,7 @@ function AppInner() {
           ]}
         />
       )}
-      {ready ? <Report token={token} month={month} year={year} gang_code={gang_code} onLoad={() => setApplyLoading(false)} /> : null}
+      {ready ? <Report token={token} user={user} month={month} year={year} gang_code={gang_code} onLoad={() => setApplyLoading(false)} /> : null}
     </>
   )
 }
