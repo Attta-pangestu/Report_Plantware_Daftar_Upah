@@ -4,6 +4,9 @@ import axios from 'axios'
 const headerCache = new Map()
 const columnCache = new Map()
 const CACHE_TTL = 15 * 60 * 1000 // 15 minutes in milliseconds
+// In-flight request registries to prevent duplicate axios calls
+const inFlightHeaders = new Map()
+const inFlightColumns = new Map()
 
 const getCacheKey = (token, month, year, gangCode) => {
   return `${token || 'guest'}_${gangCode || 'all'}_${year || 'current'}_${month || 'current'}`
@@ -46,12 +49,19 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
+  // Return existing in-flight promise if present
+  if (inFlightHeaders.has(cacheKey)) {
+    return await inFlightHeaders.get(cacheKey)
+  }
+
   try {
     console.log(`[Headers API] Fetching dynamic headers for: ${gangCode || 'all'} ${month}-${year}`)
     console.log(`[Headers API] Request: GET /payroll/headers with params:`, JSON.stringify(params, null, 2))
     const startTime = Date.now()
 
-    const response = await axios.get('/payroll/headers', config)
+    const promise = axios.get('/payroll/headers', config)
+    inFlightHeaders.set(cacheKey, promise)
+    const response = await promise
     const data = response.data
 
     const fetchTime = Date.now() - startTime
@@ -60,10 +70,12 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
 
     // Cache the response
     setCache(headerCache, cacheKey, data)
+    inFlightHeaders.delete(cacheKey)
 
     return data
   } catch (e) {
     console.error('[Headers API] Failed to fetch dynamic headers:', e)
+    inFlightHeaders.delete(cacheKey)
 
     // Enhanced error logging
     const errorDetails = {
@@ -102,22 +114,34 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
+  if (inFlightColumns.has(cacheKey)) {
+    return await inFlightColumns.get(cacheKey)
+  }
+
   try {
     console.log(`Fetching column definitions for: ${gangCode || 'all'} ${month}-${year}`)
     const startTime = Date.now()
 
-    const response = await axios.get('/payroll/columns', config)
+    const promise = axios.get('/payroll/columns', config)
+    inFlightColumns.set(cacheKey, promise)
+    const response = await promise
     const data = response.data
 
     const fetchTime = Date.now() - startTime
     console.log(`Column definitions fetched in ${fetchTime}ms`)
+    console.log('[Columns API] Raw response data:', data)
+    console.log('[Columns API] Data type:', typeof data)
+    console.log('[Columns API] Is array?:', Array.isArray(data))
+    console.log('[Columns API] Data length:', data?.length)
 
     // Cache the response
     setCache(columnCache, cacheKey, data)
+    inFlightColumns.delete(cacheKey)
 
     return data
   } catch (e) {
     console.error('Failed to fetch column definitions:', e)
+    inFlightColumns.delete(cacheKey)
 
     // Enhanced error logging
     const errorDetails = {

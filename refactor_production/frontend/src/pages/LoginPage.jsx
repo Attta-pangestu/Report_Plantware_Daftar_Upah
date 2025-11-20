@@ -17,33 +17,10 @@ const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  // In test mode, auto-fill admin credentials and auto-submit
-  useEffect(() => {
-    if (!TEST_MODE || autoRef.current) return
-    autoRef.current = true
-
-    // Add a small delay to ensure all components are mounted
-    const timer = setTimeout(async () => {
-      try {
-        console.log('[AutoLogin] Starting auto-login with admin credentials')
-        setFormData(prev => ({ ...prev, username: 'admin', password: 'admin' }))
-
-        // Add another small delay before submitting
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        const success = await login('admin', 'admin')
-        if (success) {
-          console.log('[AutoLogin] Auto-login successful')
-        } else {
-          console.error('[AutoLogin] Auto-login failed')
-        }
-      } catch (error) {
-        console.error('[AutoLogin] Auto-login error:', error)
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [])
+  // Auto-login completely disabled - manual login only
+  // useEffect(() => {
+  //   // Disabled - causing issues with browser extensions
+  // }, [])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

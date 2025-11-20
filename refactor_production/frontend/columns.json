@@ -1,0 +1,682 @@
+﻿[
+    {
+        "field":  "no",
+        "headerName":  "NO",
+        "width":  100,
+        "type":  "textColumn",
+        "cellStyle":  {
+                          "textAlign":  "left"
+                      },
+        "pinned":  "left"
+    },
+    {
+        "field":  "nama",
+        "headerName":  "NAMA",
+        "width":  100,
+        "type":  "textColumn",
+        "cellStyle":  {
+                          "textAlign":  "left"
+                      },
+        "pinned":  "left"
+    },
+    {
+        "field":  "jenis_kelamin",
+        "headerName":  "L/P",
+        "width":  100,
+        "type":  "textColumn",
+        "cellStyle":  {
+                          "textAlign":  "left"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "nik",
+        "headerName":  "NIK",
+        "width":  100,
+        "type":  "textColumn",
+        "cellStyle":  {
+                          "textAlign":  "left"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "upah_dasar",
+        "headerName":  "UPAH DASAR",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "hari_kerja",
+        "headerName":  "HARI KERJA",
+        "width":  100,
+        "type":  "textColumn",
+        "cellStyle":  {
+                          "textAlign":  "left"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "upah_pokok",
+        "headerName":  "UPAH POKOK",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      },
+        "pinned":  null
+    },
+    {
+        "headerName":  "Cuti/Libur",
+        "children":  [
+                         {
+                             "headerName":  "TAHUNAN (Izin)",
+                             "children":  [
+                                              {
+                                                  "field":  "cuti_tahunan_hari",
+                                                  "headerName":  "H",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "SAKIT + HAID",
+                             "children":  [
+                                              {
+                                                  "field":  "cuti_sakit_haid_hari",
+                                                  "headerName":  "H",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "MINGGU",
+                             "children":  [
+                                              {
+                                                  "field":  "cuti_minggu_hari",
+                                                  "headerName":  "H",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "NASIONAL",
+                             "children":  [
+                                              {
+                                                  "field":  "cuti_nasional_hari",
+                                                  "headerName":  "H",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "IZIN",
+                             "children":  [
+                                              {
+                                                  "field":  "cuti_izin_hari",
+                                                  "headerName":  "H",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              }
+                                          ]
+                         }
+                     ]
+    },
+    {
+        "field":  "jumlah_hk",
+        "headerName":  "JML HK",
+        "width":  80,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "gaji_pokok",
+        "headerName":  "GAJI POKOK",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      },
+        "pinned":  null
+    },
+    {
+        "headerName":  "TUNJANGAN",
+        "children":  [
+                         {
+                             "headerName":  "BERAS",
+                             "children":  [
+                                              {
+                                                  "field":  "beras_rate",
+                                                  "headerName":  "Rate (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              },
+                                              {
+                                                  "field":  "beras_jumlah",
+                                                  "headerName":  "Jumlah",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "JABATAN",
+                             "children":  [
+                                              {
+                                                  "field":  "jabatan_rate",
+                                                  "headerName":  "Rate (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              },
+                                              {
+                                                  "field":  "jabatan_jumlah",
+                                                  "headerName":  "Jumlah",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "MASA KERJA",
+                             "children":  [
+                                              {
+                                                  "field":  "masa_kerja_tahun",
+                                                  "headerName":  "Lama (Thn)",
+                                                  "width":  100,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              },
+                                              {
+                                                  "field":  "masa_kerja_jumlah",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  120,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "LEMBUR",
+                             "children":  [
+                                              {
+                                                  "field":  "lembur_jam",
+                                                  "headerName":  "Jam",
+                                                  "width":  80,
+                                                  "type":  "textColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "left"
+                                                                }
+                                              },
+                                              {
+                                                  "field":  "lembur_jumlah",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  120,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         }
+                     ]
+    },
+    {
+        "headerName":  "PREMI",
+        "children":  [
+                         {
+                             "headerName":  "BRONDOL",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_brondol",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PRUNING",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_pruning",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PREMI ANGKUT MATERIAL",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_angkut_material",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PREMI ANGKUT TBS",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_angkut_tbs",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PREMI HARVESTING",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_harvesting",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PREMI HARVESTING +INVCENTIVE PANEN",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_harvesting_incentive",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PREMI PUPUK",
+                             "children":  [
+                                              {
+                                                  "field":  "premi_pupuk",
+                                                  "headerName":  "Jumlah (Rp)",
+                                                  "width":  100,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right"
+                                                                }
+                                              }
+                                          ]
+                         }
+                     ]
+    },
+    {
+        "field":  "total_premi",
+        "headerName":  "Total Premi",
+        "width":  100,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      }
+    },
+    {
+        "field":  "total_tunjangan",
+        "headerName":  "TOTAL TUNJANGAN",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      },
+        "pinned":  null
+    },
+    {
+        "field":  "jumlah_upah_kotor",
+        "headerName":  "Upah Kotor",
+        "width":  100,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right"
+                      }
+    },
+    {
+        "headerName":  "CARUMAN ASTEK",
+        "children":  [
+                         {
+                             "headerName":  "PEKERJA",
+                             "field":  "pot_bpjs_pek",
+                             "width":  80,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#e8f5e8",
+                                               "color":  "#2e7d32"
+                                           }
+                         },
+                         {
+                             "headerName":  "MAJIKAN",
+                             "field":  "pot_bpjs_maj",
+                             "width":  80,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#e8f5e8",
+                                               "color":  "#2e7d32"
+                                           }
+                         },
+                         {
+                             "headerName":  "JUMLAH",
+                             "field":  "pot_bpjs_jumlah",
+                             "width":  80,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#e8f5e8",
+                                               "color":  "#2e7d32"
+                                           }
+                         }
+                     ]
+    },
+    {
+        "headerName":  "POTONGAN BPJS",
+        "children":  [
+                         {
+                             "headerName":  "KESEHATAN",
+                             "children":  [
+                                              {
+                                                  "headerName":  "PEKERJA",
+                                                  "field":  "pot_bpjs_kesehatan_pekerja",
+                                                  "width":  90,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right",
+                                                                    "backgroundColor":  "#fff3e0",
+                                                                    "color":  "#e65100"
+                                                                }
+                                              },
+                                              {
+                                                  "headerName":  "MAJIKAN",
+                                                  "field":  "pot_bpjs_kesehatan_majikan",
+                                                  "width":  90,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right",
+                                                                    "backgroundColor":  "#fff3e0",
+                                                                    "color":  "#e65100"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "PENSIUN",
+                             "children":  [
+                                              {
+                                                  "headerName":  "PEKERJA",
+                                                  "field":  "pot_bpjs_pensiun_pekerja",
+                                                  "width":  90,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right",
+                                                                    "backgroundColor":  "#fff3e0",
+                                                                    "color":  "#e65100"
+                                                                }
+                                              },
+                                              {
+                                                  "headerName":  "MAJIKAN",
+                                                  "field":  "pot_bpjs_pensiun_majikan",
+                                                  "width":  90,
+                                                  "type":  "numericColumn",
+                                                  "cellStyle":  {
+                                                                    "textAlign":  "right",
+                                                                    "backgroundColor":  "#fff3e0",
+                                                                    "color":  "#e65100"
+                                                                }
+                                              }
+                                          ]
+                         },
+                         {
+                             "headerName":  "JUMLAH",
+                             "field":  "pot_bpjs_pekerja_total",
+                             "width":  100,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#fff3e0",
+                                               "color":  "#e65100"
+                                           }
+                         }
+                     ]
+    },
+    {
+        "headerName":  "KOREKSI",
+        "children":  [
+                         {
+                             "headerName":  "JUMLAH",
+                             "field":  "pot_koreksi",
+                             "width":  120,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#fff3e0",
+                                               "color":  "#e65100"
+                                           }
+                         }
+                     ]
+    },
+    {
+        "headerName":  "IURAN SPSI",
+        "children":  [
+                         {
+                             "headerName":  "JUMLAH",
+                             "field":  "pot_spsi",
+                             "width":  100,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#fff3e0",
+                                               "color":  "#e65100"
+                                           }
+                         }
+                     ]
+    },
+    {
+        "headerName":  "PPH21",
+        "children":  [
+                         {
+                             "headerName":  "JUMLAH",
+                             "field":  "pot_pph21",
+                             "width":  100,
+                             "type":  "numericColumn",
+                             "cellStyle":  {
+                                               "textAlign":  "right",
+                                               "backgroundColor":  "#fff3e0",
+                                               "color":  "#e65100"
+                                           }
+                         }
+                     ]
+    },
+    {
+        "field":  "total_potongan",
+        "headerName":  "TOTAL POTONGAN",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right",
+                          "backgroundColor":  "#e1f5fe",
+                          "color":  "#0277bd",
+                          "fontWeight":  "bold"
+                      }
+    },
+    {
+        "field":  "upah_bersih",
+        "headerName":  "UPAH BERSIH",
+        "width":  120,
+        "type":  "numericColumn",
+        "cellStyle":  {
+                          "textAlign":  "right",
+                          "backgroundColor":  "#ffe082",
+                          "color":  "#bf360c",
+                          "fontWeight":  "bold",
+                          "fontSize":  "14px"
+                      }
+    },
+    {
+        "headerName":  "POTONGAN",
+        "children":  [
+                         {
+                             "headerName":  "PPH21",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Kontan",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "THR",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Pinjam",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "KL",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "BPJS Kes",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "BPJS Pek",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "BPJS Maj",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "BPJS Pensiun Pekerja",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "BPJS Pensiun Majikan",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Total",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Total",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Total",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "Total",
+                             "children":  [
+
+                                          ]
+                         }
+                     ]
+    },
+    {
+        "headerName":  "TIDAK HADIR",
+        "children":  [
+                         {
+                             "headerName":  "CTH",
+                             "children":  [
+
+                                          ]
+                         },
+                         {
+                             "headerName":  "ALPA",
+                             "children":  [
+
+                                          ]
+                         }
+                     ]
+    }
+]

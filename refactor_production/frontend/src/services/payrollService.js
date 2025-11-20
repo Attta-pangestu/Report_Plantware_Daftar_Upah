@@ -2,6 +2,24 @@ import axios from 'axios'
 
 async function wait(ms) { return new Promise(res => setTimeout(res, ms)) }
 
+function normalizeMonthYear(month, year) {
+  let m = month
+  let y = year
+  if (typeof m === 'string') {
+    if (m.includes('-')) {
+      const [yy, mm] = m.split('-')
+      m = parseInt(mm, 10)
+      if (!y) y = parseInt(yy, 10)
+    } else {
+      m = parseInt(m, 10)
+    }
+  }
+  if (typeof y === 'string') {
+    y = parseInt(y, 10)
+  }
+  return { month: m, year: y }
+}
+
 async function requestWithRetry(url, config, retries = 2, delayMs = 300, timeoutMs = 10000) {
   let lastErr
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -20,8 +38,9 @@ async function requestWithRetry(url, config, retries = 2, delayMs = 300, timeout
 
 export async function fetchReportRows(token, { month, year, gang_code, fields, skip, limit, benchmark = false, monitor = false }) {
   const params = {}
-  if (month) params.month = month
-  if (year) params.year = year
+  const norm = normalizeMonthYear(month, year)
+  if (norm.month) params.month = norm.month
+  if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
   if (Array.isArray(fields) && fields.length > 0) params.fields = fields.join(',')
   if (typeof skip === 'number') params.skip = skip
@@ -30,7 +49,7 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
   if (monitor) params.monitor = true
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
-  const r = await requestWithRetry('/payroll/report', config, 2, 300, 45000)
+  const r = await requestWithRetry('/payroll/report', config, 2, 300, 60000)
   return r.data
 }
 
@@ -40,8 +59,9 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
  */
 export async function fetchReportRowsSimple(token, { month, year, gang_code, skip = 0, limit = 50 }) {
   const params = {}
-  if (month) params.month = month
-  if (year) params.year = year
+  const norm = normalizeMonthYear(month, year)
+  if (norm.month) params.month = norm.month
+  if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
   if (typeof skip === 'number') params.skip = skip
   if (typeof limit === 'number') params.limit = limit
@@ -51,13 +71,13 @@ export async function fetchReportRowsSimple(token, { month, year, gang_code, ski
 
   try {
     console.log('[PayrollService] Using optimized real endpoint for best performance')
-    const r = await requestWithRetry('/payroll/report/real', config, 1, 500, 45000)
+    const r = await requestWithRetry('/payroll/report/real', config, 1, 500, 90000)
     return r.data
   } catch (error) {
     console.error('[PayrollService] Real endpoint failed, falling back to simple endpoint:', error)
     // Fallback to simple endpoint if real endpoint fails
     try {
-      const r = await requestWithRetry('/payroll/report/simple', config, 1, 500, 45000)
+      const r = await requestWithRetry('/payroll/report/simple', config, 1, 500, 60000)
       return r.data
     } catch (fallbackError) {
       console.error('[PayrollService] All endpoints failed:', fallbackError)
@@ -68,24 +88,50 @@ export async function fetchReportRowsSimple(token, { month, year, gang_code, ski
 
 export async function fetchReportAggregate(token, { month, year, gang_code }) {
   const params = {}
-  if (month) params.month = month
-  if (year) params.year = year
+  const norm = normalizeMonthYear(month, year)
+  if (norm.month) params.month = norm.month
+  if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
-  const r = await requestWithRetry('/payroll/report/aggregate', config, 1, 500, 60000)
-  return r.data
+  const key = `${token || 'guest'}:${gang_code || 'all'}:${year || 'curr'}:${month || 'curr'}`
+  if (inflightAggregate.has(key)) {
+    const p = inflightAggregate.get(key)
+    const r = await p
+    return r.data
+  }
+  const p = requestWithRetry('/payroll/report/aggregate', config, 1, 500, 90000)
+  inflightAggregate.set(key, p)
+  try {
+    const r = await p
+    return r.data
+  } finally {
+    inflightAggregate.delete(key)
+  }
 }
 
 export async function fetchReportCount(token, { month, year, gang_code }) {
   const params = {}
-  if (month) params.month = month
-  if (year) params.year = year
+  const norm = normalizeMonthYear(month, year)
+  if (norm.month) params.month = norm.month
+  if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
-  const r = await requestWithRetry('/payroll/report/count', config, 2, 300, 5000)
-  return r.data
+  const key = `${token || 'guest'}:${gang_code || 'all'}:${year || 'curr'}:${month || 'curr'}`
+  if (inflightCount.has(key)) {
+    const p = inflightCount.get(key)
+    const r = await p
+    return r.data
+  }
+  const p = requestWithRetry('/payroll/report/count', config, 2, 300, 10000)
+  inflightCount.set(key, p)
+  try {
+    const r = await p
+    return r.data
+  } finally {
+    inflightCount.delete(key)
+  }
 }
 
 /**
@@ -172,3 +218,6 @@ export async function fetchReportRowsBatched(token, { month, year, gang_code, fi
 
   return mergedResults
 }
+// In-flight guards to prevent duplicate requests for identical parameters
+const inflightAggregate = new Map()
+const inflightCount = new Map()

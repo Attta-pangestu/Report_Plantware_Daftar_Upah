@@ -202,20 +202,19 @@ class HeaderService:
             rows = []
 
         excluded = {
-            # Remove important deduction columns from exclusion:
-            # 'KOREKSI',
-            # 'POTONGAN PPH21',
-            # 'POTONGAN SPSI',
-            # 'PPH21',
-            # 'SPSI',
+            'KOREKSI',
+            'KOREKSI PANEN',
+            'POTONGAN KOREKSI',
+            'POTONGAN KOREKSI PANEN',
+            'POTONGAN PPH21',
+            'POTONGAN SPSI',
+            'PPH21',
+            'PPH 21',
+            'SPSI',
             'TUNJANGAN JABATAN',
             'TUNJANGAN MASA KERJA',
             'PRUNING',
             'BRONDOL',
-            'PPH 21',  # Keep 'PPH 21' but not 'PPH21'
-            'KOREKSI PANEN',
-            'POTONGAN KOREKSI',
-            'POTONGAN KOREKSI PANEN',
             'TUNJANGAN PREMI',
             'TUNJANGAN BERAS',
             'INCENTIVE PANEN',
@@ -464,10 +463,10 @@ class HeaderService:
     def get_column_definitions(self, month: int = None, year: int = None, gang_code: str = None) -> List[Dict[str, Any]]:
         try:
             headers = self.generate_dynamic_headers(month=month, year=year, gang_code=gang_code)
-            hierarchy = headers.get('table_structure', {}).get('hierarchy', {})
-            l1 = hierarchy.get('level_1', {}).get('columns', [])
-            l2 = hierarchy.get('level_2', {}).get('columns', [])
-            l3 = hierarchy.get('level_3', {}).get('columns', [])
+            generated = headers.get('table_structure', {}).get('generated_headers', {})
+            l1 = generated.get('level_1', {}).get('columns', [])
+            l2 = generated.get('level_2', {}).get('columns', [])
+            l3 = generated.get('level_3', {}).get('columns', [])
 
             l2_by_parent = {}
             for c in l2:
@@ -505,20 +504,29 @@ class HeaderService:
                     field = static_map.get(c1_id)
                     # Skip upah_bersih from static structure to avoid duplication
                     if field and field != 'upah_bersih':
-                        col_defs.append({
+                        compute = None
+                        if field == 'total_tunjangan':
+                            compute = {
+                                'type': 'sum',
+                                'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah']
+                            }
+                        col = {
                             'field': field,
                             'headerName': c1.get('text'),
                             'width': self._get_column_width(field),
                             'type': self._get_column_type(field),
                             'cellStyle': self._get_cell_style(field),
                             'pinned': 'left' if field in ['no','nama'] else None
-                        })
+                        }
+                        if compute:
+                            col['compute'] = compute
+                        col_defs.append(col)
                     continue
 
                 level2_cols = l2_by_parent.get(c1_id, [])
                 c1_text_upper = (c1.get('text') or '').strip().upper()
                 if 'PREMI' in c1_text_upper:
-                    dyn = self._compute_dynamic_premi_headers_db(month or 0, year or 0, gang_code or '')
+                    dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
                     fixed = []
                     dynamic_slots = []
                     for c2 in level2_cols:
@@ -540,6 +548,9 @@ class HeaderService:
                         level3_cols = l3_by_parent.get(c2_id, [])
                         leaf_defs = []
                         for c3 in level3_cols:
+                            cid3 = (c3.get('id') or '').strip().lower()
+                            if 'jumlah' not in cid3:
+                                continue
                             field = self._map_to_data_field(c3.get('id'))
                             leaf_defs.append({
                                 'field': field,
@@ -557,10 +568,9 @@ class HeaderService:
                         leaf_defs = []
                         for c3 in level3_cols:
                             cid3 = (c3.get('id') or '').strip().lower()
-                            if 'jumlah' in cid3:
-                                field = f"premi_dynamic_{i+1}"
-                            else:
-                                field = f"premi_dynamic_rate_{i+1}"
+                            if 'jumlah' not in cid3:
+                                continue
+                            field = f"premi_dynamic_{i+1}"
                             leaf_defs.append({
                                 'field': field,
                                 'headerName': c3.get('text'),
@@ -568,7 +578,7 @@ class HeaderService:
                                 'type': self._get_column_type(field),
                                 'cellStyle': self._get_cell_style(field)
                             })
-                        group2_defs.append({ 'headerName': dyn[i], 'children': leaf_defs })
+                        group2_defs.append({ 'headerName': (dyn[i] if i < len(dyn) and isinstance(dyn[i], str) and len(dyn[i]) > 0 else f"PREMI {i+1}"), 'children': leaf_defs })
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                 else:
                     group2_defs = []
@@ -594,6 +604,8 @@ class HeaderService:
                 if c.get('field') == 'total_tunjangan':
                     tunj_idx = idx
                     break
+            if not col_defs:
+                return self._get_fallback_column_defs()
             if tunj_idx is not None:
                 col_defs[tunj_idx+1:tunj_idx+1] = [
                     {
@@ -601,7 +613,8 @@ class HeaderService:
                         'headerName': 'Upah Kotor',
                         'width': self._get_column_width('jumlah_upah_kotor'),
                         'type': self._get_column_type('jumlah_upah_kotor'),
-                        'cellStyle': self._get_cell_style('jumlah_upah_kotor')
+                        'cellStyle': self._get_cell_style('jumlah_upah_kotor'),
+                        'compute': { 'type': 'sum', 'fields': ['gaji_pokok','total_tunjangan','total_premi'] }
                     }
                 ]
 
@@ -616,7 +629,8 @@ class HeaderService:
                             'headerName': 'Total Premi',
                             'width': self._get_column_width('total_premi'),
                             'type': self._get_column_type('total_premi'),
-                            'cellStyle': self._get_cell_style('total_premi')
+                            'cellStyle': self._get_cell_style('total_premi'),
+                            'compute': { 'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_dynamic_' }
                         }
                     ]
                     found_premi = True
@@ -749,14 +763,16 @@ class HeaderService:
                         'headerName': 'TOTAL POTONGAN',
                         'width': 120,
                         'type': 'numericColumn',
-                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}
+                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'},
+                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
                     },
                     {
                         'field': 'upah_bersih',
                         'headerName': 'UPAH BERSIH',
                         'width': 120,
                         'type': 'numericColumn',
-                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#ffe082', 'color': '#bf360c', 'fontWeight': 'bold', 'fontSize': '14px'}
+                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#ffe082', 'color': '#bf360c', 'fontWeight': 'bold', 'fontSize': '14px'},
+                        'compute': { 'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan' }
                     }
                 ]
                 col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
@@ -791,11 +807,16 @@ class HeaderService:
                 lead_sorted.append(no_col)
             if nama_col:
                 lead_sorted.append(nama_col)
-            return lead_sorted + rest
+            final_defs = lead_sorted + rest
+            if not final_defs:
+                return self._get_fallback_column_defs()
+            return final_defs
 
         except Exception as e:
-            print(f"ERROR: Failed to generate column definitions: {e}")
-            raise Exception(f"Column definition generation failed: {e}")
+            try:
+                return self._get_fallback_column_defs()
+            except Exception:
+                raise Exception(f"Column definition generation failed: {e}")
 
     def _get_column_width(self, field: str) -> int:
         """Get appropriate width for column"""

@@ -5,6 +5,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
 import { fetchReportRows, fetchReportRowsBatched, fetchReportRowsSimple, fetchReportAggregate, fetchReportCount } from '../services/payrollService'
 import { fetchDynamicHeaders, fetchColumnDefinitions, formatCurrency, formatNumber } from '../services/headerService'
+import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
 import LoadingScreen from '../components/common/LoadingScreen'
 
@@ -17,13 +18,14 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const devYear = DEV_MODE ? (year || undefined) : year
   const devGangCode = DEV_MODE ? (gang_code || undefined) : gang_code
   
-  const finalToken = token
+  const [authToken, setAuthToken] = useState(token || null)
   const finalMonth = devMonth || month
   const finalYear = devYear || year
   const finalGangCode = devGangCode || gang_code
   const [rows, setRows] = useState([])
   const [pinnedBottom, setPinnedBottom] = useState([])
   const [columnDefs, setColumnDefs] = useState([])
+  const computeRulesRef = useRef({})
   const [headers, setHeaders] = useState(null)
   const [hierarchyHeaders, setHierarchyHeaders] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -37,8 +39,13 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const gridRef = useRef(null)
   const aggCacheRef = useRef(new Map())
   const useInfinite = true
-  const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 200)
+  const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 50)
   const fpsRef = useRef({ last: performance.now(), frames: 0 })
+  const aggregateInFlightRef = useRef(new Set())
+  const dataInitRef = useRef(false)
+  const [firstBatchReady, setFirstBatchReady] = useState(false)
+  const [initialRowsPreview, setInitialRowsPreview] = useState([])
+  const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)
   useEffect(() => {
     async function loadHeaders() {
       setHeaderLoading(true)
@@ -59,30 +66,58 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         console.log('[Report] Loading headers for:', { monthValue, yearValue, finalGangCode })
 
         setLoadingStatus(`Fetching headers for Gang ${finalGangCode}...`)
-        const headersData = await fetchDynamicHeaders(finalToken, monthValue, yearValue, finalGangCode)
-        setLoadingStatus('Processing header structure...')
-        setHeaders(headersData)
+        // Ensure auth token in dev mode
+        let activeToken = authToken
+        if (!activeToken && DEV_MODE) {
+          try {
+            const res = await login('admin', 'admin')
+            setAuthToken(res.access_token)
+            activeToken = res.access_token
+          } catch (autoErr) {
+            console.error('[Report] Auto-login failed:', autoErr)
+          }
+        }
+        try {
+          const headersData = await fetchDynamicHeaders(activeToken, monthValue, yearValue, finalGangCode)
+          setLoadingStatus('Processing header structure...')
+          setHeaders(headersData)
 
-        // Extract hierarchy headers for 3-level header structure
-        setLoadingStatus('Building 3-level header hierarchy...')
-        if (headersData) {
-          const tableStructure = headersData.table_structure || {}
-          const generatedHeaders = tableStructure.generated_headers || {}
-          setHierarchyHeaders({
-            level1: generatedHeaders.level_1?.columns || [],
-            level2: generatedHeaders.level_2?.columns || [],
-            level3: generatedHeaders.level_3?.columns || []
-          })
-        } else {
+          // Extract hierarchy headers for 3-level header structure
+          setLoadingStatus('Building 3-level header hierarchy...')
+          if (headersData) {
+            const tableStructure = headersData.table_structure || {}
+            const generatedHeaders = tableStructure.generated_headers || {}
+            setHierarchyHeaders({
+              level1: generatedHeaders.level_1?.columns || [],
+              level2: generatedHeaders.level_2?.columns || [],
+              level3: generatedHeaders.level_3?.columns || []
+            })
+          } else {
+            setHierarchyHeaders({ level1: [], level2: [], level3: [] })
+          }
+        } catch (hdrErr) {
+          console.warn('[Report] Headers fetch failed; proceeding with columns only:', hdrErr?.message || hdrErr)
+          setHeaders(null)
           setHierarchyHeaders({ level1: [], level2: [], level3: [] })
         }
 
         setLoadingStatus('Finalizing column definitions...')
-        const cols = await fetchColumnDefinitions(finalToken, monthValue, yearValue, finalGangCode)
-        setColumnDefs(cols)
+        try {
+          const cols = await fetchColumnDefinitions(activeToken, monthValue, yearValue, finalGangCode)
+          const normalized = Array.isArray(cols) ? cols : (Array.isArray(cols?.columns) ? cols.columns : [])
+          setColumnDefs(normalized)
+          computeRulesRef.current = collectComputeRules(normalized)
+          if (!Array.isArray(normalized) || normalized.length === 0) {
+            computeRulesRef.current = createFallbackComputeRules()
+          }
+        } catch (colErr) {
+          console.error('[Report] Column definitions fetch failed:', colErr)
+          // Use fallback compute rules so rows can still be computed client-side
+          computeRulesRef.current = createFallbackComputeRules()
+          setError('Failed to load column definitions')
+        }
       } catch (e) {
-        console.error('Failed to load headers:', e)
-        setError('Failed to load dynamic headers')
+        console.error('Failed to initialize header loading:', e)
       } finally {
         setHeaderLoading(false)
         setLoadingStatus('Headers loaded successfully')
@@ -91,10 +126,20 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     }
 
     loadHeaders()
-  }, [finalToken, finalMonth, finalYear, finalGangCode])
+  }, [authToken, finalMonth, finalYear, finalGangCode])
 
   useEffect(() => {
+    console.log('[Report] Data loading useEffect triggered:', {
+      columnDefsLength: columnDefs?.length || 0,
+      columnDefs: columnDefs,
+      authToken: !!authToken,
+      finalMonth,
+      finalYear,
+      finalGangCode
+    })
+
     async function run() {
+      console.log('[Report] Starting data loading process...')
       setLoading(true);
       setLoadingStatus('Loading payroll data...')
       setCurrentEndpoint('/payroll/report')
@@ -114,18 +159,10 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         setLoadingStatus(`Fetching payroll data for Gang ${finalGangCode}...`)
 
-        // Validate column definitions before proceeding
-        if (!columnDefs || columnDefs.length === 0) {
-          throw new Error('No column definitions available. Cannot fetch data without proper column structure.')
-        }
-
+        // Proceed to fetch data even if columnDefs are not yet ready; grid uses infinite model
         const leafFields = []
         const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
-        columnDefs.forEach(walk)
-
-        if (leafFields.length === 0) {
-          throw new Error('No valid fields found in column definitions. Cannot fetch data.')
-        }
+        if (Array.isArray(columnDefs)) columnDefs.forEach(walk)
 
         console.log('[Report] Fetching data with fields:', leafFields.length, 'fields')
 
@@ -139,21 +176,29 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             assign0('upah_pokok'); assign0('beras_jumlah'); assign0('jabatan_jumlah'); assign0('masa_kerja_jumlah'); assign0('lembur_jumlah'); assign0('total_tunjangan'); assign0('total_premi'); assign0('jumlah_upah_kotor'); assign0('pot_bpjs_jumlah'); assign0('total_potongan'); assign0('upah_bersih')
             setPinnedBottom([pinned0])
           }
-          fetchReportAggregate(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
-            .then(totals => {
-              aggCacheRef.current.set(key, totals)
-              const pinned = { no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL' }
-              const assign = (k) => { pinned[k] = Math.round(Number(totals[k] || 0)) }
-              assign('upah_pokok'); assign('beras_jumlah'); assign('jabatan_jumlah'); assign('masa_kerja_jumlah'); assign('lembur_jumlah'); assign('total_tunjangan'); assign('total_premi'); assign('jumlah_upah_kotor'); assign('pot_bpjs_jumlah'); assign('total_potongan'); assign('upah_bersih')
-              setPinnedBottom([pinned])
-            })
-            .catch(() => {})
-          // In infinite mode, rely on grid datasource to fetch the first block
-          safe = []
+          
+          // Ensure auth token in dev mode for data fetch as well
+          let activeToken = authToken
+          if (!activeToken && DEV_MODE) {
+            try {
+              const res = await login('admin', 'admin')
+              setAuthToken(res.access_token)
+              activeToken = res.access_token
+            } catch (autoErr) {
+              console.error('[Report] Auto-login (data) failed:', autoErr)
+            }
+          }
+          setFirstBatchAttempted(true)
+          const preview = await fetchReportRowsSimple(activeToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+          const computedPreview = applyComputeToRows(preview, computeRulesRef.current)
+          setInitialRowsPreview(Array.isArray(computedPreview) ? computedPreview : [])
+          setFirstBatchReady((Array.isArray(preview) ? preview.length : 0) > 0)
+          safe = Array.isArray(computedPreview) ? computedPreview : []
         } else {
-          const data = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
-          setRows(Array.isArray(data) ? data : [])
-          safe = Array.isArray(data) ? data : []
+          const data = await fetchReportRowsSimple(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+          const computed = applyComputeToRows(data, computeRulesRef.current)
+          setRows(Array.isArray(computed) ? computed : [])
+          safe = Array.isArray(computed) ? computed : []
         }
         
         // Debug: Tampilkan data baris pertama di console
@@ -176,8 +221,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
           gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
           premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
-          // Koreksi column
-          premi_koreksi: agg('premi_koreksi'),
+          pot_koreksi: agg('pot_koreksi'),
           total_premi: agg('total_premi'),
           jumlah_upah_kotor: agg('jumlah_upah_kotor'),
           pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
@@ -195,7 +239,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         setLoadingStatus('Table ready')
       } catch (e) {
-        if (DEV_MODE && !finalToken) {
+        if (DEV_MODE && !authToken) {
           try {
             const res = await login('admin', 'admin')
             setAuthToken(res.access_token)
@@ -212,8 +256,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               columnDefs.forEach(walk)
               data = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
             }
-            setRows(data)
-            const safe = Array.isArray(data) ? data : []
+            const computed = applyComputeToRows(data, computeRulesRef.current)
+            setRows(computed)
+            const safe = Array.isArray(computed) ? computed : []
             const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
             setPinnedBottom(safe.length > 0 ? [{
               no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
@@ -221,8 +266,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
               cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
               gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
               premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
-              // Koreksi column
-              premi_koreksi: agg('premi_koreksi'),
+              pot_koreksi: agg('pot_koreksi'),
               total_premi: agg('total_premi'),
               jumlah_upah_kotor: agg('jumlah_upah_kotor'),
               pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
@@ -256,10 +300,18 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         if (typeof onLoad === 'function') onLoad()
       }
     }
-    if (columnDefs.length > 0) {
+    console.log('[Report] Checking condition for data loading:', {
+      columnDefsLength: columnDefs?.length || 0,
+      shouldRun: !dataInitRef.current && !!authToken && !!finalMonth && !!finalYear && !!finalGangCode
+    })
+    if (!dataInitRef.current && !!authToken && !!finalMonth && !!finalYear && !!finalGangCode) {
+      dataInitRef.current = true
+      console.log('[Report] Condition met, executing data loading...')
       run()
+    } else {
+      console.log('[Report] Condition NOT met, skipping data loading')
     }
-  }, [finalToken, finalMonth, finalYear, finalGangCode, columnDefs])
+  }, [authToken, finalMonth, finalYear, finalGangCode, columnDefs])
 
   useEffect(() => {
     let rafId = 0
@@ -290,7 +342,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   // Enhanced column definitions with proper formatting
   const formatLeaf = (col) => {
     const cfg = { ...col, ...baseCol }
-    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','total_potongan','upah_bersih']
+    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','pot_koreksi','total_potongan','upah_bersih']
     const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','cuti_izin_hari','jumlah_hk','masa_kerja_tahun','lembur_jam','tidak_hadir_cth','tidak_hadir_alpa']
     if (cfg.field && moneyFields.includes(cfg.field)) {
       cfg.valueFormatter = p => {
@@ -349,12 +401,15 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
   
 
-  const enhanceColumnsRecursive = (cols) => cols.map(c => {
-    if (c.children && Array.isArray(c.children)) {
-      return { ...c, children: enhanceColumnsRecursive(c.children) }
-    }
-    return formatLeaf(c)
-  })
+  const enhanceColumnsRecursive = (cols) => {
+    if (!Array.isArray(cols)) return []
+    return cols.map(c => {
+      if (c.children && Array.isArray(c.children)) {
+        return { ...c, children: enhanceColumnsRecursive(c.children) }
+      }
+      return formatLeaf(c)
+    })
+  }
 
   // Enhanced column defs hanya di-update sekali saat autohide diproses
   // Tidak menggunakan useMemo untuk mencegah re-komputasi berulang
@@ -460,8 +515,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     }
   }
 
-  // Only show loading when headers are being loaded or when both headers and data are loading
-  if (headerLoading || (loading && !headers)) return (
+  // Only show loading when headers are actively being loaded
+  if (headerLoading) return (
     <LoadingScreen
       isLoading={true}
       message={loadingStatus || (headerLoading ? 'Loading report configuration...' : 'Analyzing payroll data...')}
@@ -480,24 +535,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       ]}
     />
   )
-  // Don't render table until headers are loaded and available
-  if (!headers || !headers.table_structure || !headers.table_structure.generated_headers) {
-    return (
-      <LoadingScreen
-        isLoading={true}
-        message={loadingStatus || 'Loading Header Structure...'}
-        gangCode={finalGangCode}
-        month={finalMonth}
-        year={finalYear}
-        logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
-        steps={[
-          { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Waiting for header API response', duration: 1800 },
-          { name: loadingStatus || 'Processing header structure...', duration: 2200 },
-          { name: 'Building table columns', duration: 1500 }
-        ]}
-      />
-    )
-  }
+  // Proceed even if headers are unavailable; rely on columnDefs from backend
 
   if (error) return (
     <div style={{
@@ -534,8 +572,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     </div>
   )
 
-  // Render loading screen until backend headers and column definitions are ready
-  if (headerLoading || !headers || !columnDefs || columnDefs.length === 0) return (
+  // Render loading screen until column definitions are ready
+  if (headerLoading || !Array.isArray(columnDefs) || columnDefs.length === 0) return (
     <LoadingScreen
       month={finalMonth}
       year={finalYear}
@@ -544,6 +582,23 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Waiting for header API response', duration: 1600 },
         { name: loadingStatus || 'Processing header structure...', duration: 2000 },
         { name: 'Building table columns', duration: 1400 }
+      ]}
+    />
+  )
+
+  // Keep loading until first batch of rows is ready in infinite mode
+  if (useInfinite && !firstBatchReady && !firstBatchAttempted) return (
+    <LoadingScreen
+      isLoading={true}
+      message={loadingStatus || 'Loading payroll data...'}
+      gangCode={finalGangCode}
+      month={finalMonth}
+      year={finalYear}
+      logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
+      steps={[
+        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Connecting to payroll database', duration: 1600 },
+        { name: loadingStatus || `Fetching rows for Gang ${finalGangCode}`, duration: 2200 },
+        { name: `${typeof finalMonth==='string' ? finalMonth : finalMonth+'/'+finalYear}`, duration: 1500 }
       ]}
     />
   )
@@ -618,7 +673,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         <AgGridReact
           ref={gridRef}
           // Always use enhanced column definitions with auto-hide logic applied
-          columnDefs={enhanceColumnsRecursive(columnDefs)}
+          columnDefs={enhanceColumnsRecursive(Array.isArray(columnDefs) ? columnDefs : [])}
           rowData={rows}
           rowModelType={'infinite'}
           cacheBlockSize={INFINITE_BATCH_SIZE}
@@ -652,7 +707,13 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
                 const end = rq.endRow
                 const monthValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[1], 10) : finalMonth
                 const yearValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[0], 10) : finalYear
-                const batch = await fetchReportRowsSimple(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: start, limit: end - start })
+                let batch = null
+                if (start === 0 && initialRowsPreview && initialRowsPreview.length > 0) {
+                  batch = initialRowsPreview.slice(0, end - start)
+                } else {
+                  batch = await fetchReportRowsSimple(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: start, limit: end - start })
+                  batch = applyComputeToRows(batch, computeRulesRef.current)
+                }
                 let rowCount = undefined
                 try {
                   const key = `${finalGangCode}:${yearValue}:${monthValue}`
@@ -660,7 +721,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
                   if (cached && typeof cached.count === 'number') {
                     rowCount = Number(cached.count)
                   } else {
-                    const c = await fetchReportCount(finalToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+                    const c = await fetchReportCount(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
                     if (c && typeof c.count === 'number') {
                       rowCount = Number(c.count)
                       const existing = aggCacheRef.current.get(key) || {}
@@ -704,3 +765,68 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     </div>
   )
 }
+  const createFallbackComputeRules = () => {
+    return {
+      total_tunjangan: { type: 'sum', fields: ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah'] },
+      total_premi: { type: 'sum', fields: ['premi_pruning','premi_brondol','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk'], match_prefix: 'premi_dynamic_' },
+      jumlah_upah_kotor: { type: 'sum', fields: ['gaji_pokok','total_tunjangan','total_premi'] },
+      total_potongan: { type: 'sum', fields: ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] },
+      upah_bersih: { type: 'sub', a: 'jumlah_upah_kotor', b: 'total_potongan' }
+    }
+  }
+  const collectComputeRules = (defs) => {
+    const rules = {}
+    const walk = (c) => {
+      if (c.children && Array.isArray(c.children)) {
+        c.children.forEach(walk)
+      } else {
+        const f = c.field
+        const comp = c.compute
+        if (f && comp) rules[f] = comp
+      }
+    }
+    if (Array.isArray(defs)) defs.forEach(walk)
+    return rules
+  }
+
+  const applyComputeToRows = (rows, rules) => {
+    if (!rows || rows.length === 0 || !rules) return rows || []
+    const safe = Array.isArray(rows) ? rows : []
+    const out = safe.map((row) => {
+      const r = { ...row }
+      for (const [field, spec] of Object.entries(rules)) {
+        let val = 0
+        if (spec.type === 'sum') {
+          const list = Array.isArray(spec.fields) ? spec.fields : []
+          for (const k of list) {
+            const v = Number(r[k] ?? 0)
+            if (!isNaN(v)) val += v
+          }
+          const pfx = spec.match_prefix
+          if (pfx) {
+            for (const key of Object.keys(r)) {
+              if (key.startsWith(pfx)) {
+                const v = Number(r[key] ?? 0)
+                if (!isNaN(v)) val += v
+              }
+            }
+          }
+        } else if (spec.type === 'sub') {
+          const a = Number(r[spec.a] ?? 0)
+          const b = Number(r[spec.b] ?? 0)
+          val = (isNaN(a) ? 0 : a) - (isNaN(b) ? 0 : b)
+        } else if (spec.type === 'mul') {
+          const a = Number(r[spec.a] ?? 0)
+          const b = Number(r[spec.b] ?? 0)
+          val = (isNaN(a) ? 0 : a) * (isNaN(b) ? 0 : b)
+        } else if (spec.type === 'div') {
+          const a = Number(r[spec.a] ?? 0)
+          const b = Number(r[spec.b] ?? 0)
+          val = (isNaN(a) ? 0 : a) / ((isNaN(b) || b === 0) ? 1 : b)
+        }
+        r[field] = val
+      }
+      return r
+    })
+    return out
+  }
