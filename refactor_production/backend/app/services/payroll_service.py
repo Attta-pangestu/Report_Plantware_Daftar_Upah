@@ -490,8 +490,7 @@ class PayrollService:
                 for i in range(min(7, len(dyn_maps))):
                     dyn_vals.append(float(dyn_maps[i].get(nik, 0.0)))
             total_premi = sum([
-                premi_brondol, premi_pruning, premi_angkut_material, premi_angkut_tbs,
-                premi_harvesting_incentive, premi_pupuk
+                premi_brondol, premi_pruning
             ] + dyn_vals)
 
             # Correct calculation from reference code:

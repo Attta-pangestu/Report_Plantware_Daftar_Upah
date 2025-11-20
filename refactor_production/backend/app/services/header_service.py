@@ -1,3 +1,5 @@
+
+
 from typing import Dict, Any, List
 from datetime import datetime
 import json
@@ -525,23 +527,25 @@ class HeaderService:
 
                 level2_cols = l2_by_parent.get(c1_id, [])
                 c1_text_upper = (c1.get('text') or '').strip().upper()
+                # Hide TUNJANGAN breakdown group; only show Total Tunjangan as top-level
+                c1_id_lower = (c1.get('id') or '').strip().lower()
+                if c1_id_lower == 'tunjangan' or 'TUNJANGAN' in c1_text_upper:
+                    # Skip building TUNJANGAN children; calculation is preserved via total_tunjangan
+                    continue
                 if 'PREMI' in c1_text_upper:
                     dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
                     fixed = []
                     dynamic_slots = []
                     for c2 in level2_cols:
                         t2 = (c2.get('text') or '').strip().upper()
-                        if (
-                            'BRONDOL' in t2 or 'PRUNING' in t2 or
-                            ('ANGKUT' in t2 and 'MATERIAL' in t2) or 'ANGKUT TBS' in t2 or
-                            'HARVEST' in t2 or 'PANEN' in t2 or 'INCENTIVE' in t2 or 'PUPUK' in t2
-                        ):
+                        if ('BRONDOL' in t2) or ('PRUNING' in t2):
                             fixed.append(c2)
                         else:
-                            # Exclude deduction-like children from Premi group
+                            # Skip known deduction-like children
                             if ('KOREKSI' in t2) or ('POTONGAN' in t2) or ('PPH' in t2) or ('SPSI' in t2):
                                 continue
-                            dynamic_slots.append(c2)
+                            # Do not rely on static dynamic slots; dynamic headers will be created from DB
+                            continue
                     group2_defs = []
                     for c2 in fixed:
                         c2_id = c2.get('id')
@@ -560,43 +564,68 @@ class HeaderService:
                                 'cellStyle': self._get_cell_style(field)
                             })
                         group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
-                    for i, c2 in enumerate(dynamic_slots):
-                        if i >= len(dyn):
-                            continue
-                        c2_id = c2.get('id')
-                        level3_cols = l3_by_parent.get(c2_id, [])
-                        leaf_defs = []
-                        for c3 in level3_cols:
-                            cid3 = (c3.get('id') or '').strip().lower()
-                            if 'jumlah' not in cid3:
-                                continue
-                            field = f"premi_dynamic_{i+1}"
-                            leaf_defs.append({
+                    # Add dynamic headers directly from DB list
+                    for i, name in enumerate(dyn[:7]):
+                        field = f"premi_dynamic_{i+1}"
+                        group2_defs.append({
+                            'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                            'children': [{
+                                'headerName': 'JUMLAH',
                                 'field': field,
-                                'headerName': c3.get('text'),
                                 'width': self._get_column_width(field),
                                 'type': self._get_column_type(field),
                                 'cellStyle': self._get_cell_style(field)
-                            })
-                        group2_defs.append({ 'headerName': (dyn[i] if i < len(dyn) and isinstance(dyn[i], str) and len(dyn[i]) > 0 else f"PREMI {i+1}"), 'children': leaf_defs })
+                            }]
+                        })
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                 else:
-                    group2_defs = []
-                    for c2 in level2_cols:
-                        c2_id = c2.get('id')
-                        level3_cols = l3_by_parent.get(c2_id, [])
-                        leaf_defs = []
-                        for c3 in level3_cols:
-                            field = self._map_to_data_field(c3.get('id'))
-                            leaf_defs.append({
-                                'field': field,
-                                'headerName': c3.get('text'),
-                                'width': self._get_column_width(field),
-                                'type': self._get_column_type(field),
-                                'cellStyle': self._get_cell_style(field)
+                    # Special-case: rebuild PREMI as dynamic (only BRONDOL & PRUNING fixed + dynamic headers)
+                    c1_text = (c1.get('text') or '').strip().upper()
+                    c1_id = (c1.get('id') or '').strip().lower()
+                    if c1_text == 'PREMI' or c1_id == 'premi':
+                        dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                        group2_defs = []
+                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
+                            group2_defs.append({
+                                'headerName': t,
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': f,
+                                    'width': self._get_column_width(f),
+                                    'type': self._get_column_type(f),
+                                    'cellStyle': self._get_cell_style(f)
+                                }]
                             })
-                        group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
-                    col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                        for i, name in enumerate(dyn[:7]):
+                            field = f"premi_dynamic_{i+1}"
+                            group2_defs.append({
+                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                }]
+                            })
+                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                    else:
+                        group2_defs = []
+                        for c2 in level2_cols:
+                            c2_id = c2.get('id')
+                            level3_cols = l3_by_parent.get(c2_id, [])
+                            leaf_defs = []
+                            for c3 in level3_cols:
+                                field = self._map_to_data_field(c3.get('id'))
+                                leaf_defs.append({
+                                    'field': field,
+                                    'headerName': c3.get('text'),
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                })
+                            group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
             # Insert 'Upah Kotor' right after 'Total Tunjangan' at level 1
             tunj_idx = None
@@ -776,6 +805,61 @@ class HeaderService:
                     }
                 ]
                 col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
+
+            # Ensure 'PREMI' group exists even if missing from JSON hierarchy
+            has_premi = any([(c.get('headerName') or '').strip().upper() == 'PREMI' for c in col_defs])
+            if not has_premi:
+                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                group2_defs = []
+                fixed_map = [
+                    ('BRONDOL', 'premi_brondol'),
+                    ('PRUNING', 'premi_pruning'),
+                ]
+                for t, f in fixed_map:
+                    group2_defs.append({
+                        'headerName': t,
+                        'children': [{
+                            'headerName': 'JUMLAH',
+                            'field': f,
+                            'width': self._get_column_width(f),
+                            'type': self._get_column_type(f),
+                            'cellStyle': self._get_cell_style(f)
+                        }]
+                    })
+                for i, name in enumerate(dyn[:7]):
+                    field = f"premi_dynamic_{i+1}"
+                    group2_defs.append({
+                        'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                        'children': [{
+                            'headerName': 'JUMLAH',
+                            'field': field,
+                            'width': self._get_column_width(field),
+                            'type': self._get_column_type(field),
+                            'cellStyle': self._get_cell_style(field)
+                        }]
+                    })
+                premi_group = { 'headerName': 'PREMI', 'children': group2_defs }
+                insert_idx = None
+                for idx, c in enumerate(col_defs):
+                    if c.get('field') == 'jumlah_upah_kotor':
+                        insert_idx = idx
+                        break
+                if insert_idx is None:
+                    col_defs.append(premi_group)
+                    premi_idx = len(col_defs) - 1
+                else:
+                    col_defs[insert_idx:insert_idx] = [premi_group]
+                    premi_idx = insert_idx
+                col_defs[premi_idx+1:premi_idx+1] = [
+                    {
+                        'field': 'total_premi',
+                        'headerName': 'Total Premi',
+                        'width': self._get_column_width('total_premi'),
+                        'type': self._get_column_type('total_premi'),
+                        'cellStyle': self._get_cell_style('total_premi'),
+                        'compute': { 'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_dynamic_' }
+                    }
+                ]
 
             # Remove duplicate 'upah_bersih' fields - keep only the one in deduction_groups
             filtered_col_defs = []

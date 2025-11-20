@@ -44,6 +44,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const fpsRef = useRef({ last: performance.now(), frames: 0 })
   const aggregateInFlightRef = useRef(new Set())
   const dataInitRef = useRef(false)
+  const autoHideMapRef = useRef({})
   const [firstBatchReady, setFirstBatchReady] = useState(false)
   const [initialRowsPreview, setInitialRowsPreview] = useState([])
   const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)
@@ -181,6 +182,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
         setRows(computed)
         const safe = Array.isArray(computed) ? computed : []
+        recomputeAutoHideMap(safe)
         setInitialRowsPreview(safe.slice(0, INFINITE_BATCH_SIZE))
         setFirstBatchAttempted(true)
         setFirstBatchReady(safe.length > 0)
@@ -205,27 +207,35 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         console.log('[Report] 🧮 Menghitung agregasi total...')
         setLoadingStatus('🧈 Menghitung total agregasi...')
         const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
-        setPinnedBottom(safe.length > 0 ? [{
-          no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
-          upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
-          cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
-          gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
-          premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
-          pot_koreksi: agg('pot_koreksi'),
-          total_premi: agg('total_premi'),
-          jumlah_upah_kotor: agg('jumlah_upah_kotor'),
-          pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
-          // BPJS detailed columns
-          pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
-          pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
-          pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
-          pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
-          pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
-          pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
-          // SPSI column
-          pot_spsi: agg('pot_spsi'),
-          pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
-        }] : [])
+        if (safe.length > 0) {
+          const grand = {
+            no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
+            upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
+            cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
+            gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
+            premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
+            pot_koreksi: agg('pot_koreksi'),
+            total_premi: agg('total_premi'),
+            jumlah_upah_kotor: agg('jumlah_upah_kotor'),
+            pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
+            pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
+            pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
+            pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
+            pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
+            pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
+            pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
+            pot_spsi: agg('pot_spsi'),
+            pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
+          }
+          for (let i = 1; i <= 7; i++) {
+            const f = `premi_dynamic_${i}`
+            const sum = agg(f)
+            if (sum > 0) grand[f] = sum
+          }
+          setPinnedBottom([grand])
+        } else {
+          setPinnedBottom([])
+        }
 
         console.log('[Report] ✅ Tabel payroll siap ditampilkan!')
         console.log('[Report] 📊 Summary:', {
@@ -258,28 +268,37 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             const computed = applyComputeToRows(data, computeRulesRef.current)
             setRows(computed)
             const safe = Array.isArray(computed) ? computed : []
+            recomputeAutoHideMap(safe)
             const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
-            setPinnedBottom(safe.length > 0 ? [{
-              no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
-              upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
-              cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
-              gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
-              premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
-              pot_koreksi: agg('pot_koreksi'),
-              total_premi: agg('total_premi'),
-              jumlah_upah_kotor: agg('jumlah_upah_kotor'),
-              pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
-              // BPJS detailed columns
-              pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
-              pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
-              pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
-              pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
-              pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
-              pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
-              // SPSI column
-              pot_spsi: agg('pot_spsi'),
-              pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
-            }] : [])
+            if (safe.length > 0) {
+              const grand = {
+                no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
+                upah_dasar: '', hari_kerja: '', upah_pokok: agg('upah_pokok'),
+                cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), cuti_izin_hari: agg('cuti_izin_hari'), jumlah_hk: agg('jumlah_hk'),
+                gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
+                premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
+                pot_koreksi: agg('pot_koreksi'),
+                total_premi: agg('total_premi'),
+                jumlah_upah_kotor: agg('jumlah_upah_kotor'),
+                pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
+                pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
+                pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
+                pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
+                pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
+                pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
+                pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
+                pot_spsi: agg('pot_spsi'),
+                pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
+              }
+              for (let i = 1; i <= 7; i++) {
+                const f = `premi_dynamic_${i}`
+                const sum = agg(f)
+                if (sum > 0) grand[f] = sum
+              }
+              setPinnedBottom([grand])
+            } else {
+              setPinnedBottom([])
+            }
 
             
           } catch (e2) {
@@ -366,7 +385,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   // Enhanced column definitions with proper formatting
   const formatLeaf = (col) => {
     const cfg = { ...col, ...baseCol }
-    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','pot_koreksi','total_potongan','upah_bersih']
+    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','pot_koreksi','total_potongan','upah_bersih','premi_dynamic_1','premi_dynamic_2','premi_dynamic_3','premi_dynamic_4','premi_dynamic_5','premi_dynamic_6','premi_dynamic_7']
     const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','cuti_izin_hari','jumlah_hk','masa_kerja_tahun','lembur_jam','tidak_hadir_cth','tidak_hadir_alpa']
     if (cfg.field && moneyFields.includes(cfg.field)) {
       cfg.valueFormatter = p => {
@@ -399,6 +418,18 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
       cfg.cellClass = classMap[cfg.field]
     }
 
+    if (cfg.field) {
+      const neverHide = new Set([
+        'no','nik','nama','jenis_kelamin','upah_bersih','jumlah_upah_kotor','total_tunjangan','total_premi','gaji_pokok','upah_pokok','hari_kerja','jumlah_hk',
+        // Fixed premi always visible
+        'premi_brondol','premi_pruning'
+      ])
+      if (!neverHide.has(cfg.field)) {
+        const hide = !!autoHideMapRef.current[cfg.field]
+        if (hide) cfg.hide = true
+      }
+    }
+
     // Soft color header/text styling per header text to differentiate columns
     const hdrText = String(cfg.headerName || '').toUpperCase()
     if (hdrText.includes('PREMI HARVESTING') && hdrText.includes('INCENTIVE')) {
@@ -427,18 +458,52 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
 
   const enhanceColumnsRecursive = (cols) => {
     if (!Array.isArray(cols)) return []
-    return cols.map(c => {
+    const out = []
+    for (const c of cols) {
       if (c.children && Array.isArray(c.children)) {
-        return { ...c, children: enhanceColumnsRecursive(c.children) }
+        const kids = enhanceColumnsRecursive(c.children)
+        const visibleKids = kids.filter(k => !k.hide)
+        if (visibleKids.length > 0) {
+          out.push({ ...c, children: visibleKids })
+        }
+      } else {
+        const leaf = formatLeaf(c)
+        if (!leaf.hide) out.push(leaf)
       }
-      return formatLeaf(c)
-    })
+    }
+    return out
   }
 
   const generateColumnsFromRow = (row) => {
     if (!row) return []
     const keys = Object.keys(row)
     return keys.map(k => ({ field: k, headerName: String(k).toUpperCase(), width: 100, type: 'textColumn', cellStyle: { textAlign: 'left' } }))
+  }
+
+  const recomputeAutoHideMap = (dataRows) => {
+    try {
+      const neverHide = new Set(['no','nik','nama','jenis_kelamin','upah_bersih','jumlah_upah_kotor','total_tunjangan','total_premi','gaji_pokok','upah_pokok','hari_kerja','jumlah_hk'])
+      const fields = new Set()
+      for (const r of dataRows || []) {
+        Object.keys(r || {}).forEach(f => fields.add(f))
+      }
+      const m = {}
+      for (const f of fields) {
+        if (neverHide.has(f)) { m[f] = false; continue }
+        let allEmpty = true
+        for (const r of dataRows || []) {
+          const v = r[f]
+          if (v === null || v === undefined) continue
+          if (typeof v === 'number') { if (v !== 0) { allEmpty = false; break } }
+          else {
+            const sv = String(v).trim()
+            if (sv !== '' && sv !== '0' && sv !== '0.0') { allEmpty = false; break }
+          }
+        }
+        m[f] = allEmpty
+      }
+      autoHideMapRef.current = m
+    } catch {}
   }
 
   const runValidation = async () => {
