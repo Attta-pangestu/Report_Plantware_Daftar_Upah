@@ -7,6 +7,7 @@ import time
 from typing import Any, Dict, Optional
 import threading
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,14 @@ class CacheService:
 
     def get(self, key: str) -> Optional[Any]:
         """Get value from cache"""
+        try:
+            if str(os.getenv('DISABLE_CACHE', 'false')).lower() == 'true' or \
+               str(os.getenv('TEST_MODE', 'false')).lower() == 'true' or \
+               str(os.getenv('DEV_MODE', 'false')).lower() == 'true' or \
+               str(os.getenv('VITE_DEV_MODE', 'false')).lower() == 'true':
+                return None
+        except Exception:
+            pass
         with self._lock:
             if key in self._cache:
                 entry = self._cache[key]
@@ -42,6 +51,14 @@ class CacheService:
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """Set value in cache with TTL"""
+        try:
+            if str(os.getenv('DISABLE_CACHE', 'false')).lower() == 'true' or \
+               str(os.getenv('TEST_MODE', 'false')).lower() == 'true' or \
+               str(os.getenv('DEV_MODE', 'false')).lower() == 'true' or \
+               str(os.getenv('VITE_DEV_MODE', 'false')).lower() == 'true':
+                return
+        except Exception:
+            pass
         ttl = ttl or self._default_ttl
         expires_at = time.time() + ttl
 

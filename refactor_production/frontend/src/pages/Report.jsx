@@ -39,7 +39,8 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const gridRef = useRef(null)
   const aggCacheRef = useRef(new Map())
   const useInfinite = true
-  const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 50)
+  const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 200)
+  const DISABLE_CACHE = (import.meta.env?.VITE_DISABLE_CACHE === 'true') || (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
   const fpsRef = useRef({ last: performance.now(), frames: 0 })
   const aggregateInFlightRef = useRef(new Set())
   const dataInitRef = useRef(false)
@@ -47,10 +48,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
   const [initialRowsPreview, setInitialRowsPreview] = useState([])
   const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)
   useEffect(() => {
-    async function loadHeaders() {
+    console.log('[Report] Column definitions useEffect triggered:', { authToken: !!authToken, finalMonth, finalYear, finalGangCode })
+    async function loadColumnDefinitions() {
       setHeaderLoading(true)
-      setLoadingStatus('Loading report headers...')
-      setCurrentEndpoint('/payroll/headers')
+      setLoadingStatus('Loading column definitions...')
+      setCurrentEndpoint('/payroll/columns')
       setError('')
       try {
         // Parse month if it's a string in YYYY-MM format
@@ -77,55 +79,40 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
             console.error('[Report] Auto-login failed:', autoErr)
           }
         }
-        try {
-          const headersData = await fetchDynamicHeaders(activeToken, monthValue, yearValue, finalGangCode)
-          setLoadingStatus('Processing header structure...')
-          setHeaders(headersData)
+        // Skip headers API - langsung ke column definitions
+        setHeaders(null)
+        setHierarchyHeaders({ level1: [], level2: [], level3: [] })
 
-          // Extract hierarchy headers for 3-level header structure
-          setLoadingStatus('Building 3-level header hierarchy...')
-          if (headersData) {
-            const tableStructure = headersData.table_structure || {}
-            const generatedHeaders = tableStructure.generated_headers || {}
-            setHierarchyHeaders({
-              level1: generatedHeaders.level_1?.columns || [],
-              level2: generatedHeaders.level_2?.columns || [],
-              level3: generatedHeaders.level_3?.columns || []
-            })
-          } else {
-            setHierarchyHeaders({ level1: [], level2: [], level3: [] })
-          }
-        } catch (hdrErr) {
-          console.warn('[Report] Headers fetch failed; proceeding with columns only:', hdrErr?.message || hdrErr)
-          setHeaders(null)
-          setHierarchyHeaders({ level1: [], level2: [], level3: [] })
-        }
-
-        setLoadingStatus('Finalizing column definitions...')
+        setLoadingStatus(`Fetching column definitions for Gang ${finalGangCode}...`)
         try {
           const cols = await fetchColumnDefinitions(activeToken, monthValue, yearValue, finalGangCode)
           const normalized = Array.isArray(cols) ? cols : (Array.isArray(cols?.columns) ? cols.columns : [])
+          console.log('[Report] 📋 Column definitions diterima:', {
+            total_columns: normalized.length,
+            sample_columns: normalized.slice(0, 3).map(c => ({ field: c.field, header: c.headerName }))
+          })
+
+          // Use columns directly from backend - they're already properly formatted for AG-Grid
           setColumnDefs(normalized)
-          computeRulesRef.current = collectComputeRules(normalized)
-          if (!Array.isArray(normalized) || normalized.length === 0) {
-            computeRulesRef.current = createFallbackComputeRules()
-          }
+          computeRulesRef.current = createFallbackComputeRules() // Use simple fallback rules
+
+          console.log('[Report] ✅ Column definitions siap, total:', normalized.length, 'kolom')
+          console.log('[Report] 🔄 Menunggu trigger data loading...')
         } catch (colErr) {
           console.error('[Report] Column definitions fetch failed:', colErr)
-          // Use fallback compute rules so rows can still be computed client-side
           computeRulesRef.current = createFallbackComputeRules()
           setError('Failed to load column definitions')
         }
       } catch (e) {
-        console.error('Failed to initialize header loading:', e)
+        console.error('Failed to initialize column definitions loading:', e)
       } finally {
         setHeaderLoading(false)
-        setLoadingStatus('Headers loaded successfully')
+        setLoadingStatus('Column definitions loaded successfully')
         setCurrentEndpoint('')
       }
     }
 
-    loadHeaders()
+    loadColumnDefinitions()
   }, [authToken, finalMonth, finalYear, finalGangCode])
 
   useEffect(() => {
@@ -155,65 +142,68 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           yearValue = parseInt(year, 10)
         }
 
-        console.log('[Report] Loading data rows for:', { monthValue, yearValue, finalGangCode })
+        console.log('[Report] 🚀 Starting data load for:', { month: monthValue, year: yearValue, gang: finalGangCode })
 
-        setLoadingStatus(`Fetching payroll data for Gang ${finalGangCode}...`)
+        setLoadingStatus(`📡 Mengambil data transaksi payroll untuk Gang ${finalGangCode}...`)
 
-        // Proceed to fetch data even if columnDefs are not yet ready; grid uses infinite model
-        const leafFields = []
-        const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
-        if (Array.isArray(columnDefs)) columnDefs.forEach(walk)
-
-        console.log('[Report] Fetching data with fields:', leafFields.length, 'fields')
-
-        let safe = []
-        if (useInfinite) {
-          const key = `${finalGangCode}:${yearValue}:${monthValue}`
-          const existing = aggCacheRef.current.get(key)
-          if (existing) {
-            const pinned0 = { no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL' }
-            const assign0 = (k) => { pinned0[k] = Math.round(Number(existing[k] || 0)) }
-            assign0('upah_pokok'); assign0('beras_jumlah'); assign0('jabatan_jumlah'); assign0('masa_kerja_jumlah'); assign0('lembur_jumlah'); assign0('total_tunjangan'); assign0('total_premi'); assign0('jumlah_upah_kotor'); assign0('pot_bpjs_jumlah'); assign0('total_potongan'); assign0('upah_bersih')
-            setPinnedBottom([pinned0])
+        // Ensure auth token is ready
+        let activeToken = authToken
+        if (!activeToken && DEV_MODE) {
+          console.log('[Report] 🔐 Auto-login untuk mendapatkan token...')
+          try {
+            const res = await login('admin', 'admin')
+            setAuthToken(res.access_token)
+            activeToken = res.access_token
+            console.log('[Report] ✅ Token berhasil didapatkan')
+          } catch (autoErr) {
+            console.error('[Report] ❌ Auto-login gagal:', autoErr)
           }
-          
-          // Ensure auth token in dev mode for data fetch as well
-          let activeToken = authToken
-          if (!activeToken && DEV_MODE) {
-            try {
-              const res = await login('admin', 'admin')
-              setAuthToken(res.access_token)
-              activeToken = res.access_token
-            } catch (autoErr) {
-              console.error('[Report] Auto-login (data) failed:', autoErr)
-            }
-          }
-          setFirstBatchAttempted(true)
-          const preview = await fetchReportRowsSimple(activeToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
-          const computedPreview = applyComputeToRows(preview, computeRulesRef.current)
-          setInitialRowsPreview(Array.isArray(computedPreview) ? computedPreview : [])
-          setFirstBatchReady((Array.isArray(preview) ? preview.length : 0) > 0)
-          safe = Array.isArray(computedPreview) ? computedPreview : []
-        } else {
-          const data = await fetchReportRowsSimple(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
-          const computed = applyComputeToRows(data, computeRulesRef.current)
-          setRows(Array.isArray(computed) ? computed : [])
-          safe = Array.isArray(computed) ? computed : []
         }
-        
-        // Debug: Tampilkan data baris pertama di console
+
+        console.log('[Report] 📡 Mengirim request ke /payroll/report/real...')
+        console.log('[Report] 📋 Parameter:', { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 200 })
+
+        const startTime = Date.now()
+        setLoadingStatus('⏳ Menunggu response data transaksi payroll...')
+
+        const data = await fetchReportRowsSimple(activeToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+
+        const fetchTime = Date.now() - startTime
+        console.log('[Report] ✅ Data transaksi diterima!')
+        console.log('[Report] 📊 Jumlah record:', data.length, 'baris')
+        console.log('[Report] ⏱️ Waktu response:', fetchTime, 'ms')
+
+        console.log('[Report] 🔄 Memproses data transaksi dengan client-side compute...')
+        const processingStart = Date.now()
+
+        const computed = applyComputeToRows(data, computeRulesRef.current)
+        const processingTime = Date.now() - processingStart
+
+        setRows(computed)
+        const safe = Array.isArray(computed) ? computed : []
+        setInitialRowsPreview(safe.slice(0, INFINITE_BATCH_SIZE))
+        setFirstBatchAttempted(true)
+        setFirstBatchReady(safe.length > 0)
+        if ((columnDefs?.length || 0) === 0 && safe.length > 0) {
+          const gen = generateColumnsFromRow(safe[0])
+          setColumnDefs(gen)
+        }
+
+        console.log('[Report] ✅ Data transaksi siap!')
+        console.log('[Report] 📊 Total record diproses:', safe.length, 'baris')
+        console.log('[Report] ⏱️ Waktu processing:', processingTime, 'ms')
+
+        // Debug: Tampilkan sampel data
         if (safe.length > 0) {
-          console.log('🔍 Data Baris Pertama (JSON):')
-          console.log(JSON.stringify(safe[0], null, 2))
-          console.log('📊 Data Baris Pertama (Object):')
+          console.log('[Report] 🔍 Sample data baris pertama:')
           console.table(safe[0])
-          const keys = Object.keys(safe[0] || {})
-          const sampleDistinct = {}
-          keys.forEach(k => { sampleDistinct[k] = new Set(safe.slice(0, Math.min(10, safe.length)).map(r => r[k])).size })
-          console.log('[Rows] Distinct counts across first 10 rows:', sampleDistinct)
+          console.log('[Report] 💰 Sample nilai upah_bersih:', safe.slice(0, 3).map(r => ({ nama: r.nama, upah_bersih: r.upah_bersih })))
         } else {
-          console.warn('⚠️ Tidak ada data yang ditemukan')
+          console.warn('[Report] ⚠️ Tidak ada data transaksi yang ditemukan')
         }
+
+        console.log('[Report] 🧮 Menghitung agregasi total...')
+        setLoadingStatus('🧈 Menghitung total agregasi...')
         const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
         setPinnedBottom(safe.length > 0 ? [{
           no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
@@ -237,7 +227,16 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
           pot_total_1: agg('pot_total_1'), pot_total_2: agg('pot_total_2'), pot_total_3: agg('pot_total_3'), pot_total_4: agg('pot_total_4'), total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih'), tidak_hadir_cth: agg('tidak_hadir_cth'), tidak_hadir_alpa: agg('tidak_hadir_alpa')
         }] : [])
 
-        setLoadingStatus('Table ready')
+        console.log('[Report] ✅ Tabel payroll siap ditampilkan!')
+        console.log('[Report] 📊 Summary:', {
+          total_employees: safe.length,
+          grand_total_upah_bersih: agg('upah_bersih'),
+          grand_total_potongan: agg('total_potongan'),
+          gang_code: finalGangCode,
+          period: `${monthValue}/${yearValue}`
+        })
+
+        setLoadingStatus('✅ Tabel payroll siap!')
       } catch (e) {
         if (DEV_MODE && !authToken) {
           try {
@@ -300,18 +299,43 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
         if (typeof onLoad === 'function') onLoad()
       }
     }
-    console.log('[Report] Checking condition for data loading:', {
+    const shouldRun = !dataInitRef.current && !!finalMonth && !!finalYear && !!finalGangCode
+    console.log('[Report] 🔍 Checking condition untuk data loading:', {
       columnDefsLength: columnDefs?.length || 0,
-      shouldRun: !dataInitRef.current && !!authToken && !!finalMonth && !!finalYear && !!finalGangCode
+      authToken: !!authToken,
+      finalMonth,
+      finalYear,
+      finalGangCode,
+      dataInitRef: dataInitRef.current,
+      shouldRun
     })
-    if (!dataInitRef.current && !!authToken && !!finalMonth && !!finalYear && !!finalGangCode) {
+    if (shouldRun) {
       dataInitRef.current = true
-      console.log('[Report] Condition met, executing data loading...')
+      console.log('[Report] ✅ Kondisi terpenuhi - Memulai data loading untuk', finalGangCode, finalMonth, '/', finalYear)
       run()
     } else {
-      console.log('[Report] Condition NOT met, skipping data loading')
+      console.log('[Report] ⏸️ Kondisi belum terpenuhi, menunggu:', {
+        hasColumns: (columnDefs?.length || 0) > 0,
+        hasToken: !!authToken,
+        hasMonth: !!finalMonth,
+        hasYear: !!finalYear,
+        hasGang: !!finalGangCode,
+        alreadyInitialized: dataInitRef.current
+      })
     }
   }, [authToken, finalMonth, finalYear, finalGangCode, columnDefs])
+
+  // Separate useEffect to monitor columnDefs changes
+  useEffect(() => {
+    console.log('[Report] ColumnDefs changed:', {
+      length: columnDefs?.length || 0,
+      authToken: !!authToken,
+      finalMonth,
+      finalYear,
+      finalGangCode,
+      dataInitRef: dataInitRef.current
+    })
+  }, [columnDefs, authToken, finalMonth, finalYear, finalGangCode])
 
   useEffect(() => {
     let rafId = 0
@@ -411,8 +435,11 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     })
   }
 
-  // Enhanced column defs hanya di-update sekali saat autohide diproses
-  // Tidak menggunakan useMemo untuk mencegah re-komputasi berulang
+  const generateColumnsFromRow = (row) => {
+    if (!row) return []
+    const keys = Object.keys(row)
+    return keys.map(k => ({ field: k, headerName: String(k).toUpperCase(), width: 100, type: 'textColumn', cellStyle: { textAlign: 'left' } }))
+  }
 
   const runValidation = async () => {
     try {
@@ -515,26 +542,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     }
   }
 
-  // Only show loading when headers are actively being loaded
-  if (headerLoading) return (
-    <LoadingScreen
-      isLoading={true}
-      message={loadingStatus || (headerLoading ? 'Loading report configuration...' : 'Analyzing payroll data...')}
-      gangCode={finalGangCode}
-      month={finalMonth}
-      year={finalYear}
-      logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
-      steps={headerLoading ? [
-        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : `Loading headers for Gang ${finalGangCode}`, duration: 1800 },
-        { name: `Fetching dynamic columns for ${finalGangCode}`, duration: 2200 },
-        { name: loadingStatus || 'Building column hierarchy', duration: 1500 }
-      ] : [
-        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Connecting to payroll database', duration: 1500 },
-        { name: loadingStatus || `Loading rows for Gang ${finalGangCode}`, duration: 2800 },
-        { name: `Aggregating ${typeof finalMonth==='string' ? finalMonth : finalMonth+'/'+finalYear}`, duration: 2500 }
-      ]}
-    />
-  )
+  
   // Proceed even if headers are unavailable; rely on columnDefs from backend
 
   if (error) return (
@@ -572,19 +580,7 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
     </div>
   )
 
-  // Render loading screen until column definitions are ready
-  if (headerLoading || !Array.isArray(columnDefs) || columnDefs.length === 0) return (
-    <LoadingScreen
-      month={finalMonth}
-      year={finalYear}
-      logoUrl={import.meta.env.VITE_COMPANY_LOGO_URL || '/rebinmas-logo.png'}
-      steps={[
-        { name: currentEndpoint ? `Requesting ${currentEndpoint}` : 'Waiting for header API response', duration: 1600 },
-        { name: loadingStatus || 'Processing header structure...', duration: 2000 },
-        { name: 'Building table columns', duration: 1400 }
-      ]}
-    />
-  )
+  
 
   // Keep loading until first batch of rows is ready in infinite mode
   if (useInfinite && !firstBatchReady && !firstBatchAttempted) return (
@@ -716,17 +712,9 @@ export default function Report({ token, month, year, gang_code, onLoad }) {
                 }
                 let rowCount = undefined
                 try {
-                  const key = `${finalGangCode}:${yearValue}:${monthValue}`
-                  const cached = aggCacheRef.current.get(key)
-                  if (cached && typeof cached.count === 'number') {
-                    rowCount = Number(cached.count)
-                  } else {
-                    const c = await fetchReportCount(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
-                    if (c && typeof c.count === 'number') {
-                      rowCount = Number(c.count)
-                      const existing = aggCacheRef.current.get(key) || {}
-                      aggCacheRef.current.set(key, { ...existing, count: rowCount })
-                    }
+                  const c = await fetchReportCount(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+                  if (c && typeof c.count === 'number') {
+                    rowCount = Number(c.count)
                   }
                 } catch {}
                 rq.successCallback(batch || [], rowCount)

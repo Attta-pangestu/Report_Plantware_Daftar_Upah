@@ -8,11 +8,16 @@ const CACHE_TTL = 15 * 60 * 1000 // 15 minutes in milliseconds
 const inFlightHeaders = new Map()
 const inFlightColumns = new Map()
 
+const DISABLE_CACHE = (import.meta.env?.VITE_DISABLE_CACHE === 'true')
+  || (import.meta.env?.VITE_DEV_MODE === 'true')
+  || (import.meta.env?.DEV_MODE === 'true')
+
 const getCacheKey = (token, month, year, gangCode) => {
   return `${token || 'guest'}_${gangCode || 'all'}_${year || 'current'}_${month || 'current'}`
 }
 
 const getFromCache = (cache, key) => {
+  if (DISABLE_CACHE) return null
   const cached = cache.get(key)
   if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
     console.log(`Cache hit for ${cache === headerCache ? 'headers' : 'columns'}: ${key}`)
@@ -25,6 +30,7 @@ const getFromCache = (cache, key) => {
 }
 
 const setCache = (cache, key, data) => {
+  if (DISABLE_CACHE) return
   cache.set(key, { data, timestamp: Date.now() })
   console.log(`Cached ${cache === headerCache ? 'headers' : 'columns'} for key: ${key}`)
 }
@@ -33,9 +39,11 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   const cacheKey = getCacheKey(token, month, year, gangCode)
 
   // Try to get from cache first
-  const cachedHeaders = getFromCache(headerCache, cacheKey)
-  if (cachedHeaders) {
-    return cachedHeaders
+  if (!DISABLE_CACHE) {
+    const cachedHeaders = getFromCache(headerCache, cacheKey)
+    if (cachedHeaders) {
+      return cachedHeaders
+    }
   }
 
   const params = {}
@@ -49,8 +57,8 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
-  // Return existing in-flight promise if present
-  if (inFlightHeaders.has(cacheKey)) {
+  // Return existing in-flight promise if present (disabled in test/dev)
+  if (!DISABLE_CACHE && inFlightHeaders.has(cacheKey)) {
     return await inFlightHeaders.get(cacheKey)
   }
 
@@ -60,7 +68,7 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
     const startTime = Date.now()
 
     const promise = axios.get('/payroll/headers', config)
-    inFlightHeaders.set(cacheKey, promise)
+    if (!DISABLE_CACHE) inFlightHeaders.set(cacheKey, promise)
     const response = await promise
     const data = response.data
 
@@ -70,12 +78,12 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
 
     // Cache the response
     setCache(headerCache, cacheKey, data)
-    inFlightHeaders.delete(cacheKey)
+    if (!DISABLE_CACHE) inFlightHeaders.delete(cacheKey)
 
     return data
   } catch (e) {
     console.error('[Headers API] Failed to fetch dynamic headers:', e)
-    inFlightHeaders.delete(cacheKey)
+    if (!DISABLE_CACHE) inFlightHeaders.delete(cacheKey)
 
     // Enhanced error logging
     const errorDetails = {
@@ -98,9 +106,11 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   const cacheKey = getCacheKey(token, month, year, gangCode)
 
   // Try to get from cache first
-  const cachedColumns = getFromCache(columnCache, cacheKey)
-  if (cachedColumns) {
-    return cachedColumns
+  if (!DISABLE_CACHE) {
+    const cachedColumns = getFromCache(columnCache, cacheKey)
+    if (cachedColumns) {
+      return cachedColumns
+    }
   }
 
   const params = {}
@@ -114,7 +124,7 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
 
-  if (inFlightColumns.has(cacheKey)) {
+  if (!DISABLE_CACHE && inFlightColumns.has(cacheKey)) {
     return await inFlightColumns.get(cacheKey)
   }
 
@@ -123,7 +133,7 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
     const startTime = Date.now()
 
     const promise = axios.get('/payroll/columns', config)
-    inFlightColumns.set(cacheKey, promise)
+    if (!DISABLE_CACHE) inFlightColumns.set(cacheKey, promise)
     const response = await promise
     const data = response.data
 
@@ -136,12 +146,12 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
 
     // Cache the response
     setCache(columnCache, cacheKey, data)
-    inFlightColumns.delete(cacheKey)
+    if (!DISABLE_CACHE) inFlightColumns.delete(cacheKey)
 
     return data
   } catch (e) {
     console.error('Failed to fetch column definitions:', e)
-    inFlightColumns.delete(cacheKey)
+    if (!DISABLE_CACHE) inFlightColumns.delete(cacheKey)
 
     // Enhanced error logging
     const errorDetails = {
