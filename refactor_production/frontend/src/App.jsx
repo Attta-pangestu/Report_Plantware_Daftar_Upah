@@ -114,6 +114,24 @@ function AppInner() {
     bootstrap()
   }, [isAuthenticated, user, token, monthInput])
 
+  // Reset all states when user logs out
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('[App] User logged out, resetting all states...')
+      setMonthInput('')
+      setGang('')
+      setDivision('')
+      setGangs([])
+      setGangSearch('')
+      setGangError('')
+      setFiltersOpen(false)
+      setReady(false)
+      setApplyLoading(false)
+      setInitError('')
+      setProfileOpen(false)
+    }
+  }, [isAuthenticated])
+
   useEffect(() => {
     async function loadGangs() {
       if (!division) { setGangs([]); setGang(''); return }
@@ -163,6 +181,36 @@ function AppInner() {
     setFiltersOpen(false)
     setApplyLoading(true)
     setReady(true)
+  }
+
+  const handleLogout = () => {
+    console.log('[App] Logging out and resetting all states...')
+
+    // Reset all form states
+    setMonthInput('')
+    setGang('')
+    setDivision('')
+    setGangs([])
+    setGangSearch('')
+    setGangError('')
+    setFiltersOpen(false)
+    setReady(false)
+    setApplyLoading(false)
+    setInitError('')
+    setProfileOpen(false)
+
+    // Clear any cache data
+    if (typeof window !== 'undefined' && window.localStorage) {
+      // Keep remember me preference but clear other app data
+      const rememberMe = localStorage.getItem('payroll_remember_me')
+      localStorage.clear()
+      if (rememberMe) {
+        localStorage.setItem('payroll_remember_me', rememberMe)
+      }
+    }
+
+    // Call auth logout
+    logout()
   }
 
   // Always show login page if not authenticated; keep it visible even while submitting
@@ -216,7 +264,7 @@ function AppInner() {
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ fontSize:13, color:'#333' }}>{user.full_name} ({user.username})</div>
           <button onClick={() => setProfileOpen(true)} style={{ padding:'4px 10px' }}>Profile</button>
-          <button onClick={() => { logout(); }} style={{ padding:'4px 10px', background:'#d32f2f', color:'#fff', border:'none', borderRadius:4 }}>Logout</button>
+          <button onClick={handleLogout} style={{ padding:'4px 10px', background:'#d32f2f', color:'#fff', border:'none', borderRadius:4 }}>Logout</button>
           <button onClick={() => setFiltersOpen(true)} style={{ padding:'4px 10px' }}>Filters</button>
         </div>
       </div>
