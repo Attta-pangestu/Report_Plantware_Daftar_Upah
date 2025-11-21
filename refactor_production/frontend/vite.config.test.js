@@ -2,7 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const isDev = process.env.DEV_MODE === 'true' || process.env.VITE_DEV_MODE === 'true'
-const backendUrl = process.env.VITE_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:8002'
+const backendPort = process.env.VITE_BACKEND_PORT || process.env.BACKEND_PORT
+const backendUrl = process.env.VITE_BACKEND_URL || (backendPort ? `http://localhost:${backendPort}` : 'http://localhost:8002')
 
 // Gunakan port 5175 sesuai dengan kebutuhan Anda
 export default defineConfig({
