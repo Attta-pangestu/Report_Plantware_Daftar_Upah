@@ -18,27 +18,10 @@ const LoginPage = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  // Auto-login untuk development mode
-  useEffect(() => {
-    const autoLogin = async () => {
-      // Cegah multiple auto-login
-      if (autoRef.current) return
-      autoRef.current = true
-
-      // Hanya auto-login di test mode dan jika belum ada session
-      if (TEST_MODE && !loading && !isAuthenticated) {
-        console.log('[LoginPage] Auto-login in test mode...')
-        const success = await login('admin', 'admin', true)
-        if (success) {
-          console.log('[LoginPage] Auto-login successful')
-        }
-      }
-    }
-
-    // Delay sedikit untuk memastikan AuthContext siap
-    const timer = setTimeout(autoLogin, 500)
-    return () => clearTimeout(timer)
-  }, [TEST_MODE, loading, isAuthenticated, login])
+  // Auto-login removed - menggunakan cookies untuk session management
+  // useEffect(() => {
+  //   // Auto-login dinonaktifkan, user harus login manual
+  // }, [])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

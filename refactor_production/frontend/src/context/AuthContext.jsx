@@ -3,7 +3,8 @@ import axios from 'axios'
 import { login as apiLogin, getMe, getTestToken } from '../services/authService'
 import cookieService from '../services/cookieService'
 
-const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
+// TEST_MODE tidak digunakan lagi - menggunakan cookies untuk session management
+// const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
 
 const AuthCtx = createContext(null)
 
@@ -96,35 +97,8 @@ export function AuthProvider({ children }) {
       }
       throw new Error('Missing token or user')
     } catch (e) {
-      console.error('[Auth] Primary login failed:', e.message)
-
-      // Only try test token as fallback in test mode
-      if (TEST_MODE) {
-        try {
-          console.log('[Auth] Attempting test token fallback')
-          const t = await getTestToken()
-          const tok = t?.access_token
-          if (tok) {
-            console.log('[Auth] Test token received, fetching user details')
-            const usr = await getMe(tok)
-            setToken(tok)
-            setUser(usr)
-            try {
-              // Save test token and user info using cookieService
-              cookieService.saveToken(tok, true) // Remember me for test mode
-              cookieService.saveUser(usr)
-              axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
-              console.log('[Auth] Test token authentication saved to cookies')
-            } catch (error) {
-              console.error('[Auth] Failed to save test authentication to cookies:', error)
-            }
-            console.log('[Auth] Test token login successful')
-            return true
-          }
-        } catch (fallbackError) {
-          console.error('[Auth] Test token fallback failed:', fallbackError.message)
-        }
-      }
+      console.error('[Auth] Login failed:', e.message)
+      // Test token fallback removed - menggunakan cookies untuk session management
 
       setError('Login failed')
       return false
