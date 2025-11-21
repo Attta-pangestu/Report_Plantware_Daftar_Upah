@@ -1,10 +1,10 @@
 {
   "database": {
     "driver": "ODBC Driver 17 for SQL Server",
-    "server": "localhost",
+    "server": "10.0.0.110",
     "port": 1433,
     "username": "sa",
-    "password": "windows0819",
+    "password": "ptrj@123",
     "database_name": "db_ptrj",
     "trusted_connection": false,
     "encrypt": false
@@ -15,7 +15,7 @@
       "server": "localhost",
       "port": 1433,
       "username": "sa",
-      "password": "",
+      "password": "windows0819",
       "database_name": "db_ptrj",
       "trusted_connection": false,
       "encrypt": false
@@ -35,7 +35,7 @@
       "server": "10.0.0.110",
       "port": 1433,
       "username": "sa",
-      "password": "",
+      "password": "ptrj@123",
       "database_name": "db_ptrj",
       "trusted_connection": false,
       "encrypt": false

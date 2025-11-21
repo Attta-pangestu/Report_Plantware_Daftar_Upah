@@ -14,7 +14,7 @@ def get_db_config(profile: Optional[str] = None):
 
     selected = None
     if profile is None:
-        profile = os.getenv('DB_PROFILE')
+        profile = os.getenv('DB_PROFILE', 'remote')
 
     if profile:
         profiles = cfg.get('database_profiles') or {}
