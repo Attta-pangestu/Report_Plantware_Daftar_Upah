@@ -44,7 +44,11 @@ function AppInner() {
 
   useEffect(() => {
     async function bootstrap() {
+      // Skip bootstrap if user is not authenticated or if states are already reset (after logout)
       if (!isAuthenticated || !user) return
+
+      // Skip bootstrap if all form states are already empty (indicates logout)
+      if (!monthInput && !gang && !division && gangs.length === 0) return
 
       setInitError('')
       try {
@@ -178,15 +182,34 @@ function AppInner() {
   }
 
   const handleLogout = () => {
-    console.log('[App] Logging out...')
+    console.log('[App] Logging out and clearing all states...')
 
-    // Clear modals and loading states
+    // Clear ALL form states immediately
+    setMonthInput('')
+    setGang('')
+    setDivision('')
+    setGangs([])
+    setGangSearch('')
+    setGangError('')
     setFiltersOpen(false)
     setReady(false)
     setApplyLoading(false)
+    setInitError('')
     setProfileOpen(false)
 
-    // Call auth logout first - this will trigger isAuthenticated=false
+    // Clear localStorage data (except cookies which are handled by AuthContext)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const keysToRemove = []
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)
+        if (key && key !== 'payroll_remember_me') {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach(key => window.localStorage.removeItem(key))
+    }
+
+    // Call auth logout last
     logout()
   }
 
