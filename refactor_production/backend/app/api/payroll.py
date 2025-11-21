@@ -20,6 +20,7 @@ from app.api.auth import get_current_user_from_token
 from app.core.config import is_test_mode, DEFAULT_GANG, DEFAULT_MONTH, DEFAULT_YEAR
 import time
 import tracemalloc
+from database.services.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -311,14 +312,80 @@ async def get_column_definitions(
     month: Optional[int] = Query(None, description="Month for report (1-12)"),
     year: Optional[int] = Query(None, description="Year for report"),
     gang_code: Optional[str] = Query(None, description="Gang code filter"),
+    fallback: Optional[bool] = Query(False, description="Force fallback column definitions"),
     response: Response = None,
     user=Depends(get_current_user_from_token)
 ):
     try:
+        import re
+        start_time = time.perf_counter()
+        if month is not None:
+            if not isinstance(month, int) or month < 1 or month > 12:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month, must be 1-12")
+        if year is not None:
+            if not isinstance(year, int) or year < 1900 or year > 2100:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid year, must be 1900-2100")
+        if gang_code is not None:
+            gc = str(gang_code or '').strip()
+            if gc == '' or not re.match(r'^[A-Za-z0-9]+$', gc):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid gang_code")
+            gang_code = gc.upper()
+            # Do not fail columns when gang is not found; proceed without strict validation
+            try:
+                repo = GangRepositoryDB()
+                _ = repo.get_details(gang_code)
+            except Exception:
+                pass
         if is_test_mode():
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
-        column_defs = header_service.get_column_definitions(month=month, year=year, gang_code=gang_code)
+        if bool(fallback):
+            column_defs = header_service._get_fallback_hierarchical_defs()
+        else:
+            column_defs = None
+            try:
+                column_defs = await asyncio.wait_for(asyncio.to_thread(
+                    header_service.get_column_definitions,
+                    month=month,
+                    year=year,
+                    gang_code=gang_code
+                ), timeout=int(os.getenv('REQUEST_TIMEOUT_SEC','30')))
+            except asyncio.TimeoutError:
+                column_defs = header_service._get_fallback_hierarchical_defs()
+            except Exception:
+                column_defs = header_service._get_fallback_hierarchical_defs()
+        def _is_group(x):
+            return isinstance(x, dict) and isinstance(x.get('children'), list) and isinstance(x.get('headerName'), str)
+        def _is_leaf(x):
+            return isinstance(x, dict) and isinstance(x.get('field'), str) and isinstance(x.get('headerName'), str)
+        if not isinstance(column_defs, list) or len(column_defs) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No column definitions available")
+        if not all(_is_group(c) or _is_leaf(c) for c in column_defs):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Invalid column structure")
+        agg_specs = {
+            'total_tunjangan': {'type': 'sum', 'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah']},
+            'total_premi': {'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_dynamic_'},
+            'jumlah_upah_kotor': {'type': 'sum', 'fields': ['gaji_pokok','total_tunjangan','total_premi']},
+            'total_potongan': {'type': 'sum', 'fields': ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi']},
+            'upah_bersih': {'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan'}
+        }
+        def _apply_agg(c):
+            if isinstance(c, dict) and isinstance(c.get('children'), list):
+                for k in c['children']:
+                    _apply_agg(k)
+            else:
+                f = c.get('field')
+                if f in agg_specs and not c.get('compute'):
+                    c['compute'] = agg_specs[f]
+        for c in column_defs:
+            _apply_agg(c)
+        exec_ms = int((time.perf_counter() - start_time) * 1000)
+        if response is not None:
+            try:
+                response.headers["X-Execution-Time-Ms"] = str(exec_ms)
+                response.headers["X-Column-Count"] = str(len(column_defs))
+            except Exception:
+                pass
         try:
             logger.info(f"payroll_columns gang_code={gang_code} month={month} year={year} count={len(column_defs)} test_mode={is_test_mode()}")
         except Exception:
@@ -852,6 +919,41 @@ async def debug_employees(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Debug error: {str(e)}"
         )
+
+@router.get("/debug/db-connection", response_model=dict)
+async def debug_db_connection(
+    profile: Optional[str] = Query(None, description="Database profile name (e.g., 'remote' or 'local')"),
+    user=Depends(get_current_user_from_token)
+):
+    try:
+        import pyodbc
+        from database.config.settings import get_db_config, connection_string
+        cfg = get_db_config(profile)
+        s = connection_string(profile)
+        ok = False
+        try:
+            conn = pyodbc.connect(s, timeout=15)
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            r = cur.fetchone()
+            cur.close()
+            conn.close()
+            ok = bool(r and r[0] == 1)
+        except Exception as e:
+            logger.error(f"Profile {profile or 'default'} connection failed: {e}")
+            ok = False
+
+        safe_cfg = {
+            "driver": cfg.get("driver"),
+            "server": cfg.get("server"),
+            "port": cfg.get("port"),
+            "database_name": cfg.get("database_name"),
+            "username": cfg.get("username"),
+            "profile": profile or (os.getenv('DB_PROFILE') or 'default')
+        }
+        return {"status": "healthy" if ok else "error", "config": safe_cfg}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/health", response_model=dict)
 async def health_check(response: Response = None, user=Depends(get_current_user_from_token)):

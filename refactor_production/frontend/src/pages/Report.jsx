@@ -44,6 +44,8 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const [validationResult, setValidationResult] = useState(null)
   const gridRef = useRef(null)
   const aggCacheRef = useRef(new Map())
+  const [overrideMonth, setOverrideMonth] = useState(null)
+  const [overrideYear, setOverrideYear] = useState(null)
   const useInfinite = true
   const INFINITE_BATCH_SIZE = Number(import.meta.env.VITE_BATCH_SIZE || 200)
   const DISABLE_CACHE = (import.meta.env?.VITE_DISABLE_CACHE === 'true') || (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
@@ -136,7 +138,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     }
 
     loadColumnDefinitions()
-  }, [authToken, finalMonth, finalYear, finalGangCode])
+  }, [authToken, finalMonth, finalYear, finalGangCode, overrideMonth, overrideYear])
 
   useEffect(() => {
     console.log('[Report] Data loading useEffect triggered:', {
@@ -189,7 +191,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         const startTime = Date.now()
         setLoadingStatus('⏳ Menunggu response data transaksi payroll...')
 
-        const data = await fetchReportRowsSimple(activeToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+        const data = await fetchReportRowsSimple(activeToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
 
         const fetchTime = Date.now() - startTime
         console.log('[Report] ✅ Data transaksi diterima!')
@@ -361,7 +363,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         alreadyInitialized: dataInitRef.current
       })
     }
-  }, [authToken, finalMonth, finalYear, finalGangCode, columnDefs])
+  }, [authToken, finalMonth, finalYear, finalGangCode, columnDefs, overrideMonth, overrideYear])
 
   useEffect(() => {
     let active = true
@@ -422,19 +424,21 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     if (cfg.field && moneyFields.includes(cfg.field)) {
       cfg.valueFormatter = p => {
         const v = p.value
-        if (v === null || v === undefined || v === 0) return '-'
-        // Pastikan nilai bulat tanpa desimal
-        const roundedValue = Math.round(Number(v))
-        return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0,maximumFractionDigits:0}).format(roundedValue)
+        if (v === null || v === undefined) return ''
+        const n = Number(v)
+        const iv = isNaN(n) ? 0 : Math.round(n)
+        return new Intl.NumberFormat('id-ID',{ minimumFractionDigits:0, maximumFractionDigits:0 }).format(iv)
       }
       cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
     } else if (cfg.field && intFields.includes(cfg.field)) {
-      cfg.valueFormatter = p => { const v = p.value; if (v === null || v === undefined || v === 0) return '-'; return new Intl.NumberFormat('id-ID').format(v) }
+      cfg.valueFormatter = p => { const v = p.value; if (v === null || v === undefined) return ''; const n = Number(v); const iv = isNaN(n) ? 0 : Math.round(n); return new Intl.NumberFormat('id-ID',{ minimumFractionDigits:0, maximumFractionDigits:0 }).format(iv) }
       cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
     } else if (cfg.field && ['nama'].includes(cfg.field)) {
-      cfg.cellStyle = { textAlign: 'left' }; cfg.type = 'leftAligned'
+      cfg.cellStyle = { textAlign: 'left' }; cfg.type = 'leftAligned'; cfg.pinned = 'left'
     } else if (cfg.field && ['nik','jenis_kelamin'].includes(cfg.field)) {
       cfg.cellStyle = { textAlign: 'center' }; cfg.type = 'centerAligned'
+    } else if (cfg.field === 'phone') {
+      cfg.hide = true
     }
     const classMap = {
       jumlah_upah_kotor: 'col-jumlah-kotor',
@@ -715,7 +719,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         textAlign: 'center',
         marginTop: '20px'
       }}>
-        Gang: {finalGangCode || '-'} | {finalMonth ? new Date(2000, finalMonth - 1).toLocaleString('default', { month: 'long' }) : '-'} {finalYear || '-'}
+        Gang: {finalGangCode || '-'} | {(overrideMonth || finalMonth) ? new Date(2000, (overrideMonth || finalMonth) - 1).toLocaleString('default', { month: 'long' }) : '-'} {(overrideYear || finalYear) || '-'}
       </div>
     </div>
   )
@@ -744,7 +748,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             DAFTAR UPAH KARYAWAN
           </h1>
           <div style={{ fontSize: '18px', marginTop: '4px', opacity: 0.9 }}>
-            Periode: {finalMonth ? new Date(2000, finalMonth - 1).toLocaleString('id-ID', { month: 'long' }) : '-'} {finalYear || '-'}
+            Periode: {(overrideMonth || finalMonth) ? new Date(2000, (overrideMonth || finalMonth) - 1).toLocaleString('id-ID', { month: 'long' }) : '-'} {(overrideYear || finalYear) || '-'}
           </div>
         </div>
 
@@ -915,6 +919,9 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
               const newGangCode = e.target.value
               if (newGangCode && newGangCode !== finalGangCode) {
                 // Trigger reload dengan gang baru
+                setRows([])
+                setPinnedBottom([])
+                dataInitRef.current = false
                 window.location.reload()
               }
             }}
@@ -1016,7 +1023,13 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
           domLayout='normal'
           sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
           getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
-          onFirstDataRendered={() => {}}
+          onFirstDataRendered={(params) => {
+            try {
+              const cols = params.columnApi.getAllDisplayedColumns()
+              const ids = cols.map(c => c.getColId())
+              if (ids.length > 0) params.columnApi.autoSizeColumns(ids)
+            } catch {}
+          }}
           frameworkComponents={{ HierHeaderGroup }}
           onGridReady={params => {
             if (rows.length > 0) {
@@ -1037,12 +1050,12 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
                 if (start === 0 && initialRowsPreview && initialRowsPreview.length > 0) {
                   batch = initialRowsPreview.slice(0, end - start)
                 } else {
-                  batch = await fetchReportRowsSimple(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: start, limit: end - start })
+                  batch = await fetchReportRowsSimple(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, skip: start, limit: end - start })
                   batch = applyComputeToRows(batch, computeRulesRef.current)
                 }
                 let rowCount = undefined
                 try {
-                  const c = await fetchReportCount(authToken, { month: monthValue, year: yearValue, gang_code: finalGangCode })
+                  const c = await fetchReportCount(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode })
                   if (c && typeof c.count === 'number') {
                     rowCount = Number(c.count)
                   }
@@ -1142,7 +1155,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
           const b = Number(r[spec.b] ?? 0)
           val = (isNaN(a) ? 0 : a) / ((isNaN(b) || b === 0) ? 1 : b)
         }
-        r[field] = val
+        r[field] = Math.round(val)
       }
       return r
     })

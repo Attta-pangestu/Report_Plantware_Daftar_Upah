@@ -1,9 +1,9 @@
 import uvicorn
 import os
 import logging
+import argparse
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import router as api_router
 from app.core.config import is_test_mode
 
 # Check if running in development mode
@@ -58,6 +58,7 @@ async def get_dev_mode():
         }
     }
 
+from app.api import router as api_router
 app.include_router(api_router)
 
 request_logger = logging.getLogger("app.request")
@@ -77,9 +78,43 @@ async def log_requests(request: Request, call_next):
     return response
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db-driver")
+    parser.add_argument("--db-server")
+    parser.add_argument("--db-port", type=int)
+    parser.add_argument("--db-name")
+    parser.add_argument("--db-user")
+    parser.add_argument("--db-pass")
+    parser.add_argument("--uvicorn-workers", type=int)
+    parser.add_argument("--port", type=int, help="Backend HTTP port")
+    args = parser.parse_args()
+
+    if args.db_driver:
+        os.environ["DB_DRIVER"] = args.db_driver
+    if args.db_server:
+        os.environ["DB_SERVER"] = args.db_server
+    if args.db_port is not None:
+        os.environ["DB_PORT"] = str(args.db_port)
+    if args.db_name:
+        os.environ["DB_NAME"] = args.db_name
+    if args.db_user:
+        os.environ["DB_USER"] = args.db_user
+    if args.db_pass:
+        os.environ["DB_PASS"] = args.db_pass
+
     workers = 1
     try:
         workers = int(os.getenv("UVICORN_WORKERS", "1"))
     except Exception:
         workers = 1
-    uvicorn.run("main:app", host="0.0.0.0", port=8002, workers=workers)
+    if args.uvicorn_workers is not None:
+        workers = args.uvicorn_workers
+    port = 8002
+    if args.port is not None:
+        port = args.port
+    try:
+        env_port = int(os.getenv("BACKEND_PORT", str(port)))
+        port = env_port
+    except Exception:
+        pass
+    uvicorn.run("main:app", host="0.0.0.0", port=port, workers=workers)

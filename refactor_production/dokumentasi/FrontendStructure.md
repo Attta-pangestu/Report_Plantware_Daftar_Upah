@@ -35,9 +35,11 @@ frontend/
 └── vite.config.js            # Vite configuration
 
 Report Grid Implementation
-- Page: `src/pages/Report.jsx` renders AG Grid with grouped headers matching Daftar Upah.
+- Page: `src/pages/Report.jsx` renders AG Grid exclusively with hierarchical grouped headers.
 - Styles: `src/styles/report.css` provides zebra striping, highlights, and alignment.
 - Features: sideBar columns/filters, CSV export, auto-size, single row selection, pinned bottom grand total.
+- Rendering mode: hierarchical-only; flat header mode is not supported.
+- Visualization: level-based coloring, indent, and expand/collapse icons on group headers.
 - Column groups:
   - CUTI/LIBUR: `TAHUNAN (H)`, `SAKIT+HAID (H)`, `MINGGU (H)`, `NASIONAL (H)`, `IZIN (H)`
   - TUNJANGAN: `BERAS (RATE)`, `BERAS (JUMLAH)`, `JABATAN (RATE)`, `JABATAN (JUMLAH)`, `MASA KERJA (LAMA)`, `MASA KERJA (JUMLAH)`, `LEMBUR (JAM)`, `LEMBUR (JUMLAH)`

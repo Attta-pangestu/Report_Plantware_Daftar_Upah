@@ -36,8 +36,8 @@ Sistem Report Plantware Daftar Upah adalah aplikasi full-stack yang terdiri dari
 - Kolom-kolom dibuat sesuai dengan header dinamis
 - Fitur-fitur AG Grid diaktifkan (sorting, filtering, dll.)
 
-### 8. Rendering dan Tampilan Akhir
-- AG Grid merender data dalam bentuk tabel
+-### 8. Rendering dan Tampilan Akhir
+- AG Grid merender data dalam mode hierarkis dengan header bertingkat
 - Kolom NO dan NAMA difreeze di posisi kiri
 - Tabel ditampilkan dengan semua fitur interaktif
 
@@ -57,7 +57,8 @@ Sistem Report Plantware Daftar Upah adalah aplikasi full-stack yang terdiri dari
 
 ### Fitur Spesifik AG Grid
 - **Frozen Columns**: Kolom NO dan NAMA tetap di posisi kiri saat scroll
-- **Column Headers**: Dinamis berdasarkan data aktual
+- **Column Headers**: Dinamis berbentuk hierarki bertingkat dengan hubungan parent-child yang jelas
+- **Rendering Mode**: Hanya mode hierarkis, tidak ada mode flat
 - **Virtual Scrolling**: Performa tinggi untuk data besar
 - **Filtering & Sorting**: Interaktif per kolom
 - **Responsive**: Tampilan adaptif di berbagai ukuran layar

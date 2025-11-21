@@ -1,17 +1,11 @@
 import pyodbc
-import json
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+from database.config.settings import get_db_config
 
 class MSSQLService:
     def __init__(self, config_path: str = None):
-        if config_path is None:
-            config_path = Path(__file__).parent.parent.parent / "config.json"
-
-        with open(config_path, 'r') as f:
-            self.config = json.load(f)
-
-        self.db_config = self.config['database']
+        self.db_config = get_db_config()
         self._connection = None
 
     def get_connection_string(self) -> str:

@@ -107,7 +107,8 @@ class EmployeeRepositoryDB:
                     'jenis_kelamin': str(row[2]).strip() if row[2] else 'L',
                     'loc_code': str(row[3]).strip() if row[3] else '',
                     'gang_code': str(row[4]).strip() if row[4] else (gang_code or ''),
-                    'gaji_pokok': 0.0
+                    'gaji_pokok': 0.0,
+                    'phone': '-'
                 }
                 employees.append(emp)
 

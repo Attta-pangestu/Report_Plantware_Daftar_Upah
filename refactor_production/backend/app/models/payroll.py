@@ -6,6 +6,7 @@ class PayrollRow(BaseModel):
     jenis_kelamin: str
     nik: str
     nama: str
+    phone: Optional[str] = "-"
     upah_dasar: float
     hari_kerja: int
     upah_pokok: float

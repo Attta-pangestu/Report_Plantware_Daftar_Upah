@@ -556,6 +556,7 @@ class PayrollService:
                 jenis_kelamin=emp.get("jenis_kelamin", ""),
                 nik=nik,
                 nama=emp.get("nama", ""),
+                phone=emp.get("phone", "-"),
                 upah_dasar=payrate,
                 hari_kerja=hari_kerja,
                 upah_pokok=upah_pokok,

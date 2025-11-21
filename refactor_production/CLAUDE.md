@@ -48,13 +48,25 @@ cd backend
 # Install dependencies
 pip install -r requirements.txt
 
-# Run development server
+# Run backend tests
+pytest
+
+# Run specific test file
+pytest tests/test_specific_file.py
+
+# Run tests with coverage
+pytest --cov=app tests/
+
+# Run development server (default port 8002)
 python main.py
 # OR
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 
 # Run with environment variables
 DEV_MODE=true VITE_DEV_MODE=true python main.py
+
+# Run with specific port
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ### Frontend Development
@@ -79,6 +91,15 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Run frontend tests
+npm run test
+
+# Run tests in watch mode
+npm run test -- --watch
+
+# Run tests with coverage
+npm run test -- --coverage
 ```
 
 ### Database Operations
@@ -155,6 +176,34 @@ Database configuration is loaded from `../Explore_database/config.json` with fal
 - `GET /payroll/validate_html` - Validate against reference HTML
 - `GET /payroll/reference_html` - Load reference HTML file
 
+## Key Architecture Patterns
+
+### API Endpoints: Headers vs Columns
+The system has two distinct but related endpoints:
+
+- **`/payroll/headers`**: Generates dynamic header structures from database queries, returns metadata and hierarchy
+- **`/payroll/columns`**: Converts headers into AG-Grid column definitions with client-side formatting
+- Headers endpoint provides raw data structure with performance metrics
+- Columns endpoint provides grid-ready configuration with field mapping and styling
+
+### Authentication Flow
+- JWT-based authentication with role-based access control (ADMIN, USER, MANAGER)
+- Token management via `js-cookie` in frontend with React Context state
+- Development mode provides auto-login (admin/admin credentials)
+- Division-based data access restrictions enforced at service layer
+
+### Database Layer Architecture
+- Singleton pattern for connection pooling with configurable pool sizes
+- JSON-based query organization using parameterized statements (`?` placeholders)
+- Transaction support with context managers for atomic operations
+- Separate configuration for development vs production environments
+
+### Frontend State Management
+- React Context for authentication state and headers data
+- AG-Grid with infinite scrolling for large datasets (200-row blocks)
+- Dynamic column definitions derived from backend header generation
+- Performance optimizations including caching and batch loading
+
 ## Development Workflow
 
 ### Running the Full Application
@@ -196,6 +245,32 @@ AG-Grid is configured with:
 - Use `TEST_MODE=true` for consistent testing environment
 - Frontend supports mock authentication in development mode
 - Database connection pooling handles concurrent requests efficiently
+
+## Common Issues & Solutions
+
+### Authentication Issues (401 Unauthorized)
+- **Problem**: Getting 401 errors even when logged in
+- **Solution**: Check JWT token expiration and refresh mechanism
+- **Debug**: Check browser's Application tab for cookie `access_token`
+- **Development**: In dev mode, auto-login should prevent this, but token may still expire
+
+### Cookie Management
+- The system uses `js-cookie` for token management
+- Cookies are configured in `frontend/src/services/cookieService.js`
+- Authentication state is managed through React Context in `frontend/src/context/AuthContext.jsx`
+- Ensure CORS settings allow credentials: `credentials: 'include'` in axios requests
+
+### Common Debugging Commands
+```bash
+# Check backend health
+curl http://localhost:8002/payroll/health
+
+# Test authentication token
+curl -H "Authorization: Bearer <token>" http://localhost:8002/payroll/gangs
+
+# Monitor database connections
+python -c "from database.services.database import Database; print(Database.instance().pool_status())"
+```
 
 ## Database Module
 

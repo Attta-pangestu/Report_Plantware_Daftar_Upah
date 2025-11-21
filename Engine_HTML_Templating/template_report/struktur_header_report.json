@@ -115,7 +115,7 @@
             "id": "premi",
             "text": "PREMI",
             "rowspan": 1,
-            "colspan": 7,
+            "colspan": 8,
             "class": "header-cell section-header",
             "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
           },
