@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
 
-const _port = (import.meta.env?.VITE_BACKEND_PORT || import.meta.env?.BACKEND_PORT || '8002')
+const _port = (import.meta.env?.VITE_BACKEND_PORT || import.meta.env?.BACKEND_PORT || '8003')
 const _host = (import.meta.env?.VITE_BACKEND_HOST || 'localhost')
 const _url = (import.meta.env?.VITE_BACKEND_URL || `http://${_host}:${_port}`)
 axios.defaults.baseURL = _url
