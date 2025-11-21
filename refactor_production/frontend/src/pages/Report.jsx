@@ -421,24 +421,37 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     const cfg = { ...col, ...baseCol }
     const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','pot_koreksi','total_potongan','upah_bersih','premi_dynamic_1','premi_dynamic_2','premi_dynamic_3','premi_dynamic_4','premi_dynamic_5','premi_dynamic_6','premi_dynamic_7']
     const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','cuti_izin_hari','jumlah_hk','masa_kerja_tahun','lembur_jam','tidak_hadir_cth','tidak_hadir_alpa']
+
+    // Helper function for integer formatting
+    const formatInteger = (value) => {
+      const v = value
+      if (v === null || v === undefined) return ''
+      const n = Number(v)
+      const iv = isNaN(n) ? 0 : Math.round(n)
+      return new Intl.NumberFormat('id-ID',{ minimumFractionDigits:0, maximumFractionDigits:0 }).format(iv)
+    }
+
     if (cfg.field && moneyFields.includes(cfg.field)) {
-      cfg.valueFormatter = p => {
-        const v = p.value
-        if (v === null || v === undefined) return ''
-        const n = Number(v)
-        const iv = isNaN(n) ? 0 : Math.round(n)
-        return new Intl.NumberFormat('id-ID',{ minimumFractionDigits:0, maximumFractionDigits:0 }).format(iv)
-      }
+      cfg.valueFormatter = p => formatInteger(p.value)
       cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
     } else if (cfg.field && intFields.includes(cfg.field)) {
-      cfg.valueFormatter = p => { const v = p.value; if (v === null || v === undefined) return ''; const n = Number(v); const iv = isNaN(n) ? 0 : Math.round(n); return new Intl.NumberFormat('id-ID',{ minimumFractionDigits:0, maximumFractionDigits:0 }).format(iv) }
+      cfg.valueFormatter = p => formatInteger(p.value)
       cfg.type = 'rightAligned'; cfg.cellStyle = { textAlign: 'right' }
     } else if (cfg.field && ['nama'].includes(cfg.field)) {
-      cfg.cellStyle = { textAlign: 'left' }; cfg.type = 'leftAligned'; cfg.pinned = 'left'
+      cfg.cellStyle = { textAlign: 'left', fontWeight: 'bold' }; cfg.type = 'leftAligned'; cfg.pinned = 'left'
     } else if (cfg.field && ['nik','jenis_kelamin'].includes(cfg.field)) {
       cfg.cellStyle = { textAlign: 'center' }; cfg.type = 'centerAligned'
     } else if (cfg.field === 'phone') {
-      cfg.hide = true
+      cfg.hide = true  // Hide phone column completely
+    } else if (cfg.field) {
+      // Default formatter for any numeric field not explicitly listed
+      cfg.valueFormatter = p => {
+        if (p.value === null || p.value === undefined) return ''
+        if (typeof p.value === 'number') {
+          return formatInteger(p.value)
+        }
+        return p.value
+      }
     }
     const classMap = {
       jumlah_upah_kotor: 'col-jumlah-kotor',
@@ -912,6 +925,33 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             📥 Export CSV
           </button>
 
+          {/* Month Picker */}
+          <input
+            type="month"
+            value={((overrideMonth || finalMonth) && (overrideYear || finalYear)) ? `${String(overrideYear || finalYear).padStart(4,'0')}-${String(overrideMonth || finalMonth).padStart(2,'0')}` : ''}
+            onChange={(e) => {
+              try {
+                const [yyyy, mm] = (e.target.value || '').split('-')
+                const m = Number(mm); const y = Number(yyyy)
+                if (!isNaN(m) && !isNaN(y) && m >= 1 && m <= 12) {
+                  setRows([])
+                  setPinnedBottom([])
+                  setOverrideMonth(m)
+                  setOverrideYear(y)
+                  dataInitRef.current = false
+                }
+              } catch {}
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '14px',
+              minWidth: '160px',
+              cursor: 'pointer'
+            }}
+          />
+
           {/* Gang Selection Dropdown */}
           <select
             value={finalGangCode || ''}
@@ -967,8 +1007,13 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             <span style={{ marginRight: '16px' }}>
               📊 Total Records: <strong>{rows.length}</strong>
             </span>
-            <span>
+            <span style={{ marginRight: '16px' }}>
               🏭 Gang: <strong>{finalGangCode || '-'}</strong>
+            </span>
+            <span>
+              📅 Periode: <strong>
+                {(overrideMonth || finalMonth) ? new Date(2000, (overrideMonth || finalMonth) - 1).toLocaleString('id-ID', { month: 'short' }) : '-'} {overrideYear || finalYear || '-'}
+              </strong>
             </span>
           </div>
 
@@ -1027,8 +1072,20 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             try {
               const cols = params.columnApi.getAllDisplayedColumns()
               const ids = cols.map(c => c.getColId())
-              if (ids.length > 0) params.columnApi.autoSizeColumns(ids)
-            } catch {}
+              if (ids.length > 0) {
+                // Auto-size all columns to fit content
+                params.columnApi.autoSizeColumns(ids)
+                // Ensure minimum width for readability
+                cols.forEach(col => {
+                  const currentWidth = col.getActualWidth()
+                  if (currentWidth < 80) {
+                    params.columnApi.setColumnWidth(col.getColId(), 80)
+                  }
+                })
+              }
+            } catch (e) {
+              console.error('Error auto-sizing columns:', e)
+            }
           }}
           frameworkComponents={{ HierHeaderGroup }}
           onGridReady={params => {
