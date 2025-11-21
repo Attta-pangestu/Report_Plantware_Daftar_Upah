@@ -40,7 +40,8 @@
       "Bash(uvicorn:*)",
       "Bash(nul:*)",
       "Bash(TEST_MODE=true DEV_MODE=true VITE_DEV_MODE=true python:*)",
-      "Bash(start http://localhost:5179)"
+      "Bash(start http://localhost:5179)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
