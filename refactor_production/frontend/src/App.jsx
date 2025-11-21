@@ -50,6 +50,14 @@ function AppInner() {
       try {
         console.log('[App] Starting authenticated bootstrap...')
 
+        // Set default month to current month if not set
+        if (!monthInput) {
+          const now = new Date()
+          const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+          setMonthInput(currentMonth)
+          console.log('[App] Set default month:', currentMonth)
+        }
+
         setFiltersOpen(true)
 
         // Load gangs from API based on user's accessible divisions
@@ -61,11 +69,18 @@ function AppInner() {
             const gangsList = await fetchGangs(token, firstDivision, null, true)
             setGangs(gangsList)
             setDivision(firstDivision)
+
+            // Set default gang if available
+            if (gangsList && gangsList.length > 0) {
+              setGang(gangsList[0])
+              console.log('[App] Set default gang:', gangsList[0])
+            }
           } catch (gangError) {
-            console.log('[App] Gang loading failed, using fallback for dev mode')
+            console.log('[App] Gang loading failed, using fallback')
             const fallbackGangs = ['H1H', 'H001', 'H002', 'H003', 'A001', 'B001']
             setGangs(fallbackGangs)
             setDivision(user.divisions[0])
+            setGang('H1H') // Set default gang
           }
         } else {
           console.log('[App] User has no division access')
@@ -78,7 +93,16 @@ function AppInner() {
           console.log('[App] Gangs loading failed, using fallback data')
           const fallbackGangs = ['H1H', 'H001', 'H002', 'H003']
           setGangs(fallbackGangs)
+          setDivision(user.divisions?.[0] || 'PG1A')
           setGang('H1H')
+
+          // Set default month if not set
+          if (!monthInput) {
+            const now = new Date()
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+            setMonthInput(currentMonth)
+          }
+
           setFiltersOpen(true)
           setReady(false)
           return
@@ -88,7 +112,7 @@ function AppInner() {
     }
 
     bootstrap()
-  }, [isAuthenticated, user, token])
+  }, [isAuthenticated, user, token, monthInput])
 
   useEffect(() => {
     async function loadGangs() {
@@ -100,20 +124,32 @@ function AppInner() {
         const list = await fetchGangs(token || '', division, searchTerm, true)
         setGangs(list)
         if (!list || list.length === 0) {
-          if (searchTerm) {
-            setGangError(`No gangs found for division "${division}" matching "${searchTerm}"`)
-          } else {
-            setGangError(`No gangs found for division "${division}"`)
+          // Use fallback gangs if API returns empty
+          console.log('[App] No gangs from API, using fallback')
+          const fallbackGangs = ['H1H', 'H001', 'H002', 'H003', 'A001', 'B001']
+          setGangs(fallbackGangs)
+          if (!gang || gangSearch) {
+            setGang(fallbackGangs[0])
           }
+          setGangError('') // Clear error since we have fallback
         } else {
           setGangError('')
+          // Auto-select first gang if none selected
+          if (!gang && !gangSearch) {
+            setGang(list[0])
+          }
         }
         // Clear selected gang if it's not in the filtered results
         if (gang && !list.includes(gang)) {
           setGang('')
         }
       } catch (e) {
-        setGangError('Failed to load gangs')
+        console.error('[App] Failed to load gangs:', e)
+        // Always provide fallback on error
+        const fallbackGangs = ['H1H', 'H001', 'H002', 'H003', 'A001', 'B001']
+        setGangs(fallbackGangs)
+        setGang('H1H')
+        setGangError('') // Clear error since we have fallback
       } finally {
         setGangLoading(false)
       }

@@ -26,6 +26,17 @@ export function AuthProvider({ children }) {
         setToken(savedToken)
         setUser(savedUser)
         axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+
+        // Verifikasi token masih valid dengan request ke /auth/me
+        getMe(savedToken).then(me => {
+          console.log('[AuthContext] Token validation successful')
+        }).catch(error => {
+          console.log('[AuthContext] Token invalid, clearing authentication')
+          cookieService.clearAuth()
+          setToken('')
+          setUser(null)
+          delete axios.defaults.headers.common['Authorization']
+        })
       } else {
         console.log('[AuthContext] No saved authentication found')
         // Clear any inconsistent auth data

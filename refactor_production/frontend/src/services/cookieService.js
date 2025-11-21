@@ -7,7 +7,7 @@ const REMEMBER_KEY = 'payroll_remember_me'
 
 // Cookie options
 const COOKIE_OPTIONS = {
-  expires: 7, // 7 hari
+  expires: 30, // 30 hari default
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'strict',
   path: '/'
@@ -21,11 +21,11 @@ export const cookieService = {
       if (rememberMe) {
         options.expires = 30 // 30 hari jika remember me
       } else {
-        options.expires = 1 // 1 hari default
+        options.expires = 7 // 7 hari default (dari 1 hari)
       }
       Cookies.set(TOKEN_KEY, token, options)
       localStorage.setItem(REMEMBER_KEY, rememberMe)
-      console.log('[CookieService] Token saved successfully')
+      console.log('[CookieService] Token saved successfully with', options.expires, 'days expiration')
     } catch (error) {
       console.error('[CookieService] Failed to save token:', error)
     }

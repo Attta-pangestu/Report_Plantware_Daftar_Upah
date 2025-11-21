@@ -7,6 +7,9 @@ const _host = (import.meta.env?.VITE_BACKEND_HOST || 'localhost')
 const _url = (import.meta.env?.VITE_BACKEND_URL || `http://${_host}:${_port}`)
 axios.defaults.baseURL = _url
 
+// Enable credentials for all requests (important for cookies)
+axios.defaults.withCredentials = true
+
 axios.interceptors.request.use(async (config) => {
   try {
     const start = Date.now()
