@@ -867,7 +867,7 @@ class HeaderService:
                         'width': 120,
                         'type': 'numericColumn',
                         'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'},
-                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
+                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
                     },
                     {
                         'field': 'upah_bersih',
@@ -888,7 +888,7 @@ class HeaderService:
                         if isinstance(g, dict):
                             for ch in (g.get('children') or []):
                                 if isinstance(ch, dict) and ch.get('field') == 'total_potongan':
-                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
+                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
                                     break
                 except Exception:
                     pass
