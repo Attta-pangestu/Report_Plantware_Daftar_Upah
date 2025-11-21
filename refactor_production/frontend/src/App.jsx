@@ -44,11 +44,8 @@ function AppInner() {
 
   useEffect(() => {
     async function bootstrap() {
-      // Skip bootstrap if user is not authenticated or if states are already reset (after logout)
+      // Skip bootstrap if user is not authenticated
       if (!isAuthenticated || !user) return
-
-      // Skip bootstrap if all form states are already empty (indicates logout)
-      if (!monthInput && !gang && !division && gangs.length === 0) return
 
       setInitError('')
       try {
