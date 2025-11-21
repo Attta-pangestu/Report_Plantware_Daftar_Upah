@@ -112,23 +112,27 @@ function AppInner() {
     }
 
     bootstrap()
-  }, [isAuthenticated, user, token, monthInput])
+  }, [isAuthenticated, user, token])
 
   // Reset all states when user logs out
   useEffect(() => {
     if (!isAuthenticated) {
       console.log('[App] User logged out, resetting all states...')
-      setMonthInput('')
-      setGang('')
-      setDivision('')
-      setGangs([])
-      setGangSearch('')
-      setGangError('')
-      setFiltersOpen(false)
-      setReady(false)
-      setApplyLoading(false)
-      setInitError('')
-      setProfileOpen(false)
+      // Use setTimeout to avoid re-render loop
+      const timer = setTimeout(() => {
+        setMonthInput('')
+        setGang('')
+        setDivision('')
+        setGangs([])
+        setGangSearch('')
+        setGangError('')
+        setFiltersOpen(false)
+        setReady(false)
+        setApplyLoading(false)
+        setInitError('')
+        setProfileOpen(false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [isAuthenticated])
 
