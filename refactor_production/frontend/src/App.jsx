@@ -114,25 +114,15 @@ function AppInner() {
     bootstrap()
   }, [isAuthenticated, user, token])
 
-  // Reset all states when user logs out
+  // Reset all states when user logs out - simplified approach
   useEffect(() => {
     if (!isAuthenticated) {
-      console.log('[App] User logged out, resetting all states...')
-      // Use setTimeout to avoid re-render loop
-      const timer = setTimeout(() => {
-        setMonthInput('')
-        setGang('')
-        setDivision('')
-        setGangs([])
-        setGangSearch('')
-        setGangError('')
-        setFiltersOpen(false)
-        setReady(false)
-        setApplyLoading(false)
-        setInitError('')
-        setProfileOpen(false)
-      }, 0)
-      return () => clearTimeout(timer)
+      console.log('[App] User logged out, cleaning up...')
+      // Simple cleanup without state updates that could cause loops
+      setFiltersOpen(false)
+      setReady(false)
+      setApplyLoading(false)
+      setProfileOpen(false)
     }
   }, [isAuthenticated])
 
@@ -188,32 +178,15 @@ function AppInner() {
   }
 
   const handleLogout = () => {
-    console.log('[App] Logging out and resetting all states...')
+    console.log('[App] Logging out...')
 
-    // Reset all form states
-    setMonthInput('')
-    setGang('')
-    setDivision('')
-    setGangs([])
-    setGangSearch('')
-    setGangError('')
+    // Clear modals and loading states
     setFiltersOpen(false)
     setReady(false)
     setApplyLoading(false)
-    setInitError('')
     setProfileOpen(false)
 
-    // Clear any cache data
-    if (typeof window !== 'undefined' && window.localStorage) {
-      // Keep remember me preference but clear other app data
-      const rememberMe = localStorage.getItem('payroll_remember_me')
-      localStorage.clear()
-      if (rememberMe) {
-        localStorage.setItem('payroll_remember_me', rememberMe)
-      }
-    }
-
-    // Call auth logout
+    // Call auth logout first - this will trigger isAuthenticated=false
     logout()
   }
 
