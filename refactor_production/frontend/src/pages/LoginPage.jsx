@@ -11,7 +11,8 @@ const LoginPage = () => {
     password: '',
     email: '',
     fullName: '',
-    divisions: []
+    divisions: [],
+    rememberMe: true // Default checked
   })
   const [availableDivisions, setAvailableDivisions] = useState(['PG1A','PG1B','PG2A','PG2B','DME','ARA','ARB1','ARB2','INFRA','AREC','IJL','STF-OFFICE','SECURITY'])
   const [submitting, setSubmitting] = useState(false)
@@ -47,7 +48,7 @@ const LoginPage = () => {
     try {
       if (isLoginMode) {
         // Login
-        const success = await login(formData.username, formData.password)
+        const success = await login(formData.username, formData.password, formData.rememberMe)
         if (!success) {
           setSubmitError('Login failed. Please check your credentials.')
         }
@@ -270,6 +271,34 @@ const LoginPage = () => {
                   </div>
                 )}
               </div>
+
+              {isLoginMode && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    color: '#666'
+                  }}>
+                    <input
+                      type="checkbox"
+                      name="rememberMe"
+                      checked={formData.rememberMe}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        rememberMe: e.target.checked
+                      }))}
+                      style={{
+                        marginRight: '0.5rem',
+                        transform: 'scale(1.1)'
+                      }}
+                      disabled={submitting}
+                    />
+                    Ingat saya (tetap masuk)
+                  </label>
+                </div>
+              )}
             </>
           )}
 
@@ -309,7 +338,8 @@ const LoginPage = () => {
                 password: '',
                 email: '',
                 fullName: '',
-                divisions: []
+                divisions: [],
+                rememberMe: true
               })
             }}
             style={{

@@ -5,7 +5,7 @@ export async function fetchGangs(token, division = null, search = null, force = 
   if (division) params.division = division
   if (search) params.search = search
   if (force) params.force = force
-  const headers = { Authorization: `Bearer ${token}` }
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined
   if (locCode) {
     const r = await axios.get('/payroll/gangs/by-loc', { headers, params: { loc_code: locCode, force } })
     return r.data
@@ -16,14 +16,14 @@ export async function fetchGangs(token, division = null, search = null, force = 
 
 export async function fetchDivisions(token) {
   const r = await axios.get('/payroll/divisions', {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
   })
   return r.data
 }
 
 export async function fetchGangInfo(token, gangCode) {
   const r = await axios.get(`/payroll/gang/${gangCode}/info`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined
   })
   return r.data
 }

@@ -28,6 +28,13 @@
 .hdr-premi-pupuk { background: #f1f8e9; color: #33691e; }
 .cell-premi-pupuk { background: #f8fcf2; color: #33691e; }
 
+.hdr-group { display:flex; align-items:center; gap:6px; }
+.hdr-toggle { background: transparent; border: none; cursor: pointer; font-size: 12px; line-height: 12px; }
+.hdr-label { font-weight: 600; }
+.hdr-level-1 { background: #e8edf7; }
+.hdr-level-2 { background: #eef7e8; }
+.hdr-level-3 { background: #f7eee8; }
+
 .loading-screen { opacity: 0.9999 }
 .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.35); }
 .fade-in { animation: fadeIn .3s ease-out forwards }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
+import HierHeaderGroup from '../components/common/HierHeaderGroup'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import '../styles/report.css'
@@ -9,16 +10,20 @@ import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
 import LoadingScreen from '../components/common/LoadingScreen'
 import { fetchGangInfo } from '../services/gangService'
+import { useAuth } from '../context/AuthContext'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
 
 export default function Report({ token, user, month, year, gang_code, onLoad }) {
+  // Authentication hook
+  const { logout } = useAuth()
+
   // In development mode, use default values if props are not provided
   const devMonth = DEV_MODE ? (month || undefined) : month
   const devYear = DEV_MODE ? (year || undefined) : year
   const devGangCode = DEV_MODE ? (gang_code || undefined) : gang_code
-  
+
   const [authToken, setAuthToken] = useState(token || null)
   const finalMonth = devMonth || month
   const finalYear = devYear || year
@@ -49,6 +54,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const [firstBatchReady, setFirstBatchReady] = useState(false)
   const [initialRowsPreview, setInitialRowsPreview] = useState([])
   const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)
+  const [gangInfo, setGangInfo] = useState(null)
   useEffect(() => {
     console.log('[Report] Column definitions useEffect triggered:', { authToken: !!authToken, finalMonth, finalYear, finalGangCode })
     async function loadColumnDefinitions() {
@@ -89,16 +95,31 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         try {
           const cols = await fetchColumnDefinitions(activeToken, monthValue, yearValue, finalGangCode)
           const normalized = Array.isArray(cols) ? cols : (Array.isArray(cols?.columns) ? cols.columns : [])
+          ensureHierarchicalOrThrow(normalized)
+          const enhanced = enhanceColumnsRecursive(normalized, 0)
           console.log('[Report] 📋 Column definitions diterima:', {
-            total_columns: normalized.length,
-            sample_columns: normalized.slice(0, 3).map(c => ({ field: c.field, header: c.headerName }))
+            total_columns: enhanced.length,
+            sample_columns: enhanced.slice(0, 3).map(c => ({ field: c.field, header: c.headerName }))
           })
 
-          // Use columns directly from backend - they're already properly formatted for AG-Grid
-          setColumnDefs(normalized)
-          computeRulesRef.current = createFallbackComputeRules() // Use simple fallback rules
+          const seqCol = {
+            headerName: 'NO',
+            width: 60,
+            pinned: 'left',
+            type: 'textColumn',
+            valueGetter: params => {
+              try {
+                const idx = params.node.rowIndex
+                return (typeof idx === 'number' ? idx + 1 : '')
+              } catch (e) {
+                return ''
+              }
+            }
+          }
+          setColumnDefs([seqCol, ...enhanced])
+          computeRulesRef.current = createFallbackComputeRules()
 
-          console.log('[Report] ✅ Column definitions siap, total:', normalized.length, 'kolom')
+          console.log('[Report] ✅ Column definitions siap, total:', enhanced.length, 'kolom')
           console.log('[Report] 🔄 Menunggu trigger data loading...')
         } catch (colErr) {
           console.error('[Report] Column definitions fetch failed:', colErr)
@@ -187,10 +208,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         setInitialRowsPreview(safe.slice(0, INFINITE_BATCH_SIZE))
         setFirstBatchAttempted(true)
         setFirstBatchReady(safe.length > 0)
-        if ((columnDefs?.length || 0) === 0 && safe.length > 0) {
-          const gen = generateColumnsFromRow(safe[0])
-          setColumnDefs(gen)
-        }
+        
 
         console.log('[Report] ✅ Data transaksi siap!')
         console.log('[Report] 📊 Total record diproses:', safe.length, 'baris')
@@ -257,16 +275,16 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
             columnDefs.forEach(walk)
             // Use simple endpoint in development mode for fallback
-            let data
+            let fallbackData
             if (DEV_MODE) {
-              data = await fetchReportRowsSimple(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 50 })
+              fallbackData = await fetchReportRowsSimple(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 50 })
             } else {
               const leafFields = []
               const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
               columnDefs.forEach(walk)
-              data = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
+              fallbackData = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
             }
-            const computed = applyComputeToRows(data, computeRulesRef.current)
+            const computed = applyComputeToRows(fallbackData, computeRulesRef.current)
             setRows(computed)
             const safe = Array.isArray(computed) ? computed : []
             recomputeAutoHideMap(safe)
@@ -470,28 +488,32 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
 
   
 
-  const enhanceColumnsRecursive = (cols) => {
+  const enhanceColumnsRecursive = (cols, depth = 0) => {
     if (!Array.isArray(cols)) return []
     const out = []
     for (const c of cols) {
       if (c.children && Array.isArray(c.children)) {
-        const kids = enhanceColumnsRecursive(c.children)
+        const kids = enhanceColumnsRecursive(c.children, depth + 1)
         const visibleKids = kids.filter(k => !k.hide)
         if (visibleKids.length > 0) {
-          out.push({ ...c, children: visibleKids })
+          out.push({ ...c, children: visibleKids, headerGroupComponent: 'HierHeaderGroup', headerClass: `hdr-level-${depth + 1}`, marryChildren: true })
         }
       } else {
         const leaf = formatLeaf(c)
+        leaf.headerClass = `hdr-level-${depth + 1}`
         if (!leaf.hide) out.push(leaf)
       }
     }
     return out
   }
 
-  const generateColumnsFromRow = (row) => {
-    if (!row) return []
-    const keys = Object.keys(row)
-    return keys.map(k => ({ field: k, headerName: String(k).toUpperCase(), width: 100, type: 'textColumn', cellStyle: { textAlign: 'left' } }))
+  const ensureHierarchicalOrThrow = (cols) => {
+    const arr = Array.isArray(cols) ? cols : []
+    const hasGroup = arr.some(c => Array.isArray(c.children) && c.children.length > 0)
+    const allLeaves = arr.every(c => !Array.isArray(c.children) || c.children.length === 0)
+    if (!hasGroup || allLeaves) {
+      throw new Error('Hierarchical headers required: detected flat columns')
+    }
   }
 
   const recomputeAutoHideMap = (dataRows) => {
@@ -700,45 +722,283 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
 
   return (
     <div className="grid-wrapper">
-      <div style={{ padding: '14px 16px', backgroundColor: '#f8f9fa', marginBottom: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-          <div style={{ flex: '1 1 480px' }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#2c3e50' }}>
-              LAPORAN DAFTAR UPAH — GANG {finalGangCode || '-'} {gangInfo?.loc_code ? `(LocCode ${gangInfo.loc_code})` : (locCodesSummary ? `(LocCode ${locCodesSummary})` : '')}
+      {/* Enhanced Report Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        borderRadius: '12px',
+        padding: '24px',
+        marginBottom: '20px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+        color: 'white',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        {/* Main Title */}
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: '24px',
+            fontWeight: 'bold',
+            letterSpacing: '1px',
+            textTransform: 'uppercase'
+          }}>
+            DAFTAR UPAH KARYAWAN
+          </h1>
+          <div style={{ fontSize: '18px', marginTop: '4px', opacity: 0.9 }}>
+            Periode: {finalMonth ? new Date(2000, finalMonth - 1).toLocaleString('id-ID', { month: 'long' }) : '-'} {finalYear || '-'}
+          </div>
+        </div>
+
+        {/* Gang Information */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '20px'
+        }}>
+          <div style={{ flex: 1, minWidth: '300px' }}>
+            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
+              🏭 GANG: {finalGangCode || '-'}
+              {gangInfo?.loc_code && <span style={{ marginLeft: '8px', fontSize: '14px', opacity: 0.8 }}>(LOC: {gangInfo.loc_code})</span>}
             </div>
-            <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>
+            <div style={{ fontSize: '14px', opacity: 0.9, lineHeight: 1.4 }}>
               {gangInfo?.description || '-'}
             </div>
-            <div style={{ fontSize: 13, color: '#555', marginTop: 6 }}>
-              Division: {gangInfo?.division || '-'} | Access: {Array.isArray(user?.divisions) ? user.divisions.join(', ') : '-'}
-            </div>
-            <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>
-              Generated by {user?.full_name} ({user?.username}) at {new Date().toLocaleString()}
+            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
+              📍 Division: {gangInfo?.division || '-'}
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+
+          {/* User Information */}
+          <div style={{ textAlign: 'right', minWidth: '250px' }}>
+            <div style={{ fontSize: '14px', marginBottom: '4px' }}>
+              👤 {user?.full_name || user?.username}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              🆔 {user?.username}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              🏢 Division: {Array.isArray(user?.divisions) ? user.divisions.slice(0, 3).join(', ') + (user.divisions.length > 3 ? '...' : '') : '-'}
+            </div>
+            <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px' }}>
+              📅 {new Date().toLocaleString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </div>
+
+          {/* User Avatar */}
+          <div style={{ textAlign: 'center' }}>
             {user?.avatar_url ? (
-              <img src={user.avatar_url} alt="profile" style={{ width:48, height:48, borderRadius:'50%', objectFit:'cover', border:'1px solid #ddd' }} onError={(e) => { e.currentTarget.style.display='none' }} />
+              <img
+                src={user.avatar_url}
+                alt="profile"
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  border: '3px solid rgba(255,255,255,0.3)',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
             ) : (
-              <div style={{ width:48, height:48, borderRadius:'50%', background:'#e0e0e0', display:'flex', alignItems:'center', justifyContent:'center', color:'#555', fontWeight:600 }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: '600',
+                fontSize: '20px',
+                border: '3px solid rgba(255,255,255,0.3)'
+              }}>
                 {(user?.full_name || user?.username || 'U').slice(0,1).toUpperCase()}
               </div>
             )}
           </div>
         </div>
+
+        {/* Status Badge */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginTop: '16px',
+          gap: '12px'
+        }}>
+          <span style={{
+            background: 'rgba(255,255,255,0.2)',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: '500'
+          }}>
+            ✅ Data Real-time
+          </span>
+          <span style={{
+            background: 'rgba(76, 175, 80, 0.3)',
+            padding: '4px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: '500'
+          }}>
+            📊 {rows.length} Records
+          </span>
+        </div>
       </div>
 
-      <div style={{ marginBottom: 8 }}>
-        <button onClick={autoSizeAll} style={{ marginRight: 8 }}>Auto Size Columns</button>
-        <button onClick={exportCsv}>Export CSV</button>
-        <button onClick={runValidation} style={{ marginLeft: 8, backgroundColor: '#2196f3', color: 'white', border: 'none', padding: '4px 8px' }}>Validate vs Reference</button>
+      {/* Enhanced Control Panel */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '16px',
+        padding: '12px 16px',
+        backgroundColor: '#ffffff',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        {/* Left Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={autoSizeAll}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+          >
+            📐 Auto Size Columns
+          </button>
+
+          <button
+            onClick={exportCsv}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#1e7e34'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+          >
+            📥 Export CSV
+          </button>
+
+          {/* Gang Selection Dropdown */}
+          <select
+            value={finalGangCode || ''}
+            onChange={(e) => {
+              const newGangCode = e.target.value
+              if (newGangCode && newGangCode !== finalGangCode) {
+                // Trigger reload dengan gang baru
+                window.location.reload()
+              }
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '14px',
+              minWidth: '120px',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">🔄 Pilih Gang</option>
+            <option value="H1H">H1H</option>
+            <option value="H1M">H1M</option>
+            <option value="H1T">H1T</option>
+            <option value="A1H">A1H</option>
+            <option value="A1M">A1M</option>
+            <option value="A1T">A1T</option>
+            <option value="A2M">A2M</option>
+            <option value="A2P">A2P</option>
+            <option value="A2T">A2T</option>
+            <option value="A3H">A3H</option>
+            <option value="A3M">A3M</option>
+            <option value="A3P">A3P</option>
+            <option value="A3T">A3T</option>
+            <option value="E1H">E1H</option>
+            <option value="E1M">E1M</option>
+            <option value="E1T">E1T</option>
+            <option value="E2H">E2H</option>
+            <option value="E2M">E2M</option>
+            <option value="E2T">E2T</option>
+            <option value="E3H">E3H</option>
+            <option value="E3M">E3M</option>
+            <option value="E3P">E3P</option>
+            <option value="E3T">E3T</option>
+          </select>
+        </div>
+
+        {/* Right Status & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            <span style={{ marginRight: '16px' }}>
+              📊 Total Records: <strong>{rows.length}</strong>
+            </span>
+            <span>
+              🏭 Gang: <strong>{finalGangCode || '-'}</strong>
+            </span>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={() => {
+              if (window.confirm('Apakah Anda yakin ingin keluar?')) {
+                logout()
+                window.location.reload() // Reload to trigger login redirect
+              }
+            }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
+            title="Keluar dari sistem"
+          >
+            🚪 Keluar
+          </button>
+        </div>
       </div>
 
       <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
         <AgGridReact
           ref={gridRef}
-          // Always use enhanced column definitions with auto-hide logic applied
-          columnDefs={enhanceColumnsRecursive(Array.isArray(columnDefs) ? columnDefs : [])}
+          columnDefs={Array.isArray(columnDefs) ? columnDefs : []}
           rowData={rows}
           rowModelType={'infinite'}
           cacheBlockSize={INFINITE_BATCH_SIZE}
@@ -757,12 +1017,13 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
           sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
           getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
           onFirstDataRendered={() => {}}
+          frameworkComponents={{ HierHeaderGroup }}
           onGridReady={params => {
             if (rows.length > 0) {
               params.api.ensureIndexVisible(0, 'top')
             }
             // Log grid ready state for debugging
-            const activeColumnDefs = enhanceColumnsRecursive(columnDefs)
+            const activeColumnDefs = Array.isArray(columnDefs) ? columnDefs : []
             console.log('[AG Grid] Grid ready with columns:', activeColumnDefs.length)
             console.log('[AG Grid] Rows loaded:', rows.length)
             console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)
@@ -887,4 +1148,3 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     })
     return out
   }
-  const [gangInfo, setGangInfo] = useState(null)

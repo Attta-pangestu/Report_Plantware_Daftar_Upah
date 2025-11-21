@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 import { login as apiLogin, getMe, getTestToken } from '../services/authService'
+import cookieService from '../services/cookieService'
 
 const TEST_MODE = (import.meta.env?.VITE_DEV_MODE === 'true') || (import.meta.env?.DEV_MODE === 'true')
 
@@ -14,27 +15,31 @@ export function AuthProvider({ children }) {
   const [loginInProgress, setLoginInProgress] = useState(false) // Prevent multiple login attempts
 
   useEffect(() => {
+    // Restore authentication from cookies on app load
     try {
-      const t = document.cookie.split('; ').find(x => x.startsWith('auth_token='))
-      const tok = t ? decodeURIComponent(t.split('=')[1]) : ''
-      if (tok) {
-        setToken(tok)
-        axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
-        ;(async () => {
-          try {
-            const u = await getMe(tok)
-            setUser(u)
-          } catch (e) {
-            setError('Failed to restore session')
-          }
-        })()
+      console.log('[AuthContext] Checking for saved authentication in cookies')
+      const savedToken = cookieService.getToken()
+      const savedUser = cookieService.getUser()
+
+      if (savedToken && savedUser) {
+        console.log('[AuthContext] Restoring authentication from cookies')
+        setToken(savedToken)
+        setUser(savedUser)
+        axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+      } else {
+        console.log('[AuthContext] No saved authentication found')
+        // Clear any inconsistent auth data
+        cookieService.clearAuth()
       }
-    } catch (_) {}
+    } catch (error) {
+      console.error('[AuthContext] Error restoring authentication:', error)
+      cookieService.clearAuth()
+    }
   }, [])
 
   // Auto-login moved to LoginPage in test mode to show the login UI while submitting automatically
 
-  async function login(username, password) {
+  async function login(username, password, rememberMe = true) {
     // Prevent multiple simultaneous login attempts
     if (loginInProgress) {
       console.log('[Auth] Login already in progress, skipping duplicate request')
@@ -67,11 +72,15 @@ export function AuthProvider({ children }) {
         setToken(tok)
         setUser(usr)
         try {
-          const secure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:'
-          const flags = `path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax` + (secure ? '; Secure' : '')
-          document.cookie = `auth_token=${encodeURIComponent(tok)}; ${flags}`
+          // Save token and user info using cookieService
+          cookieService.saveToken(tok, rememberMe)
+          cookieService.saveUser(usr)
+          cookieService.saveRememberMe(rememberMe)
           axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
-        } catch (_) {}
+          console.log('[Auth] Authentication saved to cookies successfully (rememberMe:', rememberMe, ')')
+        } catch (error) {
+          console.error('[Auth] Failed to save authentication to cookies:', error)
+        }
         return true
       }
       throw new Error('Missing token or user')
@@ -89,6 +98,15 @@ export function AuthProvider({ children }) {
             const usr = await getMe(tok)
             setToken(tok)
             setUser(usr)
+            try {
+              // Save test token and user info using cookieService
+              cookieService.saveToken(tok, true) // Remember me for test mode
+              cookieService.saveUser(usr)
+              axios.defaults.headers.common['Authorization'] = `Bearer ${tok}`
+              console.log('[Auth] Test token authentication saved to cookies')
+            } catch (error) {
+              console.error('[Auth] Failed to save test authentication to cookies:', error)
+            }
             console.log('[Auth] Test token login successful')
             return true
           }
@@ -107,9 +125,19 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     try {
-      document.cookie = 'auth_token=; Max-Age=0; path=/'
+      // Clear all authentication data using cookieService
+      cookieService.clearAuth()
       delete axios.defaults.headers.common['Authorization']
-    } catch (_) {}
+      console.log('[Auth] Logged out successfully, authentication data cleared')
+    } catch (error) {
+      console.error('[Auth] Error during logout:', error)
+      // Fallback manual cleanup
+      try {
+        document.cookie = 'auth_token=; Max-Age=0; path=/'
+        document.cookie = 'payroll_user_info=; Max-Age=0; path=/'
+        localStorage.removeItem('payroll_remember_me')
+      } catch (_) {}
+    }
     setToken('')
     setUser(null)
   }

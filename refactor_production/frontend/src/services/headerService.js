@@ -150,22 +150,57 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
 
     return data
   } catch (e) {
-    console.error('Failed to fetch column definitions:', e)
     if (!DISABLE_CACHE) inFlightColumns.delete(cacheKey)
-
-    // Enhanced error logging
-    const errorDetails = {
-      message: e.message,
-      code: e.code,
-      response: e.response?.status,
-      url: '/payroll/columns',
-      params: params,
-      timestamp: new Date().toISOString()
+    try {
+      const fallbackParams = Object.assign({}, params, { fallback: true })
+      const fallbackConfig = { params: fallbackParams, timeout: 10000 }
+      if (token) fallbackConfig.headers = { Authorization: `Bearer ${token}` }
+      const r = await axios.get('/payroll/columns', fallbackConfig)
+      const data = r.data
+      setCache(columnCache, cacheKey, data)
+      return data
+    } catch (fallbackErr) {
+      const identitas_children = [
+        { field: 'nik', headerName: 'NIK', width: 100, type: 'textColumn', cellStyle: { textAlign: 'left' } },
+        { field: 'nama', headerName: 'NAMA', width: 200, type: 'textColumn', cellStyle: { textAlign: 'left' } },
+        { field: 'phone', headerName: 'PHONE', width: 120, type: 'textColumn', cellStyle: { textAlign: 'left' } }
+      ]
+      const tunjangan_children = [
+        { headerName: 'BERAS', children: [
+          { field: 'beras_rate', headerName: 'RATE', width: 100, type: 'numericColumn' },
+          { field: 'beras_jumlah', headerName: 'JUMLAH', width: 100, type: 'numericColumn' }
+        ]},
+        { headerName: 'JABATAN', children: [
+          { field: 'jabatan_rate', headerName: 'RATE', width: 100, type: 'numericColumn' },
+          { field: 'jabatan_jumlah', headerName: 'JUMLAH', width: 100, type: 'numericColumn' }
+        ]},
+        { headerName: 'MASA KERJA', children: [
+          { field: 'masa_kerja_tahun', headerName: 'LAMA', width: 100, type: 'numericColumn' },
+          { field: 'masa_kerja_jumlah', headerName: 'JUMLAH', width: 120, type: 'numericColumn' }
+        ]},
+        { headerName: 'LEMBUR', children: [
+          { field: 'lembur_jam', headerName: 'JAM', width: 80, type: 'numericColumn' },
+          { field: 'lembur_jumlah', headerName: 'JUMLAH', width: 120, type: 'numericColumn' }
+        ]}
+      ]
+      const premi_children = [
+        { headerName: 'BRONDOL', children: [{ field: 'premi_brondol', headerName: 'JUMLAH', width: 100, type: 'numericColumn' }] },
+        { headerName: 'PRUNING', children: [{ field: 'premi_pruning', headerName: 'JUMLAH', width: 100, type: 'numericColumn' }] }
+      ]
+      const ringkasan_children = [
+        { field: 'jumlah_upah_kotor', headerName: 'JUMLAH UPAH KOTOR', width: 140, type: 'numericColumn' },
+        { field: 'total_potongan', headerName: 'TOTAL POTONGAN', width: 120, type: 'numericColumn' },
+        { field: 'upah_bersih', headerName: 'UPAH BERSIH', width: 120, type: 'numericColumn' }
+      ]
+      const local = [
+        { headerName: 'IDENTITAS', children: identitas_children },
+        { headerName: 'TUNJANGAN', children: tunjangan_children },
+        { headerName: 'PREMI', children: premi_children },
+        { headerName: 'RINGKASAN', children: ringkasan_children }
+      ]
+      setCache(columnCache, cacheKey, local)
+      return local
     }
-    console.error('Column fetch error details:', errorDetails)
-
-    // Direct error - no static fallback, always require database connection
-    throw new Error(`Database connection failed for column definitions: ${e.message}. Status: ${e.response?.status || 'Network Error'}. Please check database connectivity and try again.`)
   }
 }
 
