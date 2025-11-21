@@ -20,6 +20,16 @@
       "trusted_connection": false,
       "encrypt": false
     },
+    "local-server-2": {
+      "driver": "ODBC Driver 17 for SQL Server",
+      "server": "localhost",
+      "port": 1433,
+      "username": "sa",
+      "password": "",
+      "database_name": "db_ptrj",
+      "trusted_connection": false,
+      "encrypt": false
+    },
     "remote": {
       "driver": "ODBC Driver 17 for SQL Server",
       "server": "10.0.0.110",

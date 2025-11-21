@@ -85,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--db-name")
     parser.add_argument("--db-user")
     parser.add_argument("--db-pass")
+    parser.add_argument("--db-profile")
     parser.add_argument("--uvicorn-workers", type=int)
     parser.add_argument("--port", type=int, help="Backend HTTP port")
     args = parser.parse_args()
@@ -101,6 +102,8 @@ if __name__ == "__main__":
         os.environ["DB_USER"] = args.db_user
     if args.db_pass:
         os.environ["DB_PASS"] = args.db_pass
+    if args.db_profile:
+        os.environ["DB_PROFILE"] = args.db_profile
 
     workers = 1
     try:

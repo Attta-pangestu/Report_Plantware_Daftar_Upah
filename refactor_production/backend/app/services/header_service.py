@@ -478,6 +478,7 @@ class HeaderService:
             for c in l3:
                 p = c.get('parent')
                 l3_by_parent.setdefault(p, []).append(c)
+            pot_dynamic_children: List[Dict[str, Any]] = []
 
             static_map = {
                 'no': 'no',
@@ -563,17 +564,32 @@ class HeaderService:
                         group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
                     # Add dynamic headers directly from DB list
                     for i, name in enumerate(dyn[:7]):
-                        field = f"premi_dynamic_{i+1}"
-                        group2_defs.append({
-                            'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
-                            'children': [{
-                                'headerName': 'JUMLAH',
-                                'field': field,
-                                'width': self._get_column_width(field),
-                                'type': self._get_column_type(field),
-                                'cellStyle': self._get_cell_style(field)
-                            }]
-                        })
+                        nm = (name if isinstance(name, str) else '').strip()
+                        up = nm.upper()
+                        if 'POTONGAN' in up:
+                            pf = f"pot_dynamic_{i+1}"
+                            pot_dynamic_children.append({
+                                'headerName': (nm or f"POTONGAN {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': pf,
+                                    'width': self._get_column_width(pf),
+                                    'type': self._get_column_type(pf),
+                                    'cellStyle': self._get_cell_style(pf)
+                                }]
+                            })
+                        else:
+                            field = f"premi_dynamic_{i+1}"
+                            group2_defs.append({
+                                'headerName': (nm or f"PREMI {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                }]
+                            })
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                     continue
                 else:
@@ -594,17 +610,32 @@ class HeaderService:
                                 }]
                             })
                         for i, name in enumerate(dyn[:7]):
-                            field = f"premi_dynamic_{i+1}"
-                            group2_defs.append({
-                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
-                                'children': [{
-                                    'headerName': 'JUMLAH',
-                                    'field': field,
-                                    'width': self._get_column_width(field),
-                                    'type': self._get_column_type(field),
-                                    'cellStyle': self._get_cell_style(field)
-                                }]
-                            })
+                            nm = (name if isinstance(name, str) else '').strip()
+                            up = nm.upper()
+                            if 'POTONGAN' in up:
+                                pf = f"pot_dynamic_{i+1}"
+                                pot_dynamic_children.append({
+                                    'headerName': (nm or f"POTONGAN {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': pf,
+                                        'width': self._get_column_width(pf),
+                                        'type': self._get_column_type(pf),
+                                        'cellStyle': self._get_cell_style(pf)
+                                    }]
+                                })
+                            else:
+                                field = f"premi_dynamic_{i+1}"
+                                group2_defs.append({
+                                    'headerName': (nm or f"PREMI {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': field,
+                                        'width': self._get_column_width(field),
+                                        'type': self._get_column_type(field),
+                                        'cellStyle': self._get_cell_style(field)
+                                    }]
+                                })
                         col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                         continue
                     else:
@@ -662,17 +693,32 @@ class HeaderService:
                                 }]
                             })
                         for i, name in enumerate(dyn[:7]):
-                            field = f"premi_dynamic_{i+1}"
-                            new_children.append({
-                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
-                                'children': [{
-                                    'headerName': 'JUMLAH',
-                                    'field': field,
-                                    'width': self._get_column_width(field),
-                                    'type': self._get_column_type(field),
-                                    'cellStyle': self._get_cell_style(field)
-                                }]
-                            })
+                            nm = (name if isinstance(name, str) else '').strip()
+                            up = nm.upper()
+                            if 'POTONGAN' in up:
+                                pf = f"pot_dynamic_{i+1}"
+                                pot_dynamic_children.append({
+                                    'headerName': (nm or f"POTONGAN {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': pf,
+                                        'width': self._get_column_width(pf),
+                                        'type': self._get_column_type(pf),
+                                        'cellStyle': self._get_cell_style(pf)
+                                    }]
+                                })
+                            else:
+                                field = f"premi_dynamic_{i+1}"
+                                new_children.append({
+                                    'headerName': (nm or f"PREMI {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': field,
+                                        'width': self._get_column_width(field),
+                                        'type': self._get_column_type(field),
+                                        'cellStyle': self._get_cell_style(field)
+                                    }]
+                                })
                         c['children'] = new_children
                         break
             except Exception:
@@ -832,6 +878,20 @@ class HeaderService:
                         'compute': { 'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan' }
                     }
                 ]
+                if pot_dynamic_children:
+                    try:
+                        deduction_groups.insert(max(len(deduction_groups)-2, 0), { 'headerName': 'POTONGAN LAINNYA', 'children': pot_dynamic_children })
+                    except Exception:
+                        pass
+                try:
+                    for g in deduction_groups:
+                        if isinstance(g, dict):
+                            for ch in (g.get('children') or []):
+                                if isinstance(ch, dict) and ch.get('field') == 'total_potongan':
+                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
+                                    break
+                except Exception:
+                    pass
                 col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
 
             has_tunjangan = any([(c.get('headerName') or '').strip().upper() == 'TUNJANGAN' for c in col_defs])
