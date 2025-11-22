@@ -55,7 +55,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const autoHideMapRef = useRef({})
   const [firstBatchReady, setFirstBatchReady] = useState(false)
   const [initialRowsPreview, setInitialRowsPreview] = useState([])
-  const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)
+  const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)    
   const [gangInfo, setGangInfo] = useState(null)
   useEffect(() => {
     console.log('[Report] Column definitions useEffect triggered:', { authToken: !!authToken, finalMonth, finalYear, finalGangCode })
@@ -419,7 +419,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   // Enhanced column definitions with proper formatting
   const formatLeaf = (col) => {
     const cfg = { ...col, ...baseCol }
-    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_kontan','pot_thr','pot_pinjam','pot_kl','pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','pot_total_1','pot_total_2','pot_total_3','pot_total_4','pot_koreksi','total_potongan','upah_bersih','premi_dynamic_1','premi_dynamic_2','premi_dynamic_3','premi_dynamic_4','premi_dynamic_5','premi_dynamic_6','premi_dynamic_7']
+    const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_koreksi','total_potongan','upah_bersih','premi_dynamic_1','premi_dynamic_2','premi_dynamic_3','premi_dynamic_4','premi_dynamic_5','premi_dynamic_6','premi_dynamic_7','pot_dynamic_1','pot_dynamic_2','pot_dynamic_3','pot_dynamic_4','pot_dynamic_5','pot_dynamic_6','pot_dynamic_7','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi']
     const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','cuti_izin_hari','jumlah_hk','masa_kerja_tahun','lembur_jam','tidak_hadir_cth','tidak_hadir_alpa']
 
     // Helper function for integer formatting
@@ -452,6 +452,17 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         }
         return p.value
       }
+    }
+    const f = String(cfg.field || '')
+    const hdr = String(cfg.headerName || '').toUpperCase()
+    const isDeduction = hdr.includes('POTONGAN') || f.startsWith('pot_') || f.startsWith('pot_dynamic_')
+    const isIncome = hdr.includes('PENDAPATAN') || hdr.includes('TUNJANGAN') || hdr.includes('PREMI') || f.startsWith('premi_') || f.startsWith('premi_dynamic_') || f === 'gaji_pokok' || f === 'total_tunjangan' || f === 'total_premi' || f === 'jumlah_upah_kotor'
+    if (isDeduction) {
+      cfg.headerClass = (cfg.headerClass ? cfg.headerClass + ' ' : '') + 'hdr-deduction'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-deduction'
+    } else if (isIncome) {
+      cfg.headerClass = (cfg.headerClass ? cfg.headerClass + ' ' : '') + 'hdr-income'
+      cfg.cellClass = (cfg.cellClass ? cfg.cellClass + ' ' : '') + 'cell-income'
     }
     const classMap = {
       jumlah_upah_kotor: 'col-jumlah-kotor',

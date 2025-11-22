@@ -26,10 +26,14 @@ export default function HierHeaderGroup(props) {
   }
 
   const label = columnGroup.getDisplayName()
+  const upper = String(label || '').toUpperCase()
+  const kind = (upper.includes('POTONGAN') ? 'kind-deduction'
+                : (upper.includes('PENDAPATAN') || upper.includes('TUNJANGAN') || upper.includes('PREMI')) ? 'kind-income'
+                : 'kind-neutral')
 
   const indent = (level - 1) * 8
   return (
-    <div className={`hdr-group hdr-level-${level}`} style={{ paddingLeft: indent }}>
+    <div className={`hdr-group hdr-level-${level} ${kind}`} style={{ paddingLeft: indent }}>
       <button className={`hdr-toggle ${expanded ? 'open' : 'closed'}`} onClick={toggle} aria-label="toggle" type="button">{expanded ? '▾' : '▸'}</button>
       <span className="hdr-label">{label}</span>
     </div>

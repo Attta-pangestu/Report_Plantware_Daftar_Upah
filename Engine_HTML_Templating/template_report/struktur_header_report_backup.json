@@ -104,20 +104,20 @@
             "children": ["beras_rate", "beras_jumlah", "jabatan_rate", "jabatan_jumlah", "masa_kerja_lama", "masa_kerja_jumlah", "lembur_jam", "lembur_jumlah"]
           },
           {
-            "id": "premi",
-            "text": "PREMI",
-            "rowspan": 1,
-            "colspan": 8,
-            "class": "header-cell section-header",
-            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
-          },
-          {
             "id": "total_tunjangan",
             "text": "TOTAL TUNJANGAN",
             "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-total-tunjangan main-header",
             "children": []
+          },
+          {
+            "id": "premi",
+            "text": "PREMI",
+            "rowspan": 1,
+            "colspan": 8,
+            "class": "header-cell section-header",
+            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
           },
           {
             "id": "potongan",

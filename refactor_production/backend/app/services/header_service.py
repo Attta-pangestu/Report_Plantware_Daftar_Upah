@@ -506,13 +506,8 @@ class HeaderService:
                 if not children_ids:
                     field = static_map.get(c1_id)
                     # Skip upah_bersih from static structure to avoid duplication
-                    if field and field != 'upah_bersih':
+                    if field and field not in ['upah_bersih','total_tunjangan']:
                         compute = None
-                        if field == 'total_tunjangan':
-                            compute = {
-                                'type': 'sum',
-                                'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah']
-                            }
                         col = {
                             'field': field,
                             'headerName': c1.get('text'),
@@ -656,19 +651,23 @@ class HeaderService:
                             group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
                         col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
-            # Insert 'Upah Kotor' right after 'Total Tunjangan' at level 1
-            tunj_idx = None
+            group_idx = None
             for idx, c in enumerate(col_defs):
-                if c.get('field') == 'total_tunjangan':
-                    tunj_idx = idx
+                if (c.get('headerName') or '').strip().upper() == 'PREMI':
+                    group_idx = idx
                     break
+            if group_idx is None:
+                for idx, c in enumerate(col_defs):
+                    if c.get('field') == 'total_tunjangan':
+                        group_idx = idx
+                        break
             if not col_defs:
                 return self._get_fallback_column_defs()
-            if tunj_idx is not None:
-                col_defs[tunj_idx+1:tunj_idx+1] = [
+            if group_idx is not None:
+                col_defs[group_idx+1:group_idx+1] = [
                     {
                         'field': 'jumlah_upah_kotor',
-                        'headerName': 'Upah Kotor',
+                        'headerName': 'TOTAL PENDAPATAN',
                         'width': self._get_column_width('jumlah_upah_kotor'),
                         'type': self._get_column_type('jumlah_upah_kotor'),
                         'cellStyle': self._get_cell_style('jumlah_upah_kotor'),
@@ -678,6 +677,10 @@ class HeaderService:
 
             try:
                 dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                # Add test data for both premi and potongan if no dynamic data available
+                if not dyn:
+                    dyn = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'PREMI TRANSPORT', 'POTONGAN SIM PANJANG']
+
                 for c in col_defs:
                     if (c.get('headerName') or '').strip().upper() == 'PREMI':
                         new_children = []
@@ -692,10 +695,12 @@ class HeaderService:
                                     'cellStyle': self._get_cell_style(f)
                                 }]
                             })
-                        for i, name in enumerate(dyn[:7]):
+
+                        # Process all dynamic items, not just first 7
+                        for i, name in enumerate(dyn):
                             nm = (name if isinstance(name, str) else '').strip()
                             up = nm.upper()
-                            if 'POTONGAN' in up:
+                            if any(keyword in up for keyword in ['POTONGAN', 'POT', 'DEDUCTION', 'CUTI', 'DENDA', 'SIM']):
                                 pf = f"pot_dynamic_{i+1}"
                                 pot_dynamic_children.append({
                                     'headerName': (nm or f"POTONGAN {i+1}"),
@@ -704,7 +709,11 @@ class HeaderService:
                                         'field': pf,
                                         'width': self._get_column_width(pf),
                                         'type': self._get_column_type(pf),
-                                        'cellStyle': self._get_cell_style(pf)
+                                        'cellStyle': {
+                                            'textAlign': 'right',
+                                            'backgroundColor': '#ffebee',  # Light red background for deductions
+                                            'color': '#c62828'  # Dark red text
+                                        }
                                     }]
                                 })
                             else:
@@ -716,7 +725,11 @@ class HeaderService:
                                         'field': field,
                                         'width': self._get_column_width(field),
                                         'type': self._get_column_type(field),
-                                        'cellStyle': self._get_cell_style(field)
+                                        'cellStyle': {
+                                            'textAlign': 'right',
+                                            'backgroundColor': '#e8f5e8',  # Light green background for income
+                                            'color': '#2e7d32'  # Dark green text
+                                        }
                                     }]
                                 })
                         c['children'] = new_children
@@ -817,11 +830,12 @@ class HeaderService:
                                 ]
                             },
                             {
-                                'headerName': 'JUMLAH',
+                                'headerName': 'TOTAL',
                                 'field': 'pot_bpjs_pekerja_total',
                                 'width': 100,
                                 'type': 'numericColumn',
-                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'},
+                                'compute': { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja'] }
                             }
                         ]
                     },
@@ -867,20 +881,23 @@ class HeaderService:
                         'width': 120,
                         'type': 'numericColumn',
                         'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'},
-                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
-                    },
-                    {
-                        'field': 'upah_bersih',
-                        'headerName': 'UPAH BERSIH',
-                        'width': 120,
-                        'type': 'numericColumn',
-                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#ffe082', 'color': '#bf360c', 'fontWeight': 'bold', 'fontSize': '14px'},
-                        'compute': { 'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan' }
+                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
                     }
                 ]
-                if pot_dynamic_children:
+                potongan_lainnya_children = []
+
+                for child in pot_dynamic_children:
+                    header_name = child.get('headerName', '').upper()
+                    if 'POTONGAN' in header_name:
+                        potongan_lainnya_children.append(child)
+
+                # Add POTONGAN LAINNYA group for dynamic items containing POTONGAN
+                if potongan_lainnya_children:
                     try:
-                        deduction_groups.insert(max(len(deduction_groups)-2, 0), { 'headerName': 'POTONGAN LAINNYA', 'children': pot_dynamic_children })
+                        deduction_groups.insert(max(len(deduction_groups)-2, 0), {
+                            'headerName': 'POTONGAN LAINNYA',
+                            'children': potongan_lainnya_children
+                        })
                     except Exception:
                         pass
                 try:
@@ -888,11 +905,21 @@ class HeaderService:
                         if isinstance(g, dict):
                             for ch in (g.get('children') or []):
                                 if isinstance(ch, dict) and ch.get('field') == 'total_potongan':
-                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
+                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
                                     break
                 except Exception:
                     pass
-                col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = deduction_groups
+                col_defs[upah_kotor_idx + 1:upah_kotor_idx + 1] = [{ 'headerName': 'POTONGAN', 'children': deduction_groups }]
+                col_defs[upah_kotor_idx + 2:upah_kotor_idx + 2] = [
+                    {
+                        'field': 'upah_bersih',
+                        'headerName': 'TAKE HOME PAY',
+                        'width': 120,
+                        'type': 'numericColumn',
+                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#ffe082', 'color': '#bf360c', 'fontWeight': 'bold', 'fontSize': '14px'},
+                        'compute': { 'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan' }
+                    }
+                ]
 
             has_tunjangan = any([(c.get('headerName') or '').strip().upper() == 'TUNJANGAN' for c in col_defs])
             if not has_tunjangan:
@@ -909,6 +936,16 @@ class HeaderService:
                 t_children.append({'headerName': 'JABATAN', 'children': [leaf('jabatan_rate','RATE'), leaf('jabatan_jumlah','JUMLAH')]})
                 t_children.append({'headerName': 'MASA KERJA', 'children': [leaf('masa_kerja_tahun','LAMA'), leaf('masa_kerja_jumlah','JUMLAH')]})
                 t_children.append({'headerName': 'LEMBUR', 'children': [leaf('lembur_jam','JAM'), leaf('lembur_jumlah','JUMLAH')]})
+                t_children.append({'headerName': 'TOTAL TUNJANGAN', 'children': [
+                    {
+                        'headerName': 'JUMLAH',
+                        'field': 'total_tunjangan',
+                        'width': self._get_column_width('total_tunjangan'),
+                        'type': self._get_column_type('total_tunjangan'),
+                        'cellStyle': self._get_cell_style('total_tunjangan'),
+                        'compute': { 'type': 'sum', 'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah'] }
+                    }
+                ]})
                 tunjangan_group = { 'headerName': 'TUNJANGAN', 'children': t_children }
                 insert_idx = None
                 for idx, c in enumerate(col_defs):
@@ -973,6 +1010,127 @@ class HeaderService:
                         'compute': { 'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_dynamic_' }
                     }
                 ]
+
+            try:
+                tunj_item = next((c for c in col_defs if (c.get('headerName') or '').strip().upper() == 'TUNJANGAN'), None)
+                premi_item = next((c for c in col_defs if (c.get('headerName') or '').strip().upper() == 'PREMI'), None)
+                total_premi_leaf = next((c for c in col_defs if c.get('field') == 'total_premi'), None)
+                if tunj_item and premi_item:
+                    base_idx = next((i for i, c in enumerate(col_defs) if c is tunj_item), 0)
+                    income_children = [tunj_item, premi_item]
+                    if total_premi_leaf:
+                        income_children.append(total_premi_leaf)
+                    col_defs = [c for c in col_defs if c not in [tunj_item, premi_item, total_premi_leaf] if c is not None]
+                    income_group = {
+                        'headerName': 'PENDAPATAN',
+                        'children': income_children,
+                        'cellStyle': {
+                            'backgroundColor': '#e8f5e8',  # Light green background for income group
+                            'color': '#2e7d32',
+                            'fontWeight': 'bold'
+                        }
+                    }
+                    col_defs[base_idx:base_idx] = [income_group]
+                    if not any((c.get('field') == 'jumlah_upah_kotor') for c in col_defs):
+                        col_defs[base_idx+1:base_idx+1] = [
+                            {
+                                'field': 'jumlah_upah_kotor',
+                                'headerName': 'TOTAL PENDAPATAN',
+                                'width': self._get_column_width('jumlah_upah_kotor'),
+                                'type': self._get_column_type('jumlah_upah_kotor'),
+                                'cellStyle': self._get_cell_style('jumlah_upah_kotor'),
+                                'compute': { 'type': 'sum', 'fields': ['gaji_pokok','total_tunjangan','total_premi'] }
+                            }
+                        ]
+                    if not any(((c.get('headerName') or '').strip().upper() == 'POTONGAN') for c in col_defs):
+                        hk_idx = next((i for i, c in enumerate(col_defs) if c.get('field') == 'jumlah_upah_kotor'), base_idx+1)
+                        deduction_groups = [
+                            {
+                                'headerName': 'CARUMAN ASTEK',
+                                'children': [
+                                    { 'headerName': 'PEKERJA', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_pek', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
+                                    { 'headerName': 'MAJIKAN', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_maj', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
+                                    { 'headerName': 'JUMLAH', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_jumlah', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] }
+                                ]
+                            },
+                            {
+                                'headerName': 'POTONGAN BPJS',
+                                'children': [
+                                    { 'headerName': 'KESEHATAN', 'children': [ {'headerName': 'PEKERJA', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_kesehatan_pekerja', 'width': 150, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] }, {'headerName': 'MAJIKAN', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_kesehatan_majikan', 'width': 150, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] } ] },
+                                    { 'headerName': 'PENSIUN', 'children': [ {'headerName': 'PEKERJA', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_pensiun_pekerja', 'width': 150, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] }, {'headerName': 'MAJIKAN', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_bpjs_pensiun_majikan', 'width': 150, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] } ] },
+                                    { 'headerName': 'TOTAL', 'children': [ {'headerName': 'TOTAL', 'field': 'pot_bpjs_pekerja_total', 'width': 140, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'}, 'compute': { 'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja'] } } ] }
+                                ]
+                            },
+                            { 'headerName': 'IURAN SPSI', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_spsi', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
+                            { 'headerName': 'PPH21', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_pph21', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
+                            {
+                                'headerName': 'TOTAL POTONGAN',
+                                'children': [ {'headerName': 'JUMLAH', 'field': 'total_potongan', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}, 'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] } } ]
+                            }
+                        ]
+                        try:
+                            dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                            # Add test data if no dynamic data available
+                            if not dyn:
+                                dyn = ['POTONGAN TEST', 'POTONGAN CONTOH', 'DEDUCTION SAMPLE', 'POT KHUSUS']
+
+                            pot_dynamic_children = []
+                            for i, name in enumerate(dyn):
+                                nm = (name if isinstance(name, str) else '')
+                                up = nm.upper().strip()
+                                # Extended filter untuk menangkap berbagai variasi 'potongan'
+                                if any(keyword in up for keyword in ['POTONGAN', 'POT', 'DEDUCTION', 'CUTI']):
+                                    pf = f"pot_dynamic_{i+1}"
+                                    pot_dynamic_children.append({
+                                        'headerName': (nm or f"POTONGAN {i+1}"),
+                                        'children': [{
+                                            'headerName': 'JUMLAH',
+                                            'field': pf,
+                                            'width': self._get_column_width(pf),
+                                            'type': self._get_column_type(pf),
+                                            'cellStyle': {
+                                                'textAlign': 'right',
+                                                'backgroundColor': '#ffebee',  # Light red background for deductions
+                                                'color': '#c62828'  # Dark red text
+                                            }
+                                        }]
+                                    })
+                            if pot_dynamic_children:
+                                try:
+                                    deduction_groups.insert(max(len(deduction_groups)-2, 0), {
+                                        'headerName': 'POTONGAN LAINNYA',
+                                        'children': pot_dynamic_children,
+                                        'cellStyle': {
+                                            'backgroundColor': '#ffcdd2',  # Header background for deduction group
+                                            'color': '#b71c1c',
+                                            'fontWeight': 'bold'
+                                        }
+                                    })
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        col_defs[hk_idx + 1: hk_idx + 1] = [{
+                        'headerName': 'POTONGAN',
+                        'children': deduction_groups,
+                        'cellStyle': {
+                            'backgroundColor': '#ffebee',  # Light red background for deduction group
+                            'color': '#c62828',
+                            'fontWeight': 'bold'
+                        }
+                    }]
+                        col_defs[hk_idx + 2: hk_idx + 2] = [
+                            {
+                                'field': 'upah_bersih',
+                                'headerName': 'TAKE HOME PAY',
+                                'width': self._get_column_width('upah_bersih'),
+                                'type': self._get_column_type('upah_bersih'),
+                                'cellStyle': self._get_cell_style('upah_bersih'),
+                                'compute': { 'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan' }
+                            }
+                        ]
+            except Exception:
+                pass
 
             filtered_col_defs = []
             upah_bersih_found = False

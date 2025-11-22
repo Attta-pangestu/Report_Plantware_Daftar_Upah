@@ -34,7 +34,9 @@
       "mcp__obsidian-mcp-tools__list_vault_files",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(nul)",
+      "Bash(npm run dev:5175)"
     ],
     "deny": [],
     "ask": []

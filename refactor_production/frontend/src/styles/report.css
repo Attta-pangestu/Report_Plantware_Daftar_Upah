@@ -35,6 +35,13 @@
 .hdr-level-2 { background: #eef7e8; }
 .hdr-level-3 { background: #f7eee8; }
 
+.hdr-group.kind-income { background: #e8f5e9; color: #1b5e20; }
+.hdr-group.kind-deduction { background: #e3f2fd; color: #0d47a1; }
+.hdr-income { background: #f1f8e9; color: #2e7d32; }
+.cell-income { background: #f9fff4; }
+.hdr-deduction { background: #e3f2fd; color: #1565c0; }
+.cell-deduction { background: #f6fbff; }
+
 .loading-screen { opacity: 0.9999 }
 .loading-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.35); }
 .fade-in { animation: fadeIn .3s ease-out forwards }
