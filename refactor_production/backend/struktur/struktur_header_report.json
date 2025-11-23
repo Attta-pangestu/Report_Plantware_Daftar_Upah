@@ -1,0 +1,495 @@
+{
+  "report_info": {
+    "title": "DAFTAR UPAH - Mei 2025",
+    "generated_date": "2025-11-07_16-07-47",
+    "gang": "H1H",
+    "database": "ARC",
+    "description": "Struktur header tabel report daftar upah dengan hirarki parent-child"
+  },
+  "table_structure": {
+    "total_columns": 47,
+    "header_rows": 3,
+    "data_rows": "employee_data",
+    "hierarchy": {
+      "level_1": {
+        "row": 1,
+        "description": "Main header categories dengan colspan dan rowspan",
+        "columns": [
+          {
+            "id": "no",
+            "text": "NO",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-no main-header",
+            "children": []
+          },
+          {
+            "id": "gender",
+            "text": "L/P",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-gender main-header",
+            "children": []
+          },
+          {
+            "id": "nik",
+            "text": "NIK",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-nik main-header",
+            "children": []
+          },
+          {
+            "id": "name",
+            "text": "NAMA",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-name main-header text-left",
+            "children": []
+          },
+          {
+            "id": "upah_dasar",
+            "text": "UPAH DASAR",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-upah-dasar main-header",
+            "children": []
+          },
+          {
+            "id": "absensi",
+            "text": "ABSENSI",
+            "rowspan": 1,
+            "colspan": 3,
+            "class": "header-cell section-header",
+            "children": ["kehadiran", "ketidakhadiran", "total_hk"]
+          },
+          {
+            "id": "upah_pokok",
+            "text": "UPAH POKOK",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-upah-pokok main-header",
+            "children": []
+          },
+          {
+            "id": "gaji_pokok",
+            "text": "GAJI POKOK",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-gaji-pokok main-header",
+            "children": []
+          },
+          {
+            "id": "tunjangan",
+            "text": "TUNJANGAN",
+            "rowspan": 1,
+            "colspan": 8,
+            "class": "header-cell section-header",
+            "children": ["beras_rate", "beras_jumlah", "jabatan_rate", "jabatan_jumlah", "masa_kerja_lama", "masa_kerja_jumlah", "lembur_jam", "lembur_jumlah"]
+          },
+          {
+            "id": "premi",
+            "text": "PREMI",
+            "rowspan": 1,
+            "colspan": 8,
+            "class": "header-cell section-header",
+            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
+          },
+          {
+            "id": "total_tunjangan",
+            "text": "TOTAL TUNJANGAN",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-total-tunjangan main-header",
+            "children": []
+          },
+          {
+            "id": "potongan",
+            "text": "POTONGAN",
+            "rowspan": 1,
+            "colspan": 13,
+            "class": "header-cell section-header",
+            "children": ["pph21", "potongan_kontan", "thr", "pinjam", "kl", "bpjs_kes", "bpjs_pek", "bpjs_maj", "bpjs_pensiun_pekerja", "bpjs_pensiun_majikan", "total1", "total2", "total3", "total4"]
+          },
+          {
+            "id": "upah_bersih",
+            "text": "UPAH BERSIH",
+            "rowspan": 3,
+            "colspan": 1,
+            "class": "header-cell col-upah main-header",
+            "children": []
+          }
+        ]
+      },
+      "level_2": {
+        "row": 2,
+        "description": "Sub-header detail types",
+        "columns": [
+          {
+            "id": "kehadiran",
+            "text": "KEHADIRAN",
+            "parent": "absensi",
+            "class": "header-cell col-hadir",
+            "children": ["hari_kerja"]
+          },
+          {
+            "id": "ketidakhadiran",
+            "text": "KETIDAKHADIRAN",
+            "parent": "absensi",
+            "colspan": 6,
+            "class": "header-cell sub-header-absensi",
+            "children": ["cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cth", "alpa"]
+          },
+          {
+            "id": "total_hk",
+            "text": "TOTAL HK",
+            "parent": "absensi",
+            "class": "header-cell col-total-hk",
+            "children": ["jml_hk"]
+          },
+          {
+            "id": "beras",
+            "text": "BERAS",
+            "parent": "tunjangan",
+            "colspan": 2,
+            "class": "header-cell sub-header-tunjangan",
+            "children": ["beras_rate", "beras_jumlah"]
+          },
+          {
+            "id": "jabatan",
+            "text": "JABATAN",
+            "parent": "tunjangan",
+            "colspan": 2,
+            "class": "header-cell sub-header-tunjangan",
+            "children": ["jabatan_rate", "jabatan_jumlah"]
+          },
+          {
+            "id": "masa_kerja",
+            "text": "MASA KERJA",
+            "parent": "tunjangan",
+            "colspan": 2,
+            "class": "header-cell sub-header-tunjangan",
+            "children": ["masa_kerja_lama", "masa_kerja_jumlah"]
+          },
+          {
+            "id": "lembur",
+            "text": "LEMBUR",
+            "parent": "tunjangan",
+            "colspan": 2,
+            "class": "header-cell sub-header-tunjangan",
+            "children": ["lembur_jam", "lembur_jumlah"]
+          },
+          {
+            "id": "brondol",
+            "text": "BRONDOL",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["brondol_jumlah"]
+          },
+          {
+            "id": "pruning",
+            "text": "PRUNING",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["pruning_jumlah"]
+          },
+          {
+            "id": "premi_angkut_material",
+            "text": "PREMI ANGKUT MATERIAL",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_angkut_material_jumlah"]
+          },
+          {
+            "id": "premi_angkut_tbs",
+            "text": "PREMI ANGKUT TBS",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_angkut_tbs_jumlah"]
+          },
+          {
+            "id": "premi_harvesting",
+            "text": "PREMI HARVESTING",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_harvesting_jumlah"]
+          },
+          {
+            "id": "premi_harvesting_incentive",
+            "text": "PREMI HARVESTING INCENTIVE",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_harvesting_incentive_jumlah"]
+          },
+          {
+            "id": "premi_pupuk",
+            "text": "PREMI PUPUK",
+            "parent": "premi",
+            "class": "header-cell sub-header-premi",
+            "children": ["premi_pupuk_jumlah"]
+          },
+          {
+            "id": "potongan_astek",
+            "text": "CARUMAN ASTEK",
+            "parent": "potongan",
+            "colspan": 3,
+            "class": "header-cell sub-header-potongan",
+            "children": ["bpjs_pek", "bpjs_maj", "bpjs_jumlah"]
+          },
+          {
+            "id": "potongan_bpjs",
+            "text": "POTONGAN BPJS",
+            "parent": "potongan",
+            "colspan": 4,
+            "class": "header-cell sub-header-potongan",
+            "children": ["bpjs_kesehatan_pekerja", "bpjs_kesehatan_majikan", "bpjs_pensiun_pekerja", "bpjs_pensiun_majikan"]
+          },
+          {
+            "id": "potongan_spsi",
+            "text": "IURAN SPSI",
+            "parent": "potongan",
+            "class": "header-cell sub-header-potongan",
+            "children": ["spsi"]
+          },
+          {
+            "id": "potongan_pph21",
+            "text": "PPH21",
+            "parent": "potongan",
+            "class": "header-cell sub-header-potongan",
+            "children": ["pph21"]
+          },
+          {
+            "id": "potongan_lainnya",
+            "text": "POTONGAN LAINNYA",
+            "parent": "potongan",
+            "colspan": 4,
+            "class": "header-cell sub-header-potongan",
+            "children": ["total1", "total2", "total3", "total4"]
+          }
+        ]
+      },
+      "level_3": {
+        "row": 3,
+        "description": "Unit columns (Rate, Jumlah, Lama, Jam, etc)",
+        "columns": [
+          {
+            "id": "hari_kerja",
+            "text": "Hari",
+            "parent": "kehadiran",
+            "class": "header-cell col-hadir"
+          },
+          {
+            "id": "cuti_tahunan_unit",
+            "text": "H",
+            "parent": "cuti_tahunan",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "cuti_sakit_haid_unit",
+            "text": "H",
+            "parent": "cuti_sakit_haid",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "cuti_minggu_unit",
+            "text": "H",
+            "parent": "cuti_minggu",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "cuti_nasional_unit",
+            "text": "H",
+            "parent": "cuti_nasional",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "cth",
+            "text": "CTH",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "alpa",
+            "text": "ALPA",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "jml_hk",
+            "text": "Jumlah",
+            "parent": "total_hk",
+            "class": "header-cell col-total-hk"
+          },
+          {
+            "id": "beras_rate",
+            "text": "Rate (Rp)",
+            "parent": "beras",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "beras_jumlah",
+            "text": "Jumlah",
+            "parent": "beras",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "jabatan_rate",
+            "text": "Rate (Rp)",
+            "parent": "jabatan",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "jabatan_jumlah",
+            "text": "Jumlah",
+            "parent": "jabatan",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "masa_kerja_lama",
+            "text": "Lama (Thn)",
+            "parent": "masa_kerja",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "masa_kerja_jumlah",
+            "text": "Jumlah (Rp)",
+            "parent": "masa_kerja",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "lembur_jam",
+            "text": "Jam",
+            "parent": "lembur",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "lembur_jumlah",
+            "text": "Jumlah",
+            "parent": "lembur",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "brondol_jumlah",
+            "text": "Jumlah",
+            "parent": "brondol",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "pruning_jumlah",
+            "text": "Jumlah",
+            "parent": "pruning",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "premi_angkut_material_jumlah",
+            "text": "Jumlah",
+            "parent": "premi_angkut_material",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "premi_angkut_tbs_jumlah",
+            "text": "Jumlah",
+            "parent": "premi_angkut_tbs",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "premi_harvesting_jumlah",
+            "text": "Jumlah",
+            "parent": "premi_harvesting",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "premi_harvesting_incentive_jumlah",
+            "text": "Jumlah",
+            "parent": "premi_harvesting_incentive",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "premi_pupuk_jumlah",
+            "text": "Jumlah",
+            "parent": "premi_pupuk",
+            "class": "header-cell col-premi"
+          },
+          {
+            "id": "pph21",
+            "text": "Jumlah",
+            "parent": "potongan_pph21",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_pek",
+            "text": "Jumlah",
+            "parent": "potongan_astek",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_maj",
+            "text": "Jumlah",
+            "parent": "potongan_astek",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_jumlah",
+            "text": "Jumlah",
+            "parent": "potongan_astek",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_kesehatan_pekerja",
+            "text": "Jumlah",
+            "parent": "potongan_bpjs",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_kesehatan_majikan",
+            "text": "Jumlah",
+            "parent": "potongan_bpjs",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_pensiun_pekerja",
+            "text": "Jumlah",
+            "parent": "potongan_bpjs",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "bpjs_pensiun_majikan",
+            "text": "Jumlah",
+            "parent": "potongan_bpjs",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "spsi",
+            "text": "Jumlah",
+            "parent": "potongan_spsi",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "total1",
+            "text": "Total",
+            "parent": "potongan_lainnya",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "total2",
+            "text": "Total",
+            "parent": "potongan_lainnya",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "total3",
+            "text": "Total",
+            "parent": "potongan_lainnya",
+            "class": "header-cell col-potongan"
+          },
+          {
+            "id": "total4",
+            "text": "Total",
+            "parent": "potongan_lainnya",
+            "class": "header-cell col-potongan"
+          }
+        ]
+      }
+    }
+  }
+}

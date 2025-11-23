@@ -49,7 +49,12 @@
       "Bash(npx cross-env VITE_BACKEND_URL=http://localhost:8002 npm run dev:test:*)",
       "Bash(move:*)",
       "Bash(VITE_DEV_MODE=true npm run dev:test:*)",
-      "Bash(TEST_MODE=true DEV_MODE=true VITE_DEV_MODE=true uvicorn:*)"
+      "Bash(TEST_MODE=true DEV_MODE=true VITE_DEV_MODE=true uvicorn:*)",
+      "Bash(start http://localhost:5177)",
+      "Bash(cross-env VITE_BACKEND_URL=http://localhost:8003 VITE_DEV_MODE=true npm run dev:test:*)",
+      "Bash(VITE_BACKEND_URL=http://localhost:8003 VITE_DEV_MODE=true npm run dev:test:*)",
+      "Bash(start http://localhost:5178)",
+      "Bash(VITE_BACKEND_URL=http://localhost:8004 VITE_DEV_MODE=true npm run dev:test:*)"
     ],
     "deny": [],
     "ask": []

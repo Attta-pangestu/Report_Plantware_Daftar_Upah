@@ -431,17 +431,23 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const insertAttendanceGroupIfMissing = cols => {
     const existing = collectLeafFieldsFromColumns(cols)
 
-    const hariKerja = { field: 'hari_kerja', headerName: 'HARI KERJA' }
-    const jumlahHK = { field: 'jumlah_hk', headerName: 'JUMLAH HK' }
+    // Struktur ABSENSI yang baru sesuai permintaan user
+    const kehadiran = { field: 'hari_kerja', headerName: 'KEHADIRAN' }
 
-    const cuti = { headerName: 'KETIDAKHADIRAN', children: [
+    const ketidakhadiran = { headerName: 'KETIDAKHADIRAN', children: [
       { field: 'cuti_tahunan_hari', headerName: 'TAHUNAN (Izin)' },
       { field: 'cuti_sakit_haid_hari', headerName: 'SAKIT + HAID' },
       { field: 'cuti_minggu_hari', headerName: 'MINGGU' },
       { field: 'cuti_nasional_hari', headerName: 'NASIONAL' },
+      { field: 'cuti_izin_hari', headerName: 'IZIN' },
+      { field: 'tidak_hadir_cth', headerName: 'CTH' },
+      { field: 'tidak_hadir_alpa', headerName: 'ALPA' },
       { field: 'total_ketidakhadiran', headerName: 'TOTAL' }
     ]}
 
+    const jumlahHK = { field: 'jumlah_hk', headerName: 'JUMLAH HK' }
+
+    // Build children dengan hanya field yang belum ada
     const buildKids = items => {
       const kids = []
       const itemsArray = Array.isArray(items) ? items : [items]
@@ -451,61 +457,86 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
       return kids
     }
 
-    const hariKerjaKids = buildKids(hariKerja)
-    const cutiKids = buildKids(cuti.children)
+    const kehadiranKids = buildKids(kehadiran)
+    const ketidakhadiranKids = buildKids(ketidakhadiran.children)
     const jumlahHKKids = buildKids(jumlahHK)
 
+    // Build struktur ABSENSI
     const attendanceChildren = []
 
-    if (cutiKids.length > 0) {
-      attendanceChildren.push({ headerName: cuti.headerName, children: cutiKids })
+    // 1. Tambahkan KEHADIRAN (dari hari_kerja)
+    if (kehadiranKids.length > 0) {
+      attendanceChildren.push(kehadiranKids[0])
     }
+
+    // 2. Tambahkan KETIDAKHADIRAN
+    if (ketidakhadiranKids.length > 0) {
+      attendanceChildren.push({ headerName: ketidakhadiran.headerName, children: ketidakhadiranKids })
+    }
+
+    // 3. Tambahkan JUMLAH HK
     if (jumlahHKKids.length > 0) {
-      attendanceChildren.push({ headerName: 'JUMLAH HK', children: jumlahHKKids })
-    }
-    if (hariKerjaKids.length > 0) {
-      attendanceChildren.unshift({ headerName: 'HK', children: hariKerjaKids })
+      attendanceChildren.push({ headerName: 'TOTAL HK', children: jumlahHKKids })
     }
 
     if (attendanceChildren.length === 0) return cols
-    const attendance = { headerName: 'KEHADIRAN', children: attendanceChildren }
-    const out = Array.isArray(cols) ? cols.slice() : []
 
-    let insertAfter = -1
+    const attendance = { headerName: 'ABSENSI', children: attendanceChildren }
+    let out = Array.isArray(cols) ? cols.slice() : []
+
+    // Cari dan hapus duplikasi ABSENSI
+    const absensiIdxs = []
     for (let i = 0; i < out.length; i++) {
       const item = out[i]
-      if (!item || Array.isArray(item.children)) continue
-      const f = String(item.field || '')
-      if (f === 'upah_pokok') { insertAfter = i; break }
-    }
-    if (insertAfter >= 0) {
-      out.splice(insertAfter + 1, 0, attendance)
-      return out
-    }
-
-    let placed = false
-    for (let i = 0; i < out.length; i++) {
-      const item = out[i]
-      if (!item || Array.isArray(item.children)) continue
-      const f = String(item.field || '')
-      if (f === 'hari_kerja' || f === 'upah_dasar') {
-        out.splice(i + 1, 0, attendance)
-        placed = true
-        break
+      if (item && Array.isArray(item.children)) {
+        const name = String(item.headerName || '').toUpperCase()
+        if (name.includes('ABSENSI')) absensiIdxs.push(i)
       }
     }
-    if (placed) return out
 
-    for (let i = 0; i < out.length; i++) {
-      const h = String(out[i]?.headerName || '').toUpperCase()
-      if (h.includes('IDENTITAS')) {
-        out.splice(i + 1, 0, attendance)
-        placed = true
-        break
+    if (absensiIdxs.length > 0) {
+      // Ganti ABSENSI pertama dengan struktur baru
+      const gi = absensiIdxs[0]
+      out[gi] = { headerName: 'ABSENSI', children: attendanceChildren }
+
+      // Hapus ABSENSI lainnya (duplikasi)
+      for (let k = absensiIdxs.length - 1; k >= 1; k--) out.splice(absensiIdxs[k], 1)
+
+      // Hapus field lama (hari_kerja, jumlah_hk) dari tempat lain
+      for (let i = 0; i < out.length; i++) {
+        const item = out[i]
+        if (!item) continue
+        if (Array.isArray(item.children)) {
+          const prune = (list) => {
+            for (let j = list.length - 1; j >= 0; j--) {
+              const n = list[j]
+              if (n && Array.isArray(n.children)) prune(n.children)
+              else if (n && (String(n.field || '') === 'hari_kerja' || String(n.field || '') === 'jumlah_hk')) {
+                list.splice(j, 1)
+              }
+            }
+          }
+          prune(item.children)
+          if (item.children.length === 0) out.splice(i, 1), i--
+        } else if (String(item.field || '') === 'hari_kerja' || String(item.field || '') === 'jumlah_hk') {
+          out.splice(i, 1)
+          i--
+        }
       }
+    } else {
+      // Jika belum ada ABSENSI, tambahkan baru setelah KARYAWAN
+      const empSectionIdx = out.findIndex(item => item && String(item.headerName || '').toUpperCase().includes('KARYAWAN'))
+      const insertIdx = empSectionIdx >= 0 ? empSectionIdx + 1 : 1
+      out.splice(insertIdx, 0, attendance)
     }
-    if (!placed) out.unshift(attendance)
-    return out
+
+    // Clean up field yang tidak diinginkan
+    const rr = removeLeavesBy(out, leaf => {
+      const f = String(leaf.field || '')
+      return f === 'cuti_izin_hari' || f === 'tidak_hadir_cth' || f === 'tidak_hadir_alpa'
+    })
+
+    return rr.top
   }
   const removeLeavesBy = (cols, pred) => {
     const removed = []
@@ -570,7 +601,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const formatLeaf = (col) => {
     const cfg = { ...col, ...baseCol }
     const moneyFields = ['upah_dasar','upah_pokok','gaji_pokok','beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah','total_tunjangan','premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21','pot_koreksi','total_potongan','upah_bersih','premi_dynamic_1','premi_dynamic_2','premi_dynamic_3','premi_dynamic_4','premi_dynamic_5','premi_dynamic_6','premi_dynamic_7','pot_dynamic_1','pot_dynamic_2','pot_dynamic_3','pot_dynamic_4','pot_dynamic_5','pot_dynamic_6','pot_dynamic_7','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi']
-    const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','jumlah_hk','masa_kerja_tahun','lembur_jam']
+    const intFields = ['no','hari_kerja','cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','tidak_hadir_cth','tidak_hadir_alpa','jumlah_hk','masa_kerja_tahun','lembur_jam']
 
     // Helper function for integer formatting
     const formatInteger = (value) => {
@@ -1319,6 +1350,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const createFallbackComputeRules = () => {
     return {
       cuti_total: { type: 'sum', fields: ['cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari'] },
+      total_ketidakhadiran: { type: 'sum', fields: ['cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','tidak_hadir_cth','tidak_hadir_alpa'] },
       hari_kerja: { type: 'sub', a: 'jumlah_hk', b: 'cuti_total' },
       gaji_pokok: { type: 'mul', a: 'hari_kerja', b: 'upah_dasar' },
       upah_pokok: { type: 'mul', a: 'hari_kerja', b: 'upah_dasar' },

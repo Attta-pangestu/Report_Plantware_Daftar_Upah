@@ -12,16 +12,11 @@ from database.services.cache import Cache
 class HeaderService:
     def __init__(self):
         # Load header structure from JSON file
-        # Get the project root (4 levels up from services directory)
+        # Use relative path from backend directory
         current_dir = os.path.dirname(__file__)
         app_dir = os.path.dirname(current_dir)  # Go up to app
         backend_dir = os.path.dirname(app_dir)  # Go up to backend
-        refactor_dir = os.path.dirname(backend_dir)  # Go up to refactor_production
-        project_root = os.path.dirname(refactor_dir)  # Go up to project root
-        header_file = os.path.join(
-            project_root,
-            'Engine_HTML_Templating', 'template_report', 'struktur_header_report.json'
-        )
+        header_file = os.path.join(backend_dir, 'struktur', 'struktur_header_report.json')
         # print(f"Looking for header file at: {header_file}")  # Debug log
         try:
             with open(header_file, 'r', encoding='utf-8') as f:

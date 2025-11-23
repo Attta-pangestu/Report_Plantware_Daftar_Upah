@@ -108,12 +108,7 @@ class ThreadedHeaderService:
             current_dir = os.path.dirname(__file__)
             app_dir = os.path.dirname(current_dir)
             backend_dir = os.path.dirname(app_dir)
-            refactor_dir = os.path.dirname(backend_dir)
-            project_root = os.path.dirname(refactor_dir)
-            header_file = os.path.join(
-                project_root,
-                'Engine_HTML_Templating', 'template_report', 'struktur_header_report.json'
-            )
+            header_file = os.path.join(backend_dir, 'struktur', 'struktur_header_report.json')
 
             try:
                 with open(header_file, 'r', encoding='utf-8') as f:
