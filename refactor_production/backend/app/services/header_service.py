@@ -1174,7 +1174,32 @@ class HeaderService:
                     'field': 'phone', 'headerName': 'PHONE', 'width': self._get_column_width('phone'),
                     'type': self._get_column_type('phone'), 'cellStyle': self._get_cell_style('phone'), 'pinned': 'left'
                 })
-            final_defs = lead_sorted + rest
+            def _order_idx(c):
+                h = str((c.get('headerName') or '')).strip().upper()
+                f = str((c.get('field') or '')).strip().lower()
+                if f == 'upah_dasar':
+                    return 10
+                if f == 'hari_kerja':
+                    return 20
+                if f == 'upah_pokok':
+                    return 30
+                if h in ['KEHADIRAN','CUTI/LIBUR','KETIDAKHADIRAN']:
+                    return 40
+                if f == 'jumlah_hk':
+                    return 50
+                if f == 'gaji_pokok':
+                    return 60
+                if h == 'PENDAPATAN':
+                    return 70
+                if f == 'jumlah_upah_kotor':
+                    return 80
+                if h == 'POTONGAN':
+                    return 90
+                if f == 'upah_bersih':
+                    return 100
+                return 1000
+            rest_sorted = sorted(rest, key=_order_idx)
+            final_defs = lead_sorted + rest_sorted
             if not final_defs:
                 return self._get_fallback_column_defs()
             try:

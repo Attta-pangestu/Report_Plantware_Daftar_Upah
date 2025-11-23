@@ -47,7 +47,9 @@
       "Bash(powershell:*)",
       "Bash(cross-env VITE_BACKEND_URL=http://localhost:8002 npm run dev:test:*)",
       "Bash(npx cross-env VITE_BACKEND_URL=http://localhost:8002 npm run dev:test:*)",
-      "Bash(move:*)"
+      "Bash(move:*)",
+      "Bash(VITE_DEV_MODE=true npm run dev:test:*)",
+      "Bash(TEST_MODE=true DEV_MODE=true VITE_DEV_MODE=true uvicorn:*)"
     ],
     "deny": [],
     "ask": []
