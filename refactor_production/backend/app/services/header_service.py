@@ -422,6 +422,11 @@ class HeaderService:
             "pot_bpjs_jumlah": "pot_bpjs_jumlah",
             "pot_bpjs_pekerja_total": "pot_bpjs_pekerja_total",
             "pot_spsi": "pot_spsi",
+
+            # Attendance columns
+            "tidak_hadir_cth": "tidak_hadir_cth",
+            "tidak_hadir_alpa": "tidak_hadir_alpa",
+            "total_ketidakhadiran": "total_ketidakhadiran",
             "spsi": "pot_spsi",  # Alternative mapping
 
             # Final columns
@@ -460,10 +465,10 @@ class HeaderService:
     def get_column_definitions(self, month: int = None, year: int = None, gang_code: str = None) -> List[Dict[str, Any]]:
         try:
             headers = self.generate_dynamic_headers(month=month, year=year, gang_code=gang_code)
-            generated = headers.get('table_structure', {}).get('generated_headers', {})
-            l1 = generated.get('level_1', {}).get('columns', [])
-            l2 = generated.get('level_2', {}).get('columns', [])
-            l3 = generated.get('level_3', {}).get('columns', [])
+            hierarchy = headers.get('table_structure', {}).get('hierarchy', {})
+            l1 = hierarchy.get('level_1', {}).get('columns', [])
+            l2 = hierarchy.get('level_2', {}).get('columns', [])
+            l3 = hierarchy.get('level_3', {}).get('columns', [])
 
             l2_by_parent = {}
             for c in l2:
@@ -497,6 +502,7 @@ class HeaderService:
 
             for c1 in l1:
                 c1_id = c1.get('id')
+                c1_text = (c1.get('text') or '').strip().upper()
                 children_ids = c1.get('children', [])
                 if not children_ids:
                     field = static_map.get(c1_id)
@@ -517,8 +523,8 @@ class HeaderService:
                     continue
 
                 level2_cols = l2_by_parent.get(c1_id, [])
-                c1_text_upper = (c1.get('text') or '').strip().upper()
-                c1_id_lower = (c1.get('id') or '').strip().lower()
+                c1_text_upper = c1_text
+                c1_id_lower = c1_id.lower()
                 # Process TUNJANGAN group normally to show detailed sub-columns
                 if 'PREMI' in c1_text_upper:
                     dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])

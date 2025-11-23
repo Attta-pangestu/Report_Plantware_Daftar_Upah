@@ -136,9 +136,9 @@
             "id": "ketidakhadiran",
             "text": "KETIDAKHADIRAN",
             "parent": "absensi",
-            "colspan": 6,
+            "colspan": 7,
             "class": "header-cell sub-header-absensi",
-            "children": ["cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cth", "alpa"]
+            "children": ["cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cth", "alpa", "total_ketidakhadiran"]
           },
           {
             "id": "total_hk",
@@ -311,6 +311,12 @@
           {
             "id": "alpa",
             "text": "ALPA",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-cuti"
+          },
+          {
+            "id": "total_ketidakhadiran",
+            "text": "TOTAL",
             "parent": "ketidakhadiran",
             "class": "header-cell col-cuti"
           },

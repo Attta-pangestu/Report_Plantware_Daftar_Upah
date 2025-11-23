@@ -533,7 +533,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     // Clean up field yang tidak diinginkan
     const rr = removeLeavesBy(out, leaf => {
       const f = String(leaf.field || '')
-      return f === 'cuti_izin_hari' || f === 'tidak_hadir_cth' || f === 'tidak_hadir_alpa'
+      return f === 'cuti_izin_hari' // Hanya cuti_izin_hari yang dihapus, CTH dan ALPA dipertahankan
     })
 
     return rr.top
