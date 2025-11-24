@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 from datetime import datetime
+import time
 
 class SimplifiedHeaderService:
     """
@@ -32,8 +33,26 @@ class SimplifiedHeaderService:
             print(f"ERROR: Failed to load header structure: {e}")
             self.header_structure = self._get_fallback_structure()
 
+    def _allowed_premi_keywords(self) -> set:
+        try:
+            table_structure = self.header_structure.get('table_structure', {})
+            hierarchy = table_structure.get('hierarchy', {})
+            level2 = hierarchy.get('level_2', {}).get('columns', [])
+            tokens = set()
+            for c in level2:
+                if (c.get('parent') or '').strip().lower() == 'premi':
+                    t = (c.get('text') or '').strip().upper()
+                    t = t.replace('PREMI ', '')
+                    for w in t.split():
+                        if w and w not in {'PREMI'}:
+                            tokens.add(w)
+            base = {'PANEN','CUCI','UNIT','BLOWER','TABUR','KERANI','MANDOR','HARVEST'}
+            return tokens | base
+        except Exception:
+            return {'PANEN','CUCI','UNIT','BLOWER','TABUR','ANGKUT','TBS','HARVEST','INCENTIVE','PUPUK','KERANI','MANDOR'}
+
     def generate_dynamic_headers(self, month: int = None, year: int = None, gang_code: str = None) -> Dict[str, Any]:
-        """Generate dynamic headers based on real data"""
+        """Generate dynamic headers based on real data with PREMI and POTONGAN dynamics"""
         try:
             # Get month name in Indonesian
             month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -46,25 +65,193 @@ class SimplifiedHeaderService:
                 "generated_date": datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
                 "gang": gang_code or "All Gangs",
                 "database": "ARC",
-                "description": "Laporan daftar upah dengan header dinamis berdasarkan data real"
+                "description": "Laporan daftar upah dengan header dinamis lengkap (PREMI + POTONGAN)"
             }
 
             table_structure = self.header_structure.get('table_structure', {})
             hierarchy = table_structure.get('hierarchy', {})
 
+            # Generate dynamic headers for both PREMI and POTONGAN
+            tq0 = time.perf_counter()
+            dyn_premi = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_potongan = self._compute_dynamic_potongan_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            tq1 = time.perf_counter()
+
             return {
-                "report_info": report_info,
+                "report_info": {
+                    **report_info,
+                    "metrics": {
+                        "query_premi_ms": int((tq1 - tq0) * 1000),
+                        "query_potongan_ms": int((time.perf_counter() - tq1) * 1000),
+                        "total_query_ms": int((time.perf_counter() - tq0) * 1000)
+                    }
+                },
                 "table_structure": {
                     **table_structure,
                     "hierarchy": hierarchy,
                     "total_columns": len(hierarchy.get('level_3', {}).get('columns', [])),
-                    "data_source": "real_database"
+                    "data_source": "real_database",
+                    "dynamic_docdesc": {
+                        "premi": dyn_premi,
+                        "potongan": dyn_potongan
+                    }
                 }
             }
 
         except Exception as e:
             print(f"Error generating dynamic headers: {e}")
             return self._get_error_response(str(e))
+
+    def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """Compute dynamic PREMI headers based on database transactions"""
+        try:
+            from database.services.database import Database
+            from database.services.queries import Queries
+            from database.services.cache import Cache
+            
+            # Enhanced cache key
+            cache_key = f"dyn_premi:{gang_code}:{year}-{str(month).zfill(2)}"
+            cached = Cache.instance().get(cache_key)
+            if cached is not None:
+                print(f"Cache hit for PREMI: {cache_key} -> {cached}")
+                return cached
+            else:
+                print(f"Cache miss for PREMI: {cache_key}")
+
+            db = Database.instance()
+            q = Queries()
+            
+            # Use optimized query for PREMI
+            sql_entry = q.get('premi', 'dynamic_headers_by_gang_month_optimized')
+            if sql_entry and 'sql' in sql_entry:
+                start_date = f"{year}-{str(month).zfill(2)}-01"
+                if month == 12:
+                    end_date = f"{year+1}-01-01"
+                else:
+                    end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+                rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+                
+                if rows is not None:
+                    excluded_lower = {
+                        'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
+                        'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21'
+                    }
+
+                    headers = []
+                    for r in rows:
+                        if not r or not r[0]:
+                            continue
+                        h = str(r[0]).strip()
+                        hu = h.upper()
+                        hl = h.lower()
+                        if hl in excluded_lower:
+                            continue
+                        if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                            continue
+                        if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                            continue
+                        headers.append(h)
+
+                    seen = set()
+                    unique_headers = []
+                    for h in headers:
+                        if h not in seen:
+                            unique_headers.append(h)
+                            seen.add(h)
+                    result = unique_headers[:7]
+
+                    Cache.instance().set(cache_key, result, ttl=3600)
+                    return result
+
+            # Fallback
+            return []
+            
+        except Exception as e:
+            print(f"Error computing PREMI headers: {e}")
+            return []
+
+    def _compute_dynamic_potongan_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """Compute dynamic POTONGAN headers based on database transactions (negative amounts)"""
+        try:
+            from database.services.database import Database
+            from database.services.queries import Queries
+            from database.services.cache import Cache
+            
+            # Enhanced cache key
+            cache_key = f"dyn_potongan:{gang_code}:{year}-{str(month).zfill(2)}"
+            cached = Cache.instance().get(cache_key)
+            if cached is not None:
+                print(f"Cache hit for POTONGAN: {cache_key}")
+                return cached
+
+            db = Database.instance()
+            q = Queries()
+            
+            # Use potongan query
+            sql_entry = q.get('potongan', 'dynamic_headers_by_gang_month_optimized')
+            if sql_entry and 'sql' in sql_entry:
+                start_date = f"{year}-{str(month).zfill(2)}-01"
+                if month == 12:
+                    end_date = f"{year+1}-01-01"
+                else:
+                    end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+                rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+                
+                # Handle case where db.query_all returns None
+                if rows is not None:
+                    # Get all items from database
+                    all_headers = [
+                        str(r[0]).strip()
+                        for r in rows
+                        if r and r[0]
+                    ]
+
+                    # Apply exclude filtering for PREMI - exclude items already in TUNJANGAN section and basic deductions
+                    excluded_keywords = ['BERAS', 'PPH', 'SPSI', 'TUNJANGAN JABATAN', 'TUNJANGAN MASA KERJA']
+                    filtered_headers = []
+                    
+                    for header in all_headers:
+                        header_upper = header.upper()
+                        
+                        # More precise exclude logic
+                        should_exclude = False
+                        
+                        # Exclude items starting with 'POTONGAN' (not containing)
+                        if header_upper.startswith('POTONGAN'):
+                            should_exclude = True
+                            print(f"    PRODUCTION FILTER: {header} -> EXCLUDED (starts with POTONGAN)")
+                        
+                        # Exclude items containing specific keywords
+                        for keyword in excluded_keywords:
+                            if keyword in header_upper:
+                                should_exclude = True
+                                print(f"    PRODUCTION FILTER: {header} -> EXCLUDED (contains {keyword})")
+                                break
+                        
+                        if not should_exclude:
+                            filtered_headers.append(header)
+                            print(f"    PRODUCTION FILTER: {header} -> INCLUDED")
+
+                    # Remove duplicates and limit to 7 items (premium usually fewer)
+                    seen = set()
+                    unique_headers = []
+                    for h in filtered_headers:
+                        if h not in seen:
+                            unique_headers.append(h)
+                            seen.add(h)
+                    result = unique_headers[:7]
+
+                    Cache.instance().set(cache_key, result, ttl=3600)
+                    return result
+
+            # Fallback
+            return []
+            
+        except Exception as e:
+            print(f"Error computing POTONGAN headers: {e}")
+            return []
 
     def _get_error_response(self, error_msg: str) -> Dict[str, Any]:
         """Standard error response for header generation"""
@@ -97,257 +284,32 @@ class SimplifiedHeaderService:
 
     def get_column_definitions(self, month: int = None, year: int = None, gang_code: str = None) -> List[Dict[str, Any]]:
         """
-        Column definition generation based on original HeaderService logic
-        but with modified ABSANSI structure (KEHADIRAN + detailed KETIDAKHADIRAN)
+        Column definition generation with dynamic PREMI and POTONGAN support
         """
         try:
             # Get the header structure and JSON hierarchy for dynamic processing
             headers = self.generate_dynamic_headers(month=month, year=year, gang_code=gang_code)
-            
-            # Use complete fallback structure regardless - preserves all sections correctly
-            return self._get_fallback_column_defs()
-            
-            hierarchy = headers.get('table_structure', {}).get('hierarchy', {})
-            l1 = hierarchy.get('level_1', {}).get('columns', [])
-            l2 = hierarchy.get('level_2', {}).get('columns', [])
-            l3 = hierarchy.get('level_3', {}).get('columns', [])
 
-            # Build parent-child mappings
-            l2_by_parent = {}
-            for c in l2:
-                parent = c.get('parent')
-                if parent:
-                    l2_by_parent.setdefault(parent, []).append(c)
+            # Get dynamic headers for PREMI and POTONGAN
+            dynamic_docdesc = headers.get('table_structure', {}).get('dynamic_docdesc', {})
+            dyn_premi = dynamic_docdesc.get('premi', [])
+            dyn_potongan = dynamic_docdesc.get('potongan', [])
 
-            l3_by_parent = {}
-            for c in l3:
-                parent = c.get('parent')
-                if parent:
-                    l3_by_parent.setdefault(parent, []).append(c)
-
-            col_defs = []
-            pinned_cols = []
-            regular_cols = []
-
-            # Process each level 1 column
-            for c1 in l1:
-                c1_id = c1.get('id')
-                c1_text = c1.get('text', '').strip()
-                children_ids = c1.get('children', [])
-                c1_text_upper = c1_text.upper()
-
-                # Handle special positioning for ABSANSI
-                is_absensi = 'ABSENSI' in c1_text_upper
-
-                # Handle grouped columns with children
-                if children_ids:
-                    level2_cols = l2_by_parent.get(c1_id, [])
-                    if not level2_cols:
-                        continue
-
-                    group_children = []
-                    
-                    # Process each level 2 column
-                    for c2 in level2_cols:
-                        c2_id = c2.get('id')
-                        c2_text = c2.get('text', '')
-                        level3_cols = l3_by_parent.get(c2_id, [])
-
-                        if not level3_cols:
-                            # Simple column without level 3
-                            field = self._map_to_data_field(c2_id)
-                            if field:
-                                group_children.append({
-                                    'headerName': c2_text,
-                                    'field': field,
-                                    'width': self._get_column_width(field),
-                                    'type': self._get_column_type(field),
-                                    'cellStyle': self._get_cell_style(field)
-                                })
-                        else:
-                            # Multi-level columns with level 3 children
-                            leaf_children = []
-                            for c3 in level3_cols:
-                                field = self._map_to_data_field(c3.get('id'))
-                                if field:
-                                    leaf_children.append({
-                                        'headerName': c3.get('text'),
-                                        'field': field,
-                                        'width': self._get_column_width(field),
-                                        'type': self._get_column_type(field),
-                                        'cellStyle': self._get_cell_style(field)
-                                    })
-
-                            if leaf_children:
-                                group_children.append({
-                                    'headerName': c2_text,
-                                    'children': leaf_children
-                                })
-
-                    if group_children:
-                        group_def = {
-                            'headerName': c1_text,
-                            'children': group_children
-                        }
-                        
-                        # ABSANSI positioning: after NAMA
-                        if is_absensi:
-                            pinned_cols.append(group_def)
-                        else:
-                            regular_cols.append(group_def)
-
-                # Special handling for standalone columns (if any)
-                else:
-                    field = self._map_to_data_field(c1_id)  # Map level 1 directly
-                    if field:
-                        col_def = {
-                            'field': field,
-                            'headerName': c1_text,
-                            'width': self._get_column_width(field),
-                            'type': self._get_column_type(field),
-                            'cellStyle': self._get_cell_style(field)
-                        }
-                        
-                        # Pin identity columns
-                        if field in ['nik', 'nama']:
-                            col_def['pinned'] = 'left'
-                            pinned_cols.append(col_def)
-                        else:
-                            regular_cols.append(col_def)
-
-            # Combine columns with correct positioning
-            col_defs = pinned_cols + regular_cols
-
-            # Add computed columns at the end
-            col_defs.extend([
-                {
-                    'field': 'jumlah_upah_kotor',
-                    'headerName': 'TOTAL PENDAPATAN',
-                    'width': self._get_column_width('jumlah_upah_kotor'),
-                    'type': self._get_column_type('jumlah_upah_kotor'),
-                    'cellStyle': self._get_cell_style('jumlah_upah_kotor')
-                },
-                {
-                    'field': 'upah_bersih',
-                    'headerName': 'UPAH BERSIH',
-                    'width': self._get_column_width('upah_bersih'),
-                    'type': self._get_column_type('upah_bersih'),
-                    'cellStyle': self._get_cell_style('upah_bersih')
-                }
-            ])
-
-            return col_defs
+            # Generate fallback columns with dynamic PREMI and POTONGAN
+            return self._get_dynamic_column_defs(dyn_premi, dyn_potongan)
 
         except Exception as e:
             print(f"Error in get_column_definitions: {e}")
             return self._get_fallback_column_defs()
 
-    def _map_to_data_field(self, column_id: str) -> str:
-        """Map header column ID to PayrollRow field - covers complete structure"""
-        field_mapping = {
-            # Static/Identity columns
-            "no": "no", "gender": "jenis_kelamin", "nik": "nik", "name": "nama",
-            "upah_dasar": "upah_dasar", "upah_pokok": "upah_pokok", "gaji_pokok": "gaji_pokok",
+    def _get_dynamic_column_defs(self, dyn_premi: List[str] = None, dyn_potongan: List[str] = None) -> List[Dict[str, Any]]:
+        """Generate column definitions with dynamic PREMI and POTONGAN"""
+        dyn_premi = dyn_premi or []
+        dyn_potongan = dyn_potongan or []
 
-            # ABSENSI - KEHADIRAN (modified structure)
-            "hari_kerja": "hari_kerja",  # KEHADIRAN
-            "jml_hk": "jumlah_hk",       # JUMLAH HK
-
-            # ABSENSI - KETIDAKHADIRAN (detailed breakdown)
-            "cuti_tahunan_unit": "cuti_tahunan_hari",      # CUTI TAHUNAN
-            "cuti_sakit_haid_unit": "cuti_sakit_haid_hari",  # SAKIT + HAID
-            "cuti_minggu_unit": "cuti_minggu_hari",         # MINGGU
-            "cuti_nasional_unit": "cuti_nasional_hari",     # NASIONAL
-            "cuti_izin_unit": "cuti_izin_hari",             # IZIN
-            "cth": "tidak_hadir_cth",                         # CTH
-            "alpa": "tidak_hadir_alpa",                       # ALPA
-
-            # Tunjangan columns (COMPLETE)
-            "beras_rate": "beras_rate", "beras_jumlah": "beras_jumlah", 
-            "jabatan_rate": "jabatan_rate", "jabatan_jumlah": "jabatan_jumlah", 
-            "masa_kerja_lama": "masa_kerja_tahun", "masa_kerja_jumlah": "masa_kerja_jumlah", 
-            "lembur_jam": "lembur_jam", "lembur_jumlah": "lembur_jumlah",
-            "total_tunjangan": "total_tunjangan",
-
-            # Premi columns (COMPLETE)
-            "brondol_jumlah": "premi_brondol", "pruning_jumlah": "premi_pruning",
-            "premi_angkut_material_jumlah": "premi_angkut_material", 
-            "premi_angkut_tbs_jumlah": "premi_angkut_tbs",
-            "premi_harvesting_jumlah": "premi_harvesting", 
-            "premi_harvesting_incentive_jumlah": "premi_harvesting_incentive",
-            "premi_pupuk_jumlah": "premi_pupuk",
-            "premi_koreksi": "pot_koreksi", "koreksi": "pot_koreksi",
-            "total_premi": "total_premi",
-
-            # Potongan columns (COMPLETE)
-            "pph21": "pot_pph21", "potongan_kontan": "pot_kontan", "thr": "pot_thr", 
-            "pinjam": "pot_pinjam", "kl": "pot_kl",
-            "bpjs_kes": "pot_bpjs_kes", "bpjs_pek": "pot_bpjs_pek", "bpjs_maj": "pot_bpjs_maj",
-            "total1": "pot_total_1", "total2": "pot_total_2", "total3": "pot_total_3", "total4": "pot_total_4",
-            
-            # BPJS detailed breakdown
-            "bpjs_kesehatan_pekerja": "pot_bpjs_kesehatan_pekerja",
-            "bpjs_kesehatan_majikan": "pot_bpjs_kesehatan_majikan", 
-            "bpjs_pensiun_pekerja": "pot_bpjs_pensiun_pekerja", 
-            "bpjs_pensiun_majikan": "pot_bpjs_pensiun_majikan",
-            "bpjs_pekerja_total": "pot_bpjs_pekerja_total",
-            
-            # ASTEK detailed
-            "bpjs_pek": "pot_bpjs_pek", "bpjs_maj": "pot_bpjs_maj", "bpjs_jumlah": "pot_bpjs_jumlah",
-            
-            # Other deductions
-            "spsi": "pot_spsi", "total_potongan": "total_potongan",
-
-            # Summary columns
-            "jumlah_upah_kotor": "jumlah_upah_kotor", "upah_bersih": "upah_bersih"
-        }
-
-        return field_mapping.get(column_id, column_id)
-
-    def _get_column_width(self, field: str) -> int:
-        """Get default width for columns based on field type with ABSANSI optimization"""
-        width_map = {
-            # Static columns
-            'no': 60, 'gender': 50, 'nik': 100, 'nama': 200,
-            
-            # ABSENSI - KEHADIRAN
-            'hari_kerja': 80,           # KEHADIRAN
-            'jumlah_hk': 80,            # JUMLAH HK
-            
-            # ABSENSI - KETIDAKHADIRAN 
-            'cuti_tahunan_hari': 90,    # CUTI TAHUNAN (H)
-            'cuti_sakit_haid_hari': 110, # SAKIT + HAID (H)
-            'cuti_minggu_hari': 90,     # MINGGU (H)
-            'cuti_nasional_hari': 100,  # NASIONAL (H)
-            'cuti_izin_hari': 90,       # IZIN (H)
-            'tidak_hadir_cth': 80,      # CTH
-            'tidak_hadir_alpa': 80,     # ALPA
-            
-            # Tunjangan columns
-            'beras_rate': 100, 'beras_jumlah': 100, 'jabatan_rate': 100, 'jabatan_jumlah': 100,
-            'masa_kerja_tahun': 100, 'masa_kerja_jumlah': 120, 'lembur_jam': 80, 'lembur_jumlah': 120,
-            
-            # Upah columns
-            'upah_dasar': 120, 'upah_pokok': 120, 'gaji_pokok': 120,
-            'total_tunjangan': 120, 'jumlah_upah_kotor': 140, 'upah_bersih': 120
-        }
-        return width_map.get(field, 100)
-
-    def _get_column_type(self, field: str) -> str:
-        """Get column type based on field"""
-        text_fields = ['no', 'gender', 'nik', 'nama']
-        return 'textColumn' if field in text_fields else 'numericColumn'
-
-    def _get_cell_style(self, field: str) -> Dict[str, Any]:
-        """Get cell style based on field"""
-        text_fields = ['no', 'gender', 'nik', 'nama']
-        if field in text_fields:
-            return {'textAlign': 'left'}
-        return {'textAlign': 'right'}
-
-    def _get_fallback_column_defs(self) -> List[Dict[str, Any]]:
-        """Fallback column definitions if main logic fails - preserves full structure"""
         identitas_children = [
+            {"field": "no", "headerName": "NO", "width": 60, "type": "numericColumn", "cellStyle": {"textAlign": "center"}},
+            {"field": "jenis_kelamin", "headerName": "L/P", "width": 50, "type": "textColumn", "cellStyle": {"textAlign": "center"}},
             {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
             {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
@@ -369,6 +331,12 @@ class SimplifiedHeaderService:
             ]}
         ]
 
+        upah_dasar_children = [
+            {"field": "upah_dasar", "headerName": "UPAH DASAR", "width": 120, "type": "numericColumn"},
+            {"field": "upah_pokok", "headerName": "UPAH POKOK", "width": 120, "type": "numericColumn"},
+            {"field": "gaji_pokok", "headerName": "GAJI POKOK", "width": 120, "type": "numericColumn"}
+        ]
+
         tunjangan_children = [
             {"headerName": "BERAS", "children": [
                 {"field": "beras_rate", "headerName": "RATE", "width": 100, "type": "numericColumn"},
@@ -385,9 +353,261 @@ class SimplifiedHeaderService:
             {"headerName": "LEMBUR", "children": [
                 {"field": "lembur_jam", "headerName": "JAM", "width": 80, "type": "numericColumn"},
                 {"field": "lembur_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+            ]},
+            {"field": "total_tunjangan", "headerName": "TOTAL TUNJANGAN", "width": 120, "type": "numericColumn"}
+        ]
+
+        # Dynamic PREMI columns - ALWAYS include static BRONDOL first
+        static_premi_columns = [
+            {"headerName": "BRONDOL", "children": [{"field": "premi_brondol", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}]},
+            {"headerName": "PRUNING", "children": [{"field": "premi_pruning", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}]}
+        ]
+        
+        premi_children = static_premi_columns.copy()
+
+        # Dynamic PREMI columns from database after filtering (exclude-only)
+        # Use fields 'premi_1'..'premi_7' to match backend row model
+        if dyn_premi:
+            existing_headers = {col["headerName"].upper() for col in static_premi_columns}
+            existing_fields = {col["children"][0]["field"] for col in static_premi_columns}
+            dyn_index = 1
+            for premi_name in dyn_premi:
+                name_upper = (premi_name or "").strip().upper()
+                if not name_upper:
+                    continue
+                if name_upper in existing_headers:
+                    continue
+                field_name = f"premi_{dyn_index}"
+                dyn_index += 1
+                original_field = field_name
+                counter = 1
+                while field_name in existing_fields:
+                    field_name = f"{original_field}_{counter}"
+                    counter += 1
+                existing_fields.add(field_name)
+                premi_children.append({
+                    "headerName": name_upper,
+                    "children": [
+                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+                    ]
+                })
+
+        # Dynamic POTONGAN columns
+        potongan_children = []
+        if dyn_potongan:
+            for i, pot_name in enumerate(dyn_potongan):
+                field_name = f"pot_{i+1}"
+                # Map known deduction names to existing fields
+                mapped_field = self._map_potongan_field(pot_name)
+                if mapped_field:
+                    field_name = mapped_field
+
+                potongan_children.append({
+                    "headerName": pot_name.upper(),
+                    "children": [
+                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+                    ]
+                })
+
+        # Add static potongan columns
+        static_potongan = [
+            {"headerName": "CARUMAN ASTEK", "children": [
+                {"field": "pot_bpjs_pek", "headerName": "PEKERJA", "width": 90, "type": "numericColumn"},
+                {"field": "pot_bpjs_maj", "headerName": "MAJIKAN", "width": 90, "type": "numericColumn"},
+                {"field": "pot_bpjs_jumlah", "headerName": "JUMLAH", "width": 90, "type": "numericColumn"}
+            ]},
+            {"headerName": "POTONGAN BPJS", "children": [
+                {"headerName": "KESEHATAN", "children": [
+                    {"field": "pot_bpjs_kesehatan_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
+                    {"field": "pot_bpjs_kesehatan_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
+                ]},
+                {"headerName": "PENSIUN", "children": [
+                    {"field": "pot_bpjs_pensiun_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
+                    {"field": "pot_bpjs_pensiun_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
+                ]},
+                {"field": "pot_bpjs_pekerja_total", "headerName": "TOTAL", "width": 110, "type": "numericColumn"}
+            ]},
+            {"headerName": "IURAN SPSI", "children": [
+                {"field": "pot_spsi", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "PPH21", "children": [
+                {"field": "pot_pph21", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"}
+        ]
+
+        potongan_children.extend(static_potongan)
+
+        ringkasan_children = [
+            {"field": "jumlah_upah_kotor", "headerName": "JUMLAH UPAH KOTOR", "width": 140, "type": "numericColumn"},
+            {"field": "upah_bersih", "headerName": "UPAH BERSIH", "width": 120, "type": "numericColumn"}
+        ]
+
+        result = [
+            {"headerName": "IDENTITAS", "children": identitas_children},
+            {"headerName": "ABSENSI", "children": absensi_children},
+            {"headerName": "UPAH DASAR", "children": upah_dasar_children},
+            {"headerName": "TUNJANGAN", "children": tunjangan_children}
+        ]
+
+        # Add PREMI section if any columns exist
+        if premi_children:
+            result.append({"headerName": "PREMI", "children": premi_children})
+
+        # Add POTONGAN section if any columns exist
+        if potongan_children:
+            result.append({"headerName": "POTONGAN", "children": potongan_children})
+
+        result.append({"headerName": "RINGKASAN", "children": ringkasan_children})
+
+        return result
+
+    def _map_premi_field(self, premi_name: str) -> str:
+        """Map premium description to field name"""
+        premi_lower = premi_name.lower()
+        
+        # Exclude keywords - should not be treated as premium
+        if "potongan" in premi_lower:
+            return None  # Explicitly exclude POTONGAN items
+        
+        # Known premium mappings
+        if "brondol" in premi_lower:
+            return "premi_brondol"
+        elif "pruning" in premi_lower:
+            return "premi_pruning"
+        elif "angkut" in premi_lower and "material" in premi_lower:
+            return "premi_angkut_material"
+        elif "angkut" in premi_lower and "tbs" in premi_lower:
+            return "premi_angkut_tbs"
+        elif "harvesting" in premi_lower and "incentive" in premi_lower:
+            return "premi_harvesting_incentive"
+        elif "harvesting" in premi_lower and "tunjangan" in premi_lower:
+            return None  # Use dynamic field - avoid duplicate with static harvesting
+        elif "harvesting" in premi_lower:
+            return "premi_harvesting"
+        elif "pupuk" in premi_lower:
+            return "premi_pupuk"
+        elif "koreksi" in premi_lower:
+            return "premi_koreksi"  # Keep as premium for now
+
+        # Return None for unknown premiums - will use dynamic field name
+        return None
+
+    def _map_potongan_field(self, pot_name: str) -> str:
+        """Map potongan description to field name"""
+        pot_lower = pot_name.lower()
+
+        # Known deduction mappings
+        if "pph21" in pot_lower or "pph 21" in pot_lower:
+            return "pot_pph21"
+        elif "spsi" in pot_lower:
+            return "pot_spsi"
+        elif "bpjs" in pot_lower and "kes" in pot_lower:
+            return "pot_bpjs_kesehatan_pekerja"
+        elif "bpjs" in pot_lower and "pek" in pot_lower:
+            return "pot_bpjs_pek"
+        elif "bpjs" in pot_lower and "maj" in pot_lower:
+            return "pot_bpjs_maj"
+        elif "pinjam" in pot_lower:
+            return "pot_pinjam"
+        elif "kl" in pot_lower:
+            return "pot_kl"
+        elif "thr" in pot_lower:
+            return "pot_thr"
+        elif "kontan" in pot_lower:
+            return "pot_kontan"
+
+        # Return None for unknown deductions - will use dynamic field name
+        return None
+
+    def _has_loosefruit_data(self, month: int, year: int, gang_code: str) -> bool:
+        """Check if there's any loosefruit data for given period and gang"""
+        try:
+            from database.services.database import Database
+            
+            db = Database.instance()
+            
+            # Query to check for any loosefruit data
+            query = '''
+            SELECT COUNT(*) as count
+            FROM PR_LOOSEFRUIT_ARC LF
+            JOIN PR_LOOSEFRUITLN_ARC LFLN ON LF.ID = LFLN.MasterID
+            JOIN HR_GANGLN G ON G.GangMember = LFLN.EmpCode
+            WHERE G.GangCode = ?
+            AND LF.DocDate >= ?
+            AND LF.DocDate < ?
+            AND COALESCE(LFLN.Amount, 0) > 0
+            '''
+            
+            start_date = f"{year}-{str(month).zfill(2)}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{str(month+1).zfill(2)}-01"
+            
+            result = db.query_one(query, [gang_code, start_date, end_date])
+            
+            # Return True if count > 0
+            return result and result[0] > 0 if result else False
+            
+        except Exception as e:
+            print(f"Error checking loosefruit data: {e}")
+            # If error, assume there's data (better to show column)
+            return True
+
+    def _get_fallback_column_defs(self) -> List[Dict[str, Any]]:
+        """Fallback column definitions if main logic fails - preserves full structure"""
+        identitas_children = [
+            {"field": "no", "headerName": "NO", "width": 60, "type": "numericColumn", "cellStyle": {"textAlign": "center"}},
+            {"field": "jenis_kelamin", "headerName": "L/P", "width": 50, "type": "textColumn", "cellStyle": {"textAlign": "center"}},
+            {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
+            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
+        ]
+
+        # MODIFIED ABSENSI with KEHADIRAN and detailed KETIDAKHADIRAN
+        absensi_children = [
+            {"headerName": "KEHADIRAN", "children": [
+                {"field": "hari_kerja", "headerName": "H", "width": 80, "type": "numericColumn"},
+                {"field": "jumlah_hk", "headerName": "JML HK", "width": 80, "type": "numericColumn"}
+            ]},
+            {"headerName": "KETIDAKHADIRAN", "children": [
+                {"field": "cuti_tahunan_hari", "headerName": "TAHUNAN (H)", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT/HAID (H)", "width": 110, "type": "numericColumn"},
+                {"field": "cuti_minggu_hari", "headerName": "MINGGU (H)", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_nasional_hari", "headerName": "NASIONAL (H)", "width": 100, "type": "numericColumn"},
+                {"field": "cuti_izin_hari", "headerName": "IZIN (H)", "width": 90, "type": "numericColumn"},
+                {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
+                {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
             ]}
         ]
 
+        upah_dasar_children = [
+            {"field": "upah_dasar", "headerName": "UPAH DASAR", "width": 120, "type": "numericColumn"},
+            {"field": "upah_pokok", "headerName": "UPAH POKOK", "width": 120, "type": "numericColumn"},
+            {"field": "gaji_pokok", "headerName": "GAJI POKOK", "width": 120, "type": "numericColumn"}
+        ]
+
+        tunjangan_children = [
+            {"headerName": "BERAS", "children": [
+                {"field": "beras_rate", "headerName": "RATE", "width": 100, "type": "numericColumn"},
+                {"field": "beras_jumlah", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "JABATAN", "children": [
+                {"field": "jabatan_rate", "headerName": "RATE", "width": 100, "type": "numericColumn"},
+                {"field": "jabatan_jumlah", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "MASA KERJA", "children": [
+                {"field": "masa_kerja_tahun", "headerName": "LAMA", "width": 100, "type": "numericColumn"},
+                {"field": "masa_kerja_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+            ]},
+            {"headerName": "LEMBUR", "children": [
+                {"field": "lembur_jam", "headerName": "JAM", "width": 80, "type": "numericColumn"},
+                {"field": "lembur_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+            ]},
+            {"field": "total_tunjangan", "headerName": "TOTAL TUNJANGAN", "width": 120, "type": "numericColumn"}
+        ]
+
+        # Default PREMI columns for fallback
         premi_children = [
             {"headerName": "BRONDOL", "children": [{"field": "premi_brondol", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]},
             {"headerName": "PRUNING", "children": [{"field": "premi_pruning", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]}
@@ -427,6 +647,7 @@ class SimplifiedHeaderService:
         return [
             {"headerName": "IDENTITAS", "children": identitas_children},
             {"headerName": "ABSENSI", "children": absensi_children},
+            {"headerName": "UPAH DASAR", "children": upah_dasar_children},
             {"headerName": "TUNJANGAN", "children": tunjangan_children},
             {"headerName": "PREMI", "children": premi_children},
             {"headerName": "POTONGAN", "children": potongan_children},

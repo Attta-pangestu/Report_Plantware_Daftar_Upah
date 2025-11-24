@@ -375,7 +375,7 @@ async def get_column_definitions(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Invalid column structure")
         agg_specs = {
             'total_tunjangan': {'type': 'sum', 'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah']},
-            'total_premi': {'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_dynamic_'},
+            'total_premi': {'type': 'sum', 'fields': ['premi_pruning','premi_brondol'], 'match_prefix': 'premi_'},
             'jumlah_upah_kotor': {'type': 'sum', 'fields': ['gaji_pokok','total_tunjangan','total_premi']},
             'total_potongan': {'type': 'sum', 'fields': ['pot_bpjs_kesehatan_pekerja','pot_bpjs_pensiun_pekerja','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_'},
             'upah_bersih': {'type': 'sub', 'a': 'jumlah_upah_kotor', 'b': 'total_potongan'}

@@ -25,6 +25,24 @@ class HeaderService:
             print(f"ERROR: Failed to load header structure: {e}")
             raise Exception(f"Header structure file not found or invalid: {header_file}")
 
+    def _allowed_premi_keywords(self) -> set:
+        try:
+            table_structure = self.header_structure.get('table_structure', {})
+            hierarchy = table_structure.get('hierarchy', {})
+            level2 = hierarchy.get('level_2', {}).get('columns', [])
+            tokens = set()
+            for c in level2:
+                if (c.get('parent') or '').strip().lower() == 'premi':
+                    t = (c.get('text') or '').strip().upper()
+                    t = t.replace('PREMI ', '')
+                    for w in t.split():
+                        if w and w not in {'PREMI'}:
+                            tokens.add(w)
+            base = {'PANEN','CUCI','UNIT','BLOWER','TABUR','KERANI','MANDOR','HARVEST'}
+            return tokens | base
+        except Exception:
+            return {'PANEN','CUCI','UNIT','BLOWER','TABUR','ANGKUT','TBS','HARVEST','INCENTIVE','PUPUK','KERANI','MANDOR'}
+
     def _get_fallback_structure(self) -> Dict[str, Any]:
         """Fallback structure if JSON file cannot be loaded"""
         return {
@@ -129,24 +147,32 @@ class HeaderService:
             rows = db.query_all(sql_entry_opt['sql'], [gang_code, start_date, end_date])
             mid = time.perf_counter()
 
-            # Pre-defined excluded items for better performance
             excluded_lower = {
                 'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
                 'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21',
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
-                'tunjangan premi', 'tunjangan beras'
+                'tunjangan beras'
             }
 
             # Handle case where db.query_all returns None
             if rows is None:
                 rows = []
 
-            # Optimized filtering with list comprehension
-            headers = [
-                str(r[0]).strip()
-                for r in rows
-                if r and r[0] and str(r[0]).strip().lower() not in excluded_lower
-            ]
+            # Optimized filtering: exclude unwanted and require allowed keywords
+            headers = []
+            for r in rows:
+                if not r or not r[0]:
+                    continue
+                h = str(r[0]).strip()
+                hu = h.upper()
+                hl = h.lower()
+                if hl in excluded_lower:
+                    continue
+                if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                    continue
+                if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                    continue
+                headers.append(h)
 
             # Remove duplicates while preserving order
             seen = set()
@@ -212,10 +238,7 @@ class HeaderService:
             'TUNJANGAN MASA KERJA',
             'PRUNING',
             'BRONDOL',
-            'TUNJANGAN PREMI',
-            'TUNJANGAN BERAS',
-            'INCENTIVE PANEN',
-            'INCENTIVE'
+            'TUNJANGAN BERAS'
         }
 
         headers = []
@@ -223,8 +246,16 @@ class HeaderService:
             if not r:
                 continue
             h = str(r[0]).strip()
-            if h and h.upper() not in excluded:
-                headers.append(h)
+            if not h:
+                continue
+            hu = h.upper()
+            if hu in excluded:
+                continue
+            if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                continue
+            if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                continue
+            headers.append(h)
 
         seen = set()
         unique = []

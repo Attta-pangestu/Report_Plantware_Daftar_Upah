@@ -5,6 +5,12 @@ import './styles/report.css'
 import './utils/httpSetup'
 import 'ag-grid-enterprise'
 
+// Force disable cache in development
+if (import.meta.env.DEV) {
+  localStorage.setItem('disable-cache', Date.now().toString())
+  sessionStorage.setItem('cache-buster', Date.now().toString())
+}
+
 const mount = document.getElementById('root') || (() => {
   const el = document.createElement('div')
   el.id = 'root'

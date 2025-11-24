@@ -54,7 +54,8 @@
       "Bash(cross-env VITE_BACKEND_URL=http://localhost:8003 VITE_DEV_MODE=true npm run dev:test:*)",
       "Bash(VITE_BACKEND_URL=http://localhost:8003 VITE_DEV_MODE=true npm run dev:test:*)",
       "Bash(start http://localhost:5178)",
-      "Bash(VITE_BACKEND_URL=http://localhost:8004 VITE_DEV_MODE=true npm run dev:test:*)"
+      "Bash(VITE_BACKEND_URL=http://localhost:8004 VITE_DEV_MODE=true npm run dev:test:*)",
+      "Bash(del:*)"
     ],
     "deny": [],
     "ask": []

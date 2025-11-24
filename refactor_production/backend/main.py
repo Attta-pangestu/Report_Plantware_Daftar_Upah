@@ -4,15 +4,25 @@ import logging
 import argparse
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import is_test_mode
+from app.core.config import (
+    is_test_mode,
+    TEST_MODE,
+    DEFAULT_GANG,
+    DEFAULT_MONTH,
+    DEFAULT_YEAR,
+    get_testing_token,
+)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Check if running in development mode
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
-logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
-# Configure CORS with explicit allowed origins to avoid browser cancellations
+# Configure CORS with explicit allowed origins
 def _allowed_origins():
     env_origins = os.getenv("CORS_ALLOW_ORIGINS")
     if env_origins:
@@ -20,8 +30,8 @@ def _allowed_origins():
             items = [o.strip() for o in env_origins.split(",") if o.strip()]
             if items:
                 return items
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to parse CORS_ALLOW_ORIGINS: {e}")
     return [
         "http://localhost:5173",
         "http://localhost:5174",
@@ -40,15 +50,14 @@ app.add_middleware(
     allow_origins=_allowed_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-# Add development mode info
+# Development mode info endpoint
 @app.get("/dev-mode")
 async def get_dev_mode():
-    from app.core.config import TEST_MODE, DEFAULT_GANG, DEFAULT_MONTH, DEFAULT_YEAR, get_testing_token, is_test_mode
     return {
-        "dev_mode": is_test_mode(),
+        "dev_mode": DEV_MODE,
         "test_mode": is_test_mode(),
         "test_mode_hardcoded": TEST_MODE,
         "default_gang": DEFAULT_GANG,
@@ -58,8 +67,8 @@ async def get_dev_mode():
         "environment_vars": {
             "TEST_MODE": os.getenv("TEST_MODE"),
             "DEV_MODE": os.getenv("DEV_MODE"),
-            "VITE_DEV_MODE": os.getenv("VITE_DEV_MODE")
-        }
+            "VITE_DEV_MODE": os.getenv("VITE_DEV_MODE"),
+        },
     }
 
 from app.api import router as api_router
@@ -73,12 +82,25 @@ async def log_requests(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     duration_ms = int((time.perf_counter() - start) * 1000)
-    request_logger.info(f"{request.method} {request.url.path}?{request.url.query} {response.status_code} {duration_ms}ms test_mode={is_test_mode()}")
-    # Ensure Referrer-Policy is set to avoid noisy browser warnings; does not affect auth
-    try:
+    
+    # Sanitize query string to avoid logging sensitive data
+    sanitized_query = str(request.url.query)
+    sensitive_params = ["password", "token", "secret"]
+    for param in sensitive_params:
+        if param in sanitized_query:
+            sanitized_query = sanitized_query.replace(
+                f"{param}={request.query_params.get(param)}", 
+                f"{param}=***"
+            )
+    
+    request_logger.info(
+        f"{request.method} {request.url.path}?{sanitized_query} "
+        f"{response.status_code} {duration_ms}ms test_mode={is_test_mode()}"
+    )
+    
+    # Set Referrer-Policy header safely
+    if hasattr(response, "headers"):
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    except Exception:
-        pass
     return response
 
 if __name__ == "__main__":
@@ -94,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, help="Backend HTTP port")
     args = parser.parse_args()
 
+    # Set environment variables from CLI args (CLI takes precedence)
     if args.db_driver:
         os.environ["DB_DRIVER"] = args.db_driver
     if args.db_server:
@@ -109,19 +132,28 @@ if __name__ == "__main__":
     if args.db_profile:
         os.environ["DB_PROFILE"] = args.db_profile
 
+    # Configure workers (CLI > env var > default)
     workers = 1
-    try:
-        workers = int(os.getenv("UVICORN_WORKERS", "1"))
-    except Exception:
-        workers = 1
     if args.uvicorn_workers is not None:
         workers = args.uvicorn_workers
+    else:
+        try:
+            env_workers = os.getenv("UVICORN_WORKERS")
+            if env_workers:
+                workers = int(env_workers)
+        except ValueError:
+            logger.warning("Invalid UVICORN_WORKERS value. Using default.")
+
+    # Configure port (CLI > env var > default)
     port = 8002
     if args.port is not None:
         port = args.port
-    try:
-        env_port = int(os.getenv("BACKEND_PORT", str(port)))
-        port = env_port
-    except Exception:
-        pass
+    else:
+        try:
+            env_port = os.getenv("BACKEND_PORT")
+            if env_port:
+                port = int(env_port)
+        except ValueError:
+            logger.warning("Invalid BACKEND_PORT value. Using default.")
+
     uvicorn.run("main:app", host="0.0.0.0", port=port, workers=workers)

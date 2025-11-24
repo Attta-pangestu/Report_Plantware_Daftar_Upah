@@ -33,17 +33,13 @@ class PayrollRow(BaseModel):
     premi_harvesting: float
     premi_harvesting_incentive: float
     premi_pupuk: float
-    premi_1: float = 0.0
-    premi_2: float = 0.0
-    premi_3: float = 0.0
-    premi_4: float = 0.0
-    premi_5: float = 0.0
-    premi_6: float = 0.0
-    premi_7: float = 0.0
-    premi_4: float = 0.0
-    premi_5: float = 0.0
-    premi_6: float = 0.0
-    premi_7: float = 0.0
+    premi_dynamic_1: float = 0.0
+    premi_dynamic_2: float = 0.0
+    premi_dynamic_3: float = 0.0
+    premi_dynamic_4: float = 0.0
+    premi_dynamic_5: float = 0.0
+    premi_dynamic_6: float = 0.0
+    premi_dynamic_7: float = 0.0
     total_premi: float
     jumlah_upah_kotor: float
     pot_pph21: float

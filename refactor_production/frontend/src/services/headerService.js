@@ -51,6 +51,12 @@ export const fetchDynamicHeaders = async (token, month = null, year = null, gang
   if (year) params.year = year
   if (gangCode) params.gang_code = gangCode
 
+  // Add cache buster in development
+  if (DISABLE_CACHE) {
+    params._cb = Date.now()
+    params._nocache = 'true'
+  }
+
   const config = {
     params,
     timeout: 45000 // Increased timeout to 45 seconds for database queries
@@ -117,6 +123,12 @@ export const fetchColumnDefinitions = async (token, month = null, year = null, g
   if (month) params.month = month
   if (year) params.year = year
   if (gangCode) params.gang_code = gangCode
+
+  // Add cache buster in development
+  if (DISABLE_CACHE) {
+    params._cb = Date.now()
+    params._nocache = 'true'
+  }
 
   const config = {
     params,

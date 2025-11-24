@@ -311,10 +311,10 @@ class PayrollService:
                 'pupuk': self._premi_map(db, emp_codes, s, e, '%PUPUK%'),
             }
 
-            # Dynamic premi headers (excluding known deductions and static premi we already map)
+            # Dynamic premi headers (exclude-only, use optimized query to align with columns)
             try:
                 from database.services.queries import Queries
-                q = Queries().get('premi', 'dynamic_headers_by_gang_month')
+                q = Queries().get('premi', 'dynamic_headers_by_gang_month_optimized')
                 dyn_headers: List[str] = []
                 if q and 'sql' in q and gang_code:
                     start_date = f"{year}-{str(month).zfill(2)}-01"
@@ -323,14 +323,23 @@ class PayrollService:
                     excluded_lower = {
                         'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
                         'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21', 'spsi',
-                        'koreksi panen', 'potongan koreksi', 'potongan koreksi panen', 'tunjangan premi', 'tunjangan beras'
+                        'koreksi panen', 'potongan koreksi', 'potongan koreksi panen', 'tunjangan beras'
                     }
                     for r in rows_dyn or []:
                         if not r or r[0] is None:
                             continue
                         htxt = str(r[0]).strip()
-                        if htxt and htxt.strip().lower() not in excluded_lower:
-                            dyn_headers.append(htxt)
+                        hu = htxt.upper()
+                        hl = htxt.lower()
+                        if not htxt:
+                            continue
+                        if hl in excluded_lower:
+                            continue
+                        if any(x in hu for x in ['POTONGAN','SPSI','PPH']):
+                            continue
+                        if any(x in hu for x in ['BRONDOL','PRUNING']):
+                            continue
+                        dyn_headers.append(htxt)
                     # Keep up to 7 dynamic items
                     dyn_headers = dyn_headers[:7]
                 else:
@@ -583,13 +592,13 @@ class PayrollService:
                 premi_harvesting=0.0,
                 premi_harvesting_incentive=premi_harvesting_incentive,
                 premi_pupuk=premi_pupuk,
-                premi_dynamic_1=(dyn_vals[0] if len(dyn_vals) > 0 else 0.0),
-                premi_dynamic_2=(dyn_vals[1] if len(dyn_vals) > 1 else 0.0),
-                premi_dynamic_3=(dyn_vals[2] if len(dyn_vals) > 2 else 0.0),
-                premi_dynamic_4=(dyn_vals[3] if len(dyn_vals) > 3 else 0.0),
-                premi_dynamic_5=(dyn_vals[4] if len(dyn_vals) > 4 else 0.0),
-                premi_dynamic_6=(dyn_vals[5] if len(dyn_vals) > 5 else 0.0),
-                premi_dynamic_7=(dyn_vals[6] if len(dyn_vals) > 6 else 0.0),
+                premi_1=(dyn_vals[0] if len(dyn_vals) > 0 else 0.0),
+                premi_2=(dyn_vals[1] if len(dyn_vals) > 1 else 0.0),
+                premi_3=(dyn_vals[2] if len(dyn_vals) > 2 else 0.0),
+                premi_4=(dyn_vals[3] if len(dyn_vals) > 3 else 0.0),
+                premi_5=(dyn_vals[4] if len(dyn_vals) > 4 else 0.0),
+                premi_6=(dyn_vals[5] if len(dyn_vals) > 5 else 0.0),
+                premi_7=(dyn_vals[6] if len(dyn_vals) > 6 else 0.0),
                 premi_koreksi=koreksi_amount,
                 total_premi=total_premi,
                 jumlah_upah_kotor=jumlah_upah_kotor,

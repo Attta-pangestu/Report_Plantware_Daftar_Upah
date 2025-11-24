@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Refresh - Dynamic Headers</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+        .code { background: #f5f5f5; padding: 10px; margin: 10px 0; border-left: 3px solid #007bff; }
+        .result { background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Force Refresh & Clear Cache</h1>
+    <p class="info">Halaman ini untuk membersihkan cache dan memastikan dynamic headers muncul dengan benar.</p>
+    
+    <div style="margin: 20px 0;">
+        <button onclick="clearAllCache()">🧹 Clear All Cache</button>
+        <button onclick="testDynamicHeaders()">🧪 Test Dynamic Headers</button>
+        <button onclick="openFrontend()">🌐 Open Frontend</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <div class="code">
+        <h3>📋 Expected Dynamic Headers:</h3>
+        <ul>
+            <li><strong>PREMI:</strong> BRONDOL, PRUNING + PENGEMBALIAN UANG TIKET, POTONGAN PREMI HARVESTING, POTONGAN PREMI TRANSPORT</li>
+            <li><strong>ABSENSI:</strong> KEHADIRAN (H, JML HK) + KETIDAKHADIRAN (TAHUNAN, SAKIT/HAID, MINGGU, NASIONAL, IZIN, CTH, ALPA)</li>
+        </ul>
+    </div>
+
+    <script>
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${type}">${message}</div>`;
+            console.log(message);
+        }
+
+        function clearAllCache() {
+            try {
+                // Clear localStorage
+                localStorage.clear();
+                console.log('✅ localStorage cleared');
+                
+                // Clear sessionStorage
+                sessionStorage.clear();
+                console.log('✅ sessionStorage cleared');
+                
+                // Clear service workers
+                if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                        names.forEach(function(name) {
+                            caches.delete(name);
+                        });
+                        console.log('✅ Service worker caches cleared');
+                    });
+                }
+                
+                showResult('🧹 All cache cleared successfully! Silakan refresh frontend.', 'success');
+                
+            } catch (error) {
+                showResult('❌ Error clearing cache: ' + error.message, 'error');
+            }
+        }
+
+        async function testDynamicHeaders() {
+            try {
+                showResult('🧪 Testing dynamic headers from backend...', 'info');
+                
+                // Login admin
+                const loginResponse = await fetch('http://localhost:8002/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed: ' + loginResponse.status);
+                }
+                
+                const loginData = await loginResponse.json();
+                const token = loginData.access_token;
+                console.log('✅ Login successful');
+                
+                // Test dengan periode yang ada data (Januari 2024, Gang A1H)
+                const month = 1;
+                const year = 2024;
+                const gangCode = 'A1H';
+                
+                console.log(`📊 Testing API: /payroll/columns?month=${month}&year=${year}&gang_code=${gangCode}`);
+                
+                const columnResponse = await fetch(
+                    `http://localhost:8002/payroll/columns?month=${month}&year=${year}&gang_code=${gangCode}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+                
+                if (!columnResponse.ok) {
+                    throw new Error(`Column API failed: ${columnResponse.status}`);
+                }
+                
+                const columnData = await columnResponse.json();
+                
+                // Cari PREMI section
+                let premiSection = null;
+                let potonganSection = null;
+                let absensiSection = null;
+                
+                for (const col of columnData) {
+                    if (col.headerName === 'PREMI') {
+                        premiSection = col;
+                    }
+                    if (col.headerName === 'POTONGAN') {
+                        potonganSection = col;
+                    }
+                    if (col.headerName === 'ABSENSI') {
+                        absensiSection = col;
+                    }
+                }
+                
+                // Build result message
+                let result = '<div class="result">';
+                result += '<h3>✅ Dynamic Headers Test Results:</h3>';
+                
+                if (premiSection) {
+                    result += '<h4>🎯 PREMI Section:</h4><ul>';
+                    premiSection.children.forEach(child => {
+                        result += `<li><strong>${child.headerName}</strong> (field: ${child.children[0].field})</li>`;
+                    });
+                    result += '</ul>';
+                } else {
+                    result += '<h4>❌ PREMI Section not found!</h4>';
+                }
+                
+                if (absensiSection) {
+                    result += '<h4>📊 ABSENSI Section:</h4><ul>';
+                    absensiSection.children.forEach(child => {
+                        result += `<li><strong>${child.headerName}</strong></li>`;
+                        if (child.children) {
+                            child.children.forEach(subChild => {
+                                result += `<li> - ${subChild.headerName} (field: ${subChild.field})</li>`;
+                            });
+                        }
+                    });
+                    result += '</ul>';
+                } else {
+                    result += '<h4>❌ ABSENSI Section not found!</h4>';
+                }
+                
+                result += '</div>';
+                
+                showResult(result, 'success');
+                
+                console.log('🎯 Dynamic Headers Test Results:', { premiSection, absensiSection });
+                
+            } catch (error) {
+                showResult('❌ Test failed: ' + error.message, 'error');
+                console.error('Test error:', error);
+            }
+        }
+
+        function openFrontend() {
+            // Buka frontend dengan parameter untuk force refresh
+            const url = 'http://localhost:5173?refresh=' + Date.now();
+            window.open(url, '_blank');
+        }
+
+        // Auto-test on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testDynamicHeaders();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

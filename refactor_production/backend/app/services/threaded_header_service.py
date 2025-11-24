@@ -19,6 +19,23 @@ class ThreadedHeaderService:
         self.db = Database.instance(pool_size=20)
         self.queries = Queries()
 
+    def _allowed_premi_keywords(self, table_structure: Dict[str, Any]) -> set:
+        try:
+            hierarchy = table_structure.get('hierarchy', {})
+            level2 = hierarchy.get('level_2', {}).get('columns', [])
+            tokens = set()
+            for c in level2:
+                if (c.get('parent') or '').strip().lower() == 'premi':
+                    t = (c.get('text') or '').strip().upper()
+                    t = t.replace('PREMI ', '')
+                    for w in t.split():
+                        if w and w not in {'PREMI'}:
+                            tokens.add(w)
+            base = {'PANEN','CUCI','UNIT','BLOWER','TABUR','KERANI','MANDOR','HARVEST'}
+            return tokens | base
+        except Exception:
+            return {'PANEN','CUCI','UNIT','BLOWER','TABUR','ANGKUT','TBS','HARVEST','INCENTIVE','PUPUK','KERANI','MANDOR'}
+
     def generate_optimized_headers_parallel(self, month: int, year: int, gang_code: str) -> Dict[str, Any]:
         """
         Generate headers using parallel processing for maximum performance.
@@ -218,9 +235,22 @@ class ThreadedHeaderService:
             'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
             'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
             'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
-            'tunjangan premi', 'tunjangan beras'
+            'tunjangan beras'
         }
-        dynamic_premi_headers = [h for h in dynamic_premi_headers if h and h.strip().lower() not in excluded_lower]
+        filtered = []
+        for h in dynamic_premi_headers:
+            if not h:
+                continue
+            hl = h.strip().lower()
+            if hl in excluded_lower:
+                continue
+            hu = h.strip().upper()
+            if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                continue
+            if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                continue
+            filtered.append(h)
+        dynamic_premi_headers = filtered
 
         # Update premium headers in the structure
         level2 = hierarchy.get('level_2', {}).get('columns', [])
