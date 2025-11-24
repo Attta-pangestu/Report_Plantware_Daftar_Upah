@@ -362,7 +362,7 @@ class PayrollService:
             try:
                 if want_all or any([want(f'pot_dynamic_{i+1}') for i in range(7)]) or want('total_potongan'):
                     print(f"DEBUG: Processing dynamic potongan headers for gang {gang_code}")
-                    q_pot = Queries().get('potongan', 'potongan_headers_by_month')
+                    q_pot = Queries().get('potongan', 'dynamic_potongan_with_amounts')
                     if q_pot and 'sql' in q_pot and gang_code:
                         start_date = f"{year}-{str(month).zfill(2)}-01"
                         end_date = f"{year+1}-01-01" if int(month) == 12 else f"{year}-{str(int(month)+1).zfill(2)}-01"
@@ -379,7 +379,8 @@ class PayrollService:
                         print(f"DEBUG: Raw potongan items: {all_raw_items}")
 
                         # Filter potongan headers: INCLUDE items with "POT" awalan, exclude PPH21 and SPSI as requested
-                        excluded_pot = {'pph21', 'spsi', 'astek', 'bpjs', 'premi'}
+                        # Note: Allow "PREMI" in "POTONGAN PREMI" since these are potongan, not premi
+                        excluded_pot = {'pph21', 'spsi', 'astek', 'bpjs'}
                         filtered_items = []
                         excluded_items = []
 
@@ -395,10 +396,14 @@ class PayrollService:
                             has_tunjangan = 'tunjangan' in pot_name_lower
                             has_insentif = 'insentif' in pot_name_lower
 
-                            print(f"DEBUG: '{pot_name}' -> starts_with_pot: {starts_with_pot}, has_excluded: {has_excluded}, has_tunjangan: {has_tunjangan}, has_insentif: {has_insentif}")
+                            # Special check: allow "premi" if it's part of "potongan premi"
+                            contains_premi_but_ok = 'premi' in pot_name_lower and starts_with_pot and 'potongan' in pot_name_lower
+
+                            print(f"DEBUG: '{pot_name}' -> starts_with_pot: {starts_with_pot}, has_excluded: {has_excluded}, has_tunjangan: {has_tunjangan}, has_insentif: {has_insentif}, contains_premi_but_ok: {contains_premi_but_ok}")
 
                             # Untuk potongan: HARUS ada awalan "POT" (beda dengan premi yang exclude POT)
                             # Include potongan items dengan awalan "POT", exclude PPH21 dan SPSI
+                            # Allow "premi" in "POTONGAN PREMI" since these are potongan items
                             if starts_with_pot and not has_excluded and not has_tunjangan and not has_insentif:
                                 dyn_pot_headers.append(pot_name)
                                 filtered_items.append(pot_name)

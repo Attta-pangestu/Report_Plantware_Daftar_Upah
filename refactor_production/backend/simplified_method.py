@@ -499,7 +499,7 @@ class SimplifiedHeaderService:
         if dyn_potongan:
             potongan_lainnya_children = []
             for i, pot_name in enumerate(dyn_potongan):
-                field_name = f"pot_pattern_{i+1}"
+                field_name = f"pot_dynamic_{i+1}"
                 # Map known deduction names to existing fields
                 mapped_field = self._map_potongan_field(pot_name)
                 if mapped_field:
