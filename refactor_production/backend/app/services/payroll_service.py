@@ -260,10 +260,10 @@ class PayrollService:
         self._cache_set(key, out)
         return out
 
-    async def generate_rows(self, repo: EmployeeRepository, gang_code: str = None, month: int = None, year: int = None, skip: int = 0, limit: int = 1000, fields: List[str] = None) -> List[PayrollRow]:
+    async def generate_rows(self, repo: EmployeeRepository, gang_code: str = None, division: str = None, month: int = None, year: int = None, skip: int = 0, limit: int = 1000, fields: List[str] = None) -> List[PayrollRow]:
         rows: List[PayrollRow] = []
         db = Database.instance()
-        employees = repo.list(skip, limit, gang_code=gang_code)
+        employees = repo.list(skip, limit, gang_code=gang_code, division=division)
         s, e = self._dates(month or datetime.now().month, year or datetime.now().year)
         want_all = fields is None or len(fields) == 0
         want = (lambda name: True) if want_all else (lambda name: name in set(fields))
@@ -355,6 +355,85 @@ class PayrollService:
             for h in dyn_headers:
                 pattern = f"%{h}%"
                 dyn_maps.append(self._premi_map(db, emp_codes, s, e, pattern))
+
+            # Dynamic potongan headers (filter PPH21 and SPSI as requested) - NO CACHE
+            dyn_pot_headers: List[str] = []
+            dyn_pot_maps: List[Dict[str, float]] = []
+            try:
+                if want_all or any([want(f'pot_dynamic_{i+1}') for i in range(7)]) or want('total_potongan'):
+                    print(f"DEBUG: Processing dynamic potongan headers for gang {gang_code}")
+                    q_pot = Queries().get('potongan', 'potongan_headers_by_month')
+                    if q_pot and 'sql' in q_pot and gang_code:
+                        start_date = f"{year}-{str(month).zfill(2)}-01"
+                        end_date = f"{year+1}-01-01" if int(month) == 12 else f"{year}-{str(int(month)+1).zfill(2)}-01"
+                        rows_pot = db.query_all(q_pot['sql'], [gang_code, start_date, end_date])
+
+                        print(f"DEBUG: Found {len(rows_pot or [])} raw potongan records from database")
+                        all_raw_items = []
+                        for r in rows_pot or []:
+                            if not r or not r[0]:
+                                continue
+                            raw_item = str(r[0]).strip()
+                            all_raw_items.append(raw_item)
+
+                        print(f"DEBUG: Raw potongan items: {all_raw_items}")
+
+                        # Filter potongan headers: INCLUDE items with "POT" awalan, exclude PPH21 and SPSI as requested
+                        excluded_pot = {'pph21', 'spsi', 'astek', 'bpjs', 'premi'}
+                        filtered_items = []
+                        excluded_items = []
+
+                        for r in rows_pot or []:
+                            if not r or not r[0]:
+                                continue
+                            pot_name = str(r[0]).strip()
+                            pot_name_lower = pot_name.lower()
+
+                            # Debug: Check each filter condition
+                            starts_with_pot = pot_name_lower.startswith('pot')
+                            has_excluded = any(exclude in pot_name_lower for exclude in excluded_pot)
+                            has_tunjangan = 'tunjangan' in pot_name_lower
+                            has_insentif = 'insentif' in pot_name_lower
+
+                            print(f"DEBUG: '{pot_name}' -> starts_with_pot: {starts_with_pot}, has_excluded: {has_excluded}, has_tunjangan: {has_tunjangan}, has_insentif: {has_insentif}")
+
+                            # Untuk potongan: HARUS ada awalan "POT" (beda dengan premi yang exclude POT)
+                            # Include potongan items dengan awalan "POT", exclude PPH21 dan SPSI
+                            if starts_with_pot and not has_excluded and not has_tunjangan and not has_insentif:
+                                dyn_pot_headers.append(pot_name)
+                                filtered_items.append(pot_name)
+                                print(f"DEBUG: INCLUDED: '{pot_name}'")
+                            else:
+                                excluded_items.append(pot_name)
+                                reason = []
+                                if not starts_with_pot: reason.append("not starts_with_pot")
+                                if has_excluded: reason.append("has_excluded")
+                                if has_tunjangan: reason.append("has_tunjangan")
+                                if has_insentif: reason.append("has_insentif")
+                                print(f"DEBUG: EXCLUDED: '{pot_name}' ({', '.join(reason)})")
+
+                        print(f"DEBUG: Final potongan headers to include: {dyn_pot_headers}")
+                        print(f"DEBUG: Total excluded items: {excluded_items}")
+
+                        # Keep up to 7 dynamic potongan items
+                        dyn_pot_headers = dyn_pot_headers[:7]
+                        print(f"DEBUG: Limited to first 7 items: {dyn_pot_headers}")
+
+                        # Create potongan maps for each dynamic header
+                        for i, pot_header in enumerate(dyn_pot_headers):
+                            pattern = f"%{pot_header}%"
+                            print(f"DEBUG: Creating map {i+1} for '{pot_header}' with pattern '{pattern}'")
+                            dyn_pot_maps.append(self._premi_map(db, emp_codes, s, e, pattern))
+                    else:
+                        print(f"DEBUG: No query found for potongan headers")
+                else:
+                    print(f"DEBUG: Potongan processing skipped - want_all={want_all}, want_dynamic={any([want(f'pot_dynamic_{i+1}') for i in range(7)])}")
+            except Exception as e:
+                print(f"ERROR processing dynamic potongan headers: {e}")
+                import traceback
+                traceback.print_exc()
+                dyn_pot_headers = []
+                dyn_pot_maps = []
         cuti_maps: Dict[str, Dict[str, int]] = {}
         if want_all or any([want('cuti_tahunan_hari'), want('cuti_sakit_haid_hari'), want('cuti_minggu_hari'), want('cuti_nasional_hari'), want('hari_kerja'), want('jumlah_hk')]):
             cuti_maps = self._cuti_maps(db, emp_codes, s, e, cuti_tah_raw, cuti_sakit_raw, hk_minggu_raw, hk_nas_raw)
@@ -505,6 +584,12 @@ class PayrollService:
                 premi_brondol, premi_pruning
             ] + dyn_vals)
 
+            # Dynamic potongan amounts
+            dyn_pot_vals: List[float] = []
+            if want_all or any([want(f'pot_dynamic_{i+1}') for i in range(7)]) or want('total_potongan'):
+                for i in range(min(7, len(dyn_pot_maps))):
+                    dyn_pot_vals.append(float(dyn_pot_maps[i].get(nik, 0.0)))
+
             # Correct calculation from reference code:
             # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
             jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
@@ -550,10 +635,10 @@ class PayrollService:
             pot_kl = 0.0
 
             # Total potongan calculation based on reference code (line 1418 in reference engine):
-            # Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21
+            # Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21 + Dynamic Potongan
             # Note: Only employee portions are counted in total potongan (from reference engine)
             total_potongan = (pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
-                             pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_koreksi)
+                             pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_koreksi + sum(dyn_pot_vals))
 
             # Simplified for the predefined fields
             pot_total_1 = pot_bpjs_kesehatan_pekerja  # BPJS Kesehatan Pekerja
@@ -626,6 +711,13 @@ class PayrollService:
                 total_potongan=total_potongan,
                 pot_spsi=pot_spsi,
                 pot_koreksi=pot_koreksi,
+                pot_dynamic_1=(dyn_pot_vals[0] if len(dyn_pot_vals) > 0 else 0.0),
+                pot_dynamic_2=(dyn_pot_vals[1] if len(dyn_pot_vals) > 1 else 0.0),
+                pot_dynamic_3=(dyn_pot_vals[2] if len(dyn_pot_vals) > 2 else 0.0),
+                pot_dynamic_4=(dyn_pot_vals[3] if len(dyn_pot_vals) > 3 else 0.0),
+                pot_dynamic_5=(dyn_pot_vals[4] if len(dyn_pot_vals) > 4 else 0.0),
+                pot_dynamic_6=(dyn_pot_vals[5] if len(dyn_pot_vals) > 5 else 0.0),
+                pot_dynamic_7=(dyn_pot_vals[6] if len(dyn_pot_vals) > 6 else 0.0),
                 upah_bersih=upah_bersih,
                 tidak_hadir_cth=0,
                 tidak_hadir_alpa=0,

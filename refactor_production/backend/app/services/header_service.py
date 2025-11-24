@@ -7,7 +7,6 @@ import os
 import time
 from database.services.database import Database
 from database.services.queries import Queries
-from database.services.cache import Cache
 
 class HeaderService:
     def __init__(self):
@@ -125,16 +124,12 @@ class HeaderService:
         """
         start = time.perf_counter()
         
-        # Enhanced cache key with potongan identification
-        cache_key = f"dyn_pot_headers:{gang_code}:{year}-{str(month).zfill(2)}"
-        cached = Cache.instance().get(cache_key)
-        if cached is not None:
-            print(f"Cache hit for {cache_key}")
-            return cached
+        # NO CACHE - Always query fresh data
+        print(f"[HEADER DEBUG] Processing dynamic potongan headers for gang {gang_code}, {month}/{year}")
 
         db = Database.instance()
         q = Queries()
-        
+
         # Try potongan query
         sql_entry = q.get('potongan', 'potongan_headers_by_month')
         if sql_entry and 'sql' in sql_entry:
@@ -144,6 +139,7 @@ class HeaderService:
             else:
                 end_date = f"{year}-{str(month+1).zfill(2)}-01"
 
+            print(f"[HEADER DEBUG] Executing potongan query from {start_date} to {end_date}")
             # Execute potongan query
             rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
             mid = time.perf_counter()
@@ -152,23 +148,59 @@ class HeaderService:
             if rows is None:
                 rows = []
 
+            print(f"[HEADER DEBUG] Found {len(rows)} raw potongan records")
+
             # Extract potongan headers
             headers = []
+            all_raw_items = []
+            included_items = []
+            excluded_items = []
+
             for r in rows:
                 if not r or not r[0]:
                     continue
                 h = str(r[0]).strip()
                 hu = h.upper()
-                # Only include items that are clearly potongan
-                # Include: PPH21, POTONGAN (including variants like POTONGAN BRONDOL, POTONGAN PREMI, etc), SPPI, etc
-                # Exclude: ASTEK, PREMI (unless it's POTONGAN PREMI), BPJS, TUNJANGAN, INSENTIF (unless it's potongan)
-                if (any(keyword in hu for keyword in ['POTONGAN', 'POT', 'DEDUCT', 'CUTI', 'DENDA', 'IZIN', 'PPH21']) or
-                    'POTONGAN SPSI' == hu):
-                    if ('ASTEK' not in hu and 
-                        'BPJS' not in hu and 
-                        ('TUNJANGAN' not in hu or 'POTONGAN' in hu) and
-                        ('INSENTIF' not in hu or 'POTONGAN' in hu)):
-                        headers.append(h)
+                all_raw_items.append(h)
+
+                # Debug: Check each filter condition
+                starts_with_pot = hu.startswith('POT')
+                has_pph21 = 'PPH21' in hu
+                has_spsi = 'SPSI' in hu
+                has_astek = 'ASTEK' in hu
+                has_bpjs = 'BPJS' in hu
+                has_Premi = 'PREMI' in hu
+                has_tunjangan = 'TUNJANGAN' in hu
+                has_insentif = 'INSENTIF' in hu
+
+                print(f"[HEADER DEBUG] '{h}' -> starts_with_pot: {starts_with_pot}, pph21: {has_pph21}, spsi: {has_spsi}, astek: {has_astek}, bpjs: {has_bpjs}, premi: {has_Premi}, tunjangan: {has_tunjangan}, insentif: {has_insentif}")
+
+                # Logic: Untuk potongan, HARUS ada awalan "POT" (beda dengan premi yang exclude POT)
+                # Include: Hanya items yang dimulai dengan "POT" (POTONGAN, POT, dll)
+                # Exclude: PPH21, SPSI, ASTEK, BPJS, PREMI, TUNJANGAN, INSENTIF
+                if (starts_with_pot and
+                    not has_pph21 and not has_spsi and not has_astek and not has_bpjs and not has_Premi and
+                    'TUNJANGAN' not in hu and
+                    'INSENTIF' not in hu):
+                    headers.append(h)
+                    included_items.append(h)
+                    print(f"[HEADER DEBUG] INCLUDED: '{h}'")
+                else:
+                    excluded_items.append(h)
+                    reason = []
+                    if not starts_with_pot: reason.append("not starts_with_pot")
+                    if has_pph21: reason.append("has_pph21")
+                    if has_spsi: reason.append("has_spsi")
+                    if has_astek: reason.append("has_astek")
+                    if has_bpjs: reason.append("has_bpjs")
+                    if has_Premi: reason.append("has_Premi")
+                    if has_tunjangan: reason.append("has_tunjangan")
+                    if has_insentif: reason.append("has_insentif")
+                    print(f"[HEADER DEBUG] EXCLUDED: '{h}' ({', '.join(reason)})")
+
+            print(f"[HEADER DEBUG] Raw potongan items: {all_raw_items}")
+            print(f"[HEADER DEBUG] Included items: {included_items}")
+            print(f"[HEADER DEBUG] Excluded items: {excluded_items}")
 
             # Remove duplicates while preserving order
             seen = set()
@@ -181,9 +213,6 @@ class HeaderService:
             # Limit to 7 items for consistency
             result = unique_headers[:7]
 
-            # Extended cache TTL for better performance (1 hour)
-            Cache.instance().set(cache_key, result, ttl=3600)
-
             query_time = (mid - start) * 1000
             total_time = (time.perf_counter() - start) * 1000
             print(f"Potongan query time: {query_time:.2f}ms, Total time: {total_time:.2f}ms")
@@ -195,17 +224,10 @@ class HeaderService:
         
     def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
         """
-        Optimized version with better caching and query performance.
-        Uses faster query and improved caching strategy.
+        Optimized version with direct query performance.
+        NO CACHE - Always query fresh data.
         """
         start = time.perf_counter()
-
-        # Enhanced cache key with optimization strategy
-        cache_key = f"dyn_hdr_opt:{gang_code}:{year}-{str(month).zfill(2)}"
-        cached = Cache.instance().get(cache_key)
-        if cached is not None:
-            print(f"Cache hit for {cache_key}")
-            return cached
 
         db = Database.instance()
         q = Queries()
@@ -264,9 +286,6 @@ class HeaderService:
             # Limit to 7 items for consistency
             result = unique_headers[:7]
 
-            # Extended cache TTL for better performance (1 hour)
-            Cache.instance().set(cache_key, result, ttl=3600)
-
             query_time = (mid - start) * 1000
             total_time = (time.perf_counter() - start) * 1000
             print(f"Optimized query time: {query_time:.2f}ms, Total time: {total_time:.2f}ms")
@@ -279,10 +298,6 @@ class HeaderService:
     def _compute_dynamic_premi_headers_db_fallback(self, month: int, year: int, gang_code: str) -> List[str]:
         """Fallback method using original query for compatibility"""
         start = time.perf_counter()
-        cache_key = f"dyn_hdr_fallback:{gang_code}:{year}-{str(month).zfill(2)}"
-        cached = Cache.instance().get(cache_key)
-        if cached is not None:
-            return cached
 
         db = Database.instance()
         q = Queries()
@@ -346,7 +361,6 @@ class HeaderService:
                 seen.add(h)
                 unique.append(h)
 
-        Cache.instance().set(cache_key, unique[:7], ttl=1800)  # 30 minutes for fallback
         return unique[:7]
 
     def _build_header_hierarchy(self, table_structure: Dict[str, Any]) -> Dict[str, Any]:
@@ -747,11 +761,8 @@ class HeaderService:
                 dyn_premi = headers.get('table_structure', {}).get('dynamic_docdesc_premi', [])
                 dyn_potongan = headers.get('table_structure', {}).get('dynamic_docdesc_potongan', [])
                 
-                # Add test data for both premi and potongan if no dynamic data available
-                if not dyn_premi:
-                    dyn_premi = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'PREMI TRANSPORT']
-                if not dyn_potongan:
-                    dyn_potongan = ['POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'POTONGAN SIM PANJANG']
+                # Use only real data from database, no static test data
+                # If no data found, keep empty arrays
 
                 # Process PREMI group
                 for c in col_defs:
@@ -791,23 +802,27 @@ class HeaderService:
                         break
 
                 # Process POTONGAN LAINNYA group with dynamic potongan data
+                # Hanya potongan dengan keyword "POTONGAN" yang masuk
                 for i, name in enumerate(dyn_potongan[:7], 1):  # Limit to 7 items
                     nm = (name if isinstance(name, str) else '').strip()
-                    pf = f"pot_dynamic_{i}"
-                    pot_dynamic_children.append({
-                        'headerName': (nm or f"POTONGAN {i}"),
-                        'children': [{
-                            'headerName': 'JUMLAH',
-                            'field': pf,
-                            'width': 100,  # Fixed width for consistency
-                            'type': 'numericColumn',
-                            'cellStyle': {
-                                'textAlign': 'right',
-                                'backgroundColor': '#ffebee',  # Light red background for deductions
-                                'color': '#c62828'  # Dark red text
-                            }
-                        }]
-                    })
+                    up = nm.upper()
+                    # Hanya yang mengandung "POTONGAN" yang masuk ke POTONGAN LAINNYA
+                    if any(pot_keyword in up for pot_keyword in ['POTONGAN', 'POT']):
+                        pf = f"pot_dynamic_{i}"
+                        pot_dynamic_children.append({
+                            'headerName': (nm or f"POTONGAN {i}"),
+                            'children': [{
+                                'headerName': 'JUMLAH',
+                                'field': pf,
+                                'width': 100,  # Fixed width for consistency
+                                'type': 'numericColumn',
+                                'cellStyle': {
+                                    'textAlign': 'right',
+                                    'backgroundColor': '#ffebee',  # Light red background for deductions
+                                    'color': '#c62828'  # Dark red text
+                                }
+                            }]
+                        })
             except Exception:
                 pass
 
@@ -823,7 +838,8 @@ class HeaderService:
                     }
                 }
                 
-                # Find POTONGAN group and add POTONGAN LAINNYA
+                # Find FIRST POTONGAN group and add POTONGAN LAINNYA
+                potongan_group_found = False
                 for idx, c in enumerate(col_defs):
                     if (c.get('headerName') or '').strip().upper() == 'POTONGAN':
                         if isinstance(c.get('children'), list):
@@ -856,7 +872,13 @@ class HeaderService:
                                         compute['fields'] = fields
                                         child['compute'] = compute
                                     break
-                        break
+                            
+                            potongan_group_found = True
+                            break  # Only process the FIRST POTONGAN group
+                
+                # Remove any duplicate POTONGAN groups if found
+                if potongan_group_found:
+                    col_defs = [c for c in col_defs if not (isinstance(c, dict) and c.get('headerName') == 'POTONGAN' and col_defs.index(c) > 0)]
 
             found_premi = False
             for idx, c in enumerate(col_defs):
@@ -882,6 +904,10 @@ class HeaderService:
                     break
 
             if upah_kotor_idx is not None:
+                # Check if PPH21 and SPSI are in dynamic data to avoid duplication
+                has_dynamic_pph21 = 'PPH21' in dyn_potongan
+                has_dynamic_spsi = 'POTONGAN SPSI' in dyn_potongan
+                
                 deduction_groups = [
                     {
                         'headerName': 'CARUMAN ASTEK',
@@ -971,8 +997,12 @@ class HeaderService:
                                 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
                             }
                         ]
-                    },
-                    {
+                    }
+                ]
+                
+                # Only add static SPSI and PPH21 if they're not in dynamic data
+                if not has_dynamic_spsi:
+                    deduction_groups.append({
                         'headerName': 'IURAN SPSI',
                         'children': [
                             {
@@ -983,8 +1013,10 @@ class HeaderService:
                                 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
                             }
                         ]
-                    },
-                    {
+                    })
+                
+                if not has_dynamic_pph21:
+                    deduction_groups.append({
                         'headerName': 'PPH21',
                         'children': [
                             {
@@ -995,16 +1027,23 @@ class HeaderService:
                                 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
                             }
                         ]
-                    },
-                    {
-                        'field': 'total_potongan',
-                        'headerName': 'TOTAL POTONGAN',
-                        'width': 120,
-                        'type': 'numericColumn',
-                        'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'},
-                        'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] }
-                    }
-                ]
+                    })
+                
+                # Total potongan computation - include dynamic fields
+                total_fields = ['pot_bpjs_pekerja_total', 'pot_koreksi']
+                if has_dynamic_spsi:
+                    total_fields.append('pot_spsi')
+                if has_dynamic_pph21:
+                    total_fields.append('pot_pph21')
+                
+                deduction_groups.append({
+                    'field': 'total_potongan',
+                    'headerName': 'TOTAL POTONGAN',
+                    'width': 120,
+                    'type': 'numericColumn',
+                    'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'},
+                    'compute': { 'type': 'sum', 'fields': total_fields }
+                })
                 potongan_lainnya_children = []
 
                 for child in pot_dynamic_children:
@@ -1013,12 +1052,38 @@ class HeaderService:
                         potongan_lainnya_children.append(child)
 
                 # Add POTONGAN LAINNYA group for dynamic items containing POTONGAN
+                # Position: after IURAN SPSI, before PPH21
                 if potongan_lainnya_children:
                     try:
-                        deduction_groups.insert(max(len(deduction_groups)-2, 0), {
-                            'headerName': 'POTONGAN LAINNYA',
-                            'children': potongan_lainnya_children
-                        })
+                        # Find the position to insert POTONGAN LAINNYA (after SPSI, before PPH21)
+                        insert_pos = -1
+                        for i, group in enumerate(deduction_groups):
+                            header_name = group.get('headerName', '')
+                            if header_name == 'IURAN SPSI':
+                                insert_pos = i + 1
+                                break
+                        
+                        # If SPSI not found, insert before PPH21
+                        if insert_pos == -1:
+                            for i, group in enumerate(deduction_groups):
+                                header_name = group.get('headerName', '')
+                                if header_name == 'PPH21':
+                                    insert_pos = i
+                                    break
+                        
+                        # Insert at calculated position
+                        if insert_pos > 0:
+                            deduction_groups.insert(insert_pos, {
+                                'headerName': 'POTONGAN LAINNYA',
+                                'children': potongan_lainnya_children
+                            })
+                        else:
+                            # Fallback: insert before last element (TOTAL POTONGAN)
+                            if len(deduction_groups) > 1:
+                                deduction_groups.insert(len(deduction_groups)-1, {
+                                    'headerName': 'POTONGAN LAINNYA',
+                                    'children': potongan_lainnya_children
+                                })
                     except Exception:
                         pass
                 try:

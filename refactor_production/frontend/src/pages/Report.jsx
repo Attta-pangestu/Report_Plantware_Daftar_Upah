@@ -9,13 +9,13 @@ import { fetchDynamicHeaders, fetchColumnDefinitions, formatCurrency, formatNumb
 import { login } from '../services/authService'
 import { fetchReferenceHtml } from '../services/validationService'
 import LoadingScreen from '../components/common/LoadingScreen'
-import { fetchGangInfo } from '../services/gangService'
+import { fetchGangInfo, fetchGangs } from '../services/gangService'
 import { useAuth } from '../context/AuthContext'
 
 // Check if running in development mode
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true' || import.meta.env.DEV_MODE === 'true'
 
-export default function Report({ token, user, month, year, gang_code, onLoad }) {
+export default function Report({ token, user, month, year, gang_code, division, onLoad }) {
   // Authentication hook
   const { logout } = useAuth()
 
@@ -28,6 +28,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const finalMonth = devMonth || month
   const finalYear = devYear || year
   const finalGangCode = devGangCode || gang_code
+  const finalDivision = division
   const [rows, setRows] = useState([])
   const [pinnedBottom, setPinnedBottom] = useState([])
   const [columnDefs, setColumnDefs] = useState([])
@@ -57,6 +58,9 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
   const [initialRowsPreview, setInitialRowsPreview] = useState([])
   const [firstBatchAttempted, setFirstBatchAttempted] = useState(false)    
   const [gangInfo, setGangInfo] = useState(null)
+  const [gangList, setGangList] = useState([])
+  const [tables, setTables] = useState({})
+  const [multiLoading, setMultiLoading] = useState(false)
   useEffect(() => {
     console.log('[Report] Column definitions useEffect triggered:', { authToken: !!authToken, finalMonth, finalYear, finalGangCode })
     async function loadColumnDefinitions() {
@@ -64,6 +68,16 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
       setLoadingStatus('Loading column definitions...')
       setCurrentEndpoint('/payroll/columns')
       setError('')
+      if (String(finalGangCode).toUpperCase() === 'ALL') {
+        setHeaders(null)
+        setHierarchyHeaders({ level1: [], level2: [], level3: [] })
+        setColumnDefs([])
+        computeRulesRef.current = createFallbackComputeRules()
+        setHeaderLoading(false)
+        setLoadingStatus('Column definitions loaded successfully')
+        setCurrentEndpoint('')
+        return
+      }
       try {
         // Parse month if it's a string in YYYY-MM format
         let monthValue = finalMonth
@@ -188,12 +202,12 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         }
 
         console.log('[Report] 📡 Mengirim request ke /payroll/report/real...')
-        console.log('[Report] 📋 Parameter:', { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 200 })
+        console.log('[Report] 📋 Parameter:', { month: monthValue, year: yearValue, gang_code: finalGangCode, division: finalDivision, skip: 0, limit: 200 })
 
         const startTime = Date.now()
         setLoadingStatus('⏳ Menunggu response data transaksi payroll...')
 
-        const data = await fetchReportRowsSimple(activeToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, skip: 0, limit: INFINITE_BATCH_SIZE })
+        const data = await fetchReportRowsSimple(activeToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, division: finalDivision, skip: 0, limit: INFINITE_BATCH_SIZE })
 
         const fetchTime = Date.now() - startTime
         console.log('[Report] ✅ Data transaksi diterima!')
@@ -255,6 +269,11 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             const sum = agg(f)
             if (sum > 0) grand[f] = sum
           }
+          for (let i = 1; i <= 7; i++) {
+            const f = `pot_dynamic_${i}`
+            const sum = agg(f)
+            if (sum > 0) grand[f] = sum
+          }
           setPinnedBottom([grand])
         } else {
           setPinnedBottom([])
@@ -281,12 +300,12 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
             // Use simple endpoint in development mode for fallback
             let fallbackData
             if (DEV_MODE) {
-              fallbackData = await fetchReportRowsSimple(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, skip: 0, limit: 50 })
+              fallbackData = await fetchReportRowsSimple(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, division: finalDivision, skip: 0, limit: 50 })
             } else {
               const leafFields = []
               const walk = (c) => { if (c.children) c.children.forEach(walk); else if (c.field) leafFields.push(c.field) }
               columnDefs.forEach(walk)
-              fallbackData = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, fields: leafFields, benchmark: true, monitor: false })
+              fallbackData = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, division: finalDivision, fields: leafFields, benchmark: true, monitor: false })
             }
             const computed = applyComputeToRows(fallbackData, computeRulesRef.current)
             setRows(computed)
@@ -341,7 +360,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         if (typeof onLoad === 'function') onLoad()
       }
     }
-    const shouldRun = !dataInitRef.current && !!finalMonth && !!finalYear && !!finalGangCode
+    const shouldRun = String(finalGangCode).toUpperCase() !== 'ALL' && !dataInitRef.current && !!finalMonth && !!finalYear && !!finalGangCode
     console.log('[Report] 🔍 Checking condition untuk data loading:', {
       columnDefsLength: columnDefs?.length || 0,
       authToken: !!authToken,
@@ -372,13 +391,96 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     ;(async () => {
       try {
         if (authToken && finalGangCode) {
-          const info = await fetchGangInfo(authToken, finalGangCode)
-          if (active) setGangInfo(info)
+          if (String(finalGangCode).toUpperCase() === 'ALL') {
+            if (active) setGangInfo({ division: finalDivision, description: 'All gangs in division', loc_code: '' })
+          } else {
+            const info = await fetchGangInfo(authToken, finalGangCode)
+            if (active) setGangInfo(info)
+          }
         }
       } catch (_) {}
     })()
     return () => { active = false }
-  }, [authToken, finalGangCode])
+  }, [authToken, finalGangCode, finalDivision])
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      if (String(finalGangCode).toUpperCase() !== 'ALL') return
+      if (!finalDivision) return
+      setMultiLoading(true)
+      setError('')
+      try {
+        let monthValue = finalMonth
+        let yearValue = finalYear
+        if (typeof finalMonth === 'string' && finalMonth.includes('-')) {
+          const [year, month] = finalMonth.split('-')
+          monthValue = parseInt(month, 10)
+          yearValue = parseInt(year, 10)
+        }
+        let activeToken = authToken
+        if (!activeToken && DEV_MODE) {
+          try {
+            const res = await login('admin', 'admin')
+            setAuthToken(res.access_token)
+            activeToken = res.access_token
+          } catch {}
+        }
+        const list = await fetchGangs(activeToken, finalDivision, null, true)
+        if (!active) return
+        setGangList(list)
+        const nextTables = {}
+        for (const g of list) {
+          const cols = await fetchColumnDefinitions(activeToken, monthValue, yearValue, g)
+          const normalized = Array.isArray(cols) ? cols : (Array.isArray(cols?.columns) ? cols.columns : [])
+          const transformed = removePlaceholderPotonganHeaders(relocateDynamicPotonganHeaders(normalized))
+          ensureHierarchicalOrThrow(transformed)
+          const enhanced = enhanceColumnsRecursive(transformed, 0)
+          const data = await fetchReportRowsSimple(activeToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: g, skip: 0, limit: INFINITE_BATCH_SIZE })
+          const computed = applyComputeToRows(data, computeRulesRef.current)
+          const safe = Array.isArray(computed) ? computed : []
+          const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
+          let grand = []
+          if (safe.length > 0) {
+            const tmp = {
+              no: '', jenis_kelamin: '', nik: '', nama: 'GRAND TOTAL',
+              upah_dasar: '', hari_kerja: agg('hari_kerja'), upah_pokok: agg('upah_pokok'),
+              cuti_tahunan_hari: agg('cuti_tahunan_hari'), cuti_sakit_haid_hari: agg('cuti_sakit_haid_hari'), cuti_minggu_hari: agg('cuti_minggu_hari'), cuti_nasional_hari: agg('cuti_nasional_hari'), jumlah_hk: agg('jumlah_hk'),
+              gaji_pokok: agg('gaji_pokok'), beras_rate: '', beras_jumlah: agg('beras_jumlah'), jabatan_rate: '', jabatan_jumlah: agg('jabatan_jumlah'), masa_kerja_tahun: '', masa_kerja_jumlah: agg('masa_kerja_jumlah'), lembur_jam: '', lembur_jumlah: agg('lembur_jumlah'), total_tunjangan: agg('total_tunjangan'),
+              premi_brondol: agg('premi_brondol'), premi_pruning: agg('premi_pruning'), premi_angkut_material: agg('premi_angkut_material'), premi_angkut_tbs: agg('premi_angkut_tbs'), premi_harvesting: agg('premi_harvesting'), premi_harvesting_incentive: agg('premi_harvesting_incentive'), premi_pupuk: agg('premi_pupuk'),
+              pot_koreksi: agg('pot_koreksi'),
+              total_premi: agg('total_premi'),
+              jumlah_upah_kotor: agg('jumlah_upah_kotor'),
+              pot_pph21: agg('pot_pph21'), pot_kontan: agg('pot_kontan'), pot_thr: agg('pot_thr'), pot_pinjam: agg('pot_pinjam'), pot_kl: agg('pot_kl'), pot_bpjs_kes: agg('pot_bpjs_kes'), pot_bpjs_pek: agg('pot_bpjs_pek'), pot_bpjs_maj: agg('pot_bpjs_maj'),
+              pot_bpjs_kesehatan_pekerja: agg('pot_bpjs_kesehatan_pekerja'),
+              pot_bpjs_kesehatan_majikan: agg('pot_bpjs_kesehatan_majikan'),
+              pot_bpjs_pensiun_pekerja: agg('pot_bpjs_pensiun_pekerja'),
+              pot_bpjs_pensiun_majikan: agg('pot_bpjs_pensiun_majikan'),
+              pot_bpjs_jumlah: agg('pot_bpjs_jumlah'),
+              pot_bpjs_pekerja_total: agg('pot_bpjs_pekerja_total'),
+              pot_spsi: agg('pot_spsi'),
+              total_potongan: agg('total_potongan'), upah_bersih: agg('upah_bersih')
+            }
+            for (let i = 1; i <= 7; i++) {
+              const f = `premi_dynamic_${i}`
+              const sum = agg(f)
+              if (sum > 0) tmp[f] = sum
+            }
+            grand = [tmp]
+          }
+          nextTables[g] = { cols: enhanced, rows: safe, pinnedBottom: grand }
+        }
+        if (!active) return
+        setTables(nextTables)
+      } catch (e) {
+        setError('Failed to load multi-gang data')
+      } finally {
+        setMultiLoading(false)
+        if (typeof onLoad === 'function') onLoad()
+      }
+    })()
+    return () => { active = false }
+  }, [authToken, finalGangCode, finalDivision, finalMonth, finalYear, overrideMonth, overrideYear])
 
   // Separate useEffect to monitor columnDefs changes
   useEffect(() => {
@@ -561,7 +663,7 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     const pred = leaf => {
       const f = String(leaf.field || '')
       const h = String(leaf.headerName || '').toUpperCase().trim()
-      if (!f.startsWith('premi_dynamic_')) return false
+      if (!f.startsWith('pot_dynamic_')) return false
       if (h.startsWith('POT')) return true
       if (h.includes('POTONG')) return true
       return false
@@ -663,7 +765,9 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
       const neverHide = new Set([
         'no','nik','nama','jenis_kelamin','upah_bersih','jumlah_upah_kotor','total_tunjangan','total_premi','gaji_pokok','upah_pokok','hari_kerja','jumlah_hk',
         'cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari',
-        'premi_brondol','premi_pruning'
+        'premi_brondol','premi_pruning',
+        'total_potongan','pot_pph21','pot_koreksi','pot_spsi','pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total',
+        'pot_dynamic_1','pot_dynamic_2','pot_dynamic_3','pot_dynamic_4','pot_dynamic_5','pot_dynamic_6','pot_dynamic_7'
       ])
       if (!neverHide.has(cfg.field)) {
         const hide = !!autoHideMapRef.current[cfg.field]
@@ -729,7 +833,9 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
     try {
       const neverHide = new Set([
         'no','nik','nama','jenis_kelamin','upah_bersih','jumlah_upah_kotor','total_tunjangan','total_premi','gaji_pokok','upah_pokok','hari_kerja','jumlah_hk',
-        'cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari'
+        'cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari',
+        'total_potongan','pot_pph21','pot_koreksi','pot_spsi','pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total',
+        'pot_dynamic_1','pot_dynamic_2','pot_dynamic_3','pot_dynamic_4','pot_dynamic_5','pot_dynamic_6','pot_dynamic_7'
       ])
       const fields = new Set()
       for (const r of dataRows || []) {
@@ -970,14 +1076,14 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         }}>
           <div style={{ flex: 1, minWidth: '300px' }}>
             <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>
-              🏭 GANG: {finalGangCode || '-'}
-              {gangInfo?.loc_code && <span style={{ marginLeft: '8px', fontSize: '14px', opacity: 0.8 }}>(LOC: {gangInfo.loc_code})</span>}
+              🏭 GANG: {String(finalGangCode).toUpperCase() === 'ALL' ? `ALL GANGS` : (finalGangCode || '-')}
+              {String(finalGangCode).toUpperCase() !== 'ALL' && gangInfo?.loc_code && <span style={{ marginLeft: '8px', fontSize: '14px', opacity: 0.8 }}>(LOC: {gangInfo.loc_code})</span>}
             </div>
             <div style={{ fontSize: '14px', opacity: 0.9, lineHeight: 1.4 }}>
-              {gangInfo?.description || '-'}
+              {String(finalGangCode).toUpperCase() === 'ALL' ? 'Displaying payroll for all gangs in selected division' : (gangInfo?.description || '-')}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '4px' }}>
-              📍 Division: {gangInfo?.division || '-'}
+              📍 Division: {String(finalGangCode).toUpperCase() === 'ALL' ? (finalDivision || '-') : (gangInfo?.division || '-')}
             </div>
           </div>
 
@@ -1242,83 +1348,118 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         </div>
       </div>
 
-      <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
-        <AgGridReact
-          ref={gridRef}
-          columnDefs={Array.isArray(columnDefs) ? columnDefs : []}
-          rowData={rows}
-          rowModelType={'infinite'}
-          cacheBlockSize={INFINITE_BATCH_SIZE}
-          maxBlocksInCache={5}
-          getRowId={params => params.data?.nik || params.data?.NIK || params.data?.no}
-          defaultColDef={baseCol}
-          rowClassRules={rowClassRules}
-          pinnedBottomRowData={pinnedBottom}
-          rowSelection={'single'}
-          pagination={false}
-          rowBuffer={20}
-          enableRangeSelection={true}
-          suppressRowClickSelection={true}
-          animateRows={true}
-          domLayout='normal'
-          sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
-          getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
-          onFirstDataRendered={(params) => {
-            try {
-              const cols = params.columnApi.getAllDisplayedColumns()
-              const ids = cols.map(c => c.getColId())
-              if (ids.length > 0) {
-                // Auto-size all columns to fit content
-                params.columnApi.autoSizeColumns(ids)
-                // Ensure minimum width for readability
-                cols.forEach(col => {
-                  const currentWidth = col.getActualWidth()
-                  if (currentWidth < 80) {
-                    params.columnApi.setColumnWidth(col.getColId(), 80)
-                  }
-                })
-              }
-            } catch (e) {
-              console.error('Error auto-sizing columns:', e)
-            }
-          }}
-          frameworkComponents={{ HierHeaderGroup }}
-          onGridReady={params => {
-            if (rows.length > 0) {
-              params.api.ensureIndexVisible(0, 'top')
-            }
-            // Log grid ready state for debugging
-            const activeColumnDefs = Array.isArray(columnDefs) ? columnDefs : []
-            console.log('[AG Grid] Grid ready with columns:', activeColumnDefs.length)
-            console.log('[AG Grid] Rows loaded:', rows.length)
-            console.log('[AG Grid] Hierarchy headers:', hierarchyHeaders)
-            const datasource = {
-              getRows: async rq => {
-                const start = rq.startRow
-                const end = rq.endRow
-                const monthValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[1], 10) : finalMonth
-                const yearValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[0], 10) : finalYear
-                let batch = null
-                if (start === 0 && initialRowsPreview && initialRowsPreview.length > 0) {
-                  batch = initialRowsPreview.slice(0, end - start)
-                } else {
-                  batch = await fetchReportRowsSimple(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, skip: start, limit: end - start })
-                  batch = applyComputeToRows(batch, computeRulesRef.current)
+      {String(finalGangCode).toUpperCase() !== 'ALL' && (
+        <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
+          <AgGridReact
+            ref={gridRef}
+            columnDefs={Array.isArray(columnDefs) ? columnDefs : []}
+            rowData={rows}
+            rowModelType={'infinite'}
+            cacheBlockSize={INFINITE_BATCH_SIZE}
+            maxBlocksInCache={5}
+            getRowId={params => params.data?.nik || params.data?.NIK || params.data?.no}
+            defaultColDef={baseCol}
+            rowClassRules={rowClassRules}
+            pinnedBottomRowData={pinnedBottom}
+            rowSelection={'single'}
+            pagination={false}
+            rowBuffer={20}
+            enableRangeSelection={true}
+            suppressRowClickSelection={true}
+            animateRows={true}
+            domLayout='normal'
+            sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
+            getRowHeight={params => params.node.rowIndex === 0 ? 40 : 30}
+            onFirstDataRendered={(params) => {
+              try {
+                const cols = params.columnApi.getAllDisplayedColumns()
+                const ids = cols.map(c => c.getColId())
+                if (ids.length > 0) {
+                  params.columnApi.autoSizeColumns(ids)
+                  cols.forEach(col => {
+                    const currentWidth = col.getActualWidth()
+                    if (currentWidth < 80) {
+                      params.columnApi.setColumnWidth(col.getColId(), 80)
+                    }
+                  })
                 }
-                let rowCount = undefined
-                try {
-                  const c = await fetchReportCount(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode })
-                  if (c && typeof c.count === 'number') {
-                    rowCount = Number(c.count)
-                  }
-                } catch {}
-                rq.successCallback(batch || [], rowCount)
+              } catch (e) {}
+            }}
+            frameworkComponents={{ HierHeaderGroup }}
+            onGridReady={params => {
+              if (rows.length > 0) {
+                params.api.ensureIndexVisible(0, 'top')
               }
-            }
-            params.api.setDatasource(datasource)
-          }}
-        />
-      </div>
+              const activeColumnDefs = Array.isArray(columnDefs) ? columnDefs : []
+              const datasource = {
+                getRows: async rq => {
+                  const start = rq.startRow
+                  const end = rq.endRow
+                  const monthValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[1], 10) : finalMonth
+                  const yearValue = typeof finalMonth === 'string' && finalMonth.includes('-') ? parseInt(finalMonth.split('-')[0], 10) : finalYear
+                  let batch = null
+                  if (start === 0 && initialRowsPreview && initialRowsPreview.length > 0) {
+                    batch = initialRowsPreview.slice(0, end - start)
+                  } else {
+                    batch = await fetchReportRowsSimple(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, division: finalDivision, skip: start, limit: end - start })
+                    batch = applyComputeToRows(batch, computeRulesRef.current)
+                  }
+                  let rowCount = undefined
+                  try {
+                    const c = await fetchReportCount(authToken, { month: (overrideMonth || monthValue), year: (overrideYear || yearValue), gang_code: finalGangCode, division: finalDivision })
+                    if (c && typeof c.count === 'number') {
+                      rowCount = Number(c.count)
+                    }
+                  } catch {}
+                  rq.successCallback(batch || [], rowCount)
+                }
+              }
+              params.api.setDatasource(datasource)
+            }}
+          />
+        </div>
+      )}
+      {String(finalGangCode).toUpperCase() === 'ALL' && (
+        <div style={{ display:'grid', gap: 24 }}>
+          {gangList.map(g => (
+            <div key={g}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                <span style={{ marginRight: '16px' }}>🏭 Gang: <strong>{g}</strong></span>
+                <span>📅 Periode: <strong>{(overrideMonth || finalMonth) ? new Date(2000, (overrideMonth || finalMonth) - 1).toLocaleString('id-ID', { month: 'short' }) : '-'} {overrideYear || finalYear || '-'}</strong></span>
+              </div>
+              <div className="ag-theme-alpine" style={{ height: 700, width: '100%' }}>
+                <AgGridReact
+                  columnDefs={Array.isArray(tables[g]?.cols) ? tables[g].cols : []}
+                  rowData={tables[g]?.rows || []}
+                  defaultColDef={baseCol}
+                  rowClassRules={rowClassRules}
+                  pinnedBottomRowData={tables[g]?.pinnedBottom || []}
+                  pagination={false}
+                  animateRows={true}
+                  domLayout='normal'
+                  sideBar={{ toolPanels: ['columns', 'filters'], defaultToolPanel: 'columns' }}
+                  frameworkComponents={{ HierHeaderGroup }}
+                  onFirstDataRendered={(params) => {
+                    try {
+                      const cols = params.columnApi.getAllDisplayedColumns()
+                      const ids = cols.map(c => c.getColId())
+                      if (ids.length > 0) {
+                        params.columnApi.autoSizeColumns(ids)
+                        cols.forEach(col => {
+                          const currentWidth = col.getActualWidth()
+                          if (currentWidth < 80) {
+                            params.columnApi.setColumnWidth(col.getColId(), 80)
+                          }
+                        })
+                      }
+                    } catch (e) {}
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {showValidation && (
         <div className="validation-panel" style={{ marginTop: 16 }}>
           <h3>Reference Preview</h3>

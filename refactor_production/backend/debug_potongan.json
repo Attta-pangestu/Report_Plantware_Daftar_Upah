@@ -1,0 +1,284 @@
+{
+  "columnDefs": [
+    {
+      "headerName": "POTONGAN",
+      "children": [
+        {
+          "headerName": "CARUMAN ASTEK",
+          "children": [
+            {
+              "headerName": "PEKERJA",
+              "field": "pot_bpjs_pek",
+              "width": 80,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#e8f5e8",
+                "color": "#2e7d32"
+              }
+            },
+            {
+              "headerName": "MAJIKAN",
+              "field": "pot_bpjs_maj",
+              "width": 80,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#e8f5e8",
+                "color": "#2e7d32"
+              }
+            },
+            {
+              "headerName": "JUMLAH",
+              "field": "pot_bpjs_jumlah",
+              "width": 80,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#e8f5e8",
+                "color": "#2e7d32"
+              }
+            }
+          ]
+        },
+        {
+          "headerName": "POTONGAN BPJS",
+          "children": [
+            {
+              "headerName": "KESEHATAN",
+              "children": [
+                {
+                  "headerName": "PEKERJA",
+                  "field": "pot_bpjs_kesehatan_pekerja",
+                  "width": 90,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#fff3e0",
+                    "color": "#e65100"
+                  }
+                },
+                {
+                  "headerName": "MAJIKAN",
+                  "field": "pot_bpjs_kesehatan_majikan",
+                  "width": 90,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#fff3e0",
+                    "color": "#e65100"
+                  }
+                }
+              ]
+            },
+            {
+              "headerName": "PENSIUN",
+              "children": [
+                {
+                  "headerName": "PEKERJA",
+                  "field": "pot_bpjs_pensiun_pekerja",
+                  "width": 90,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#fff3e0",
+                    "color": "#e65100"
+                  }
+                },
+                {
+                  "headerName": "MAJIKAN",
+                  "field": "pot_bpjs_pensiun_majikan",
+                  "width": 90,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#fff3e0",
+                    "color": "#e65100"
+                  }
+                }
+              ]
+            },
+            {
+              "headerName": "TOTAL",
+              "field": "pot_bpjs_pekerja_total",
+              "width": 100,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#fff3e0",
+                "color": "#e65100"
+              },
+              "compute": {
+                "type": "sum",
+                "fields": [
+                  "pot_bpjs_kesehatan_pekerja",
+                  "pot_bpjs_pensiun_pekerja"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "headerName": "KOREKSI",
+          "children": [
+            {
+              "headerName": "JUMLAH",
+              "field": "pot_koreksi",
+              "width": 120,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#fff3e0",
+                "color": "#e65100"
+              }
+            }
+          ]
+        },
+        {
+          "headerName": "IURAN SPSI",
+          "children": [
+            {
+              "headerName": "JUMLAH",
+              "field": "pot_spsi",
+              "width": 100,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#fff3e0",
+                "color": "#e65100"
+              }
+            }
+          ]
+        },
+        {
+          "headerName": "POTONGAN LAINNYA",
+          "children": [
+            {
+              "headerName": "POTONGAN PREMI HARVESTING",
+              "children": [
+                {
+                  "headerName": "JUMLAH",
+                  "field": "pot_dynamic_1",
+                  "width": 100,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#ffebee",
+                    "color": "#c62828"
+                  }
+                }
+              ]
+            },
+            {
+              "headerName": "POTONGAN BRONDOL",
+              "children": [
+                {
+                  "headerName": "JUMLAH",
+                  "field": "pot_dynamic_2",
+                  "width": 100,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#ffebee",
+                    "color": "#c62828"
+                  }
+                }
+              ]
+            },
+            {
+              "headerName": "POTONGAN PREMI",
+              "children": [
+                {
+                  "headerName": "JUMLAH",
+                  "field": "pot_dynamic_3",
+                  "width": 100,
+                  "type": "numericColumn",
+                  "cellStyle": {
+                    "textAlign": "right",
+                    "backgroundColor": "#ffebee",
+                    "color": "#c62828"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "headerName": "PPH21",
+          "children": [
+            {
+              "headerName": "JUMLAH",
+              "field": "pot_pph21",
+              "width": 100,
+              "type": "numericColumn",
+              "cellStyle": {
+                "textAlign": "right",
+                "backgroundColor": "#fff3e0",
+                "color": "#e65100"
+              }
+            }
+          ]
+        },
+        {
+          "field": "total_potongan",
+          "headerName": "TOTAL POTONGAN",
+          "width": 120,
+          "type": "numericColumn",
+          "cellStyle": {
+            "textAlign": "right",
+            "backgroundColor": "#e1f5fe",
+            "color": "#0277bd",
+            "fontWeight": "bold"
+          },
+          "compute": {
+            "type": "sum",
+            "fields": [
+              "pot_bpjs_pekerja_total",
+              "pot_koreksi"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "rowData": [
+    {
+      "nik": "C0526",
+      "nama": "Test User 1",
+      "gaji_pokok": 2000000,
+      "total_tunjangan": 500000,
+      "total_premi": 1000000,
+      "pot_bpjs_pekerja_total": 200000,
+      "pot_spsi": 40000,
+      "pot_pph21": 140300,
+      "pot_koreksi": 0,
+      "pot_dynamic_1": 140300,
+      "pot_dynamic_2": 40000,
+      "jumlah_upah_kotor": 3500000,
+      "total_potongan": 380300,
+      "upah_bersih": 3119700
+    },
+    {
+      "nik": "C0680",
+      "nama": "Test User 2",
+      "gaji_pokok": 2000000,
+      "total_tunjangan": 500000,
+      "total_premi": 1000000,
+      "pot_bpjs_pekerja_total": 200000,
+      "pot_spsi": 40000,
+      "pot_pph21": 527590,
+      "pot_koreksi": 0,
+      "pot_dynamic_1": 527590,
+      "pot_dynamic_2": 40000,
+      "jumlah_upah_kotor": 3500000,
+      "total_potongan": 767590,
+      "upah_bersih": 2732410
+    }
+  ],
+  "metadata": {
+    "month": 10,
+    "year": 2025,
+    "gang_code": "C1H",
+    "description": "Debug package for POTONGAN LAINNYA rendering issue"
+  }
+}

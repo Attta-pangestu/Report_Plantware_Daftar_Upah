@@ -159,6 +159,7 @@ class SimplifiedHeaderService:
                             seen.add(h)
                     result = unique_headers[:7]
 
+                    Cache.instance().set(cache_key, result, ttl=3600)
                     return result
 
             # Fallback
@@ -173,9 +174,14 @@ class SimplifiedHeaderService:
         try:
             from database.services.database import Database
             from database.services.queries import Queries
+            from database.services.cache import Cache
             
-            # NO CACHE - Always query fresh data
-            print(f"[CACHE DISABLED] Querying fresh POTONGAN data for {gang_code}, {month}/{year}")
+            # Enhanced cache key
+            cache_key = f"dyn_potongan:{gang_code}:{year}-{str(month).zfill(2)}"
+            cached = Cache.instance().get(cache_key)
+            if cached is not None:
+                print(f"Cache hit for POTONGAN: {cache_key}")
+                return cached
 
             db = Database.instance()
             q = Queries()
@@ -235,6 +241,7 @@ class SimplifiedHeaderService:
                             seen.add(h)
                     result = unique_headers[:7]
 
+                    Cache.instance().set(cache_key, result, ttl=3600)
                     return result
 
             # Fallback
@@ -249,9 +256,14 @@ class SimplifiedHeaderService:
         try:
             from database.services.database import Database
             from database.services.queries import Queries
+            from database.services.cache import Cache
 
-            # NO CACHE - Always query fresh data
-            print(f"[CACHE DISABLED] Querying fresh POTONGAN PATTERN data for {gang_code}, {month}/{year}")
+            # Enhanced cache key for pattern-based potongan
+            cache_key = f"dyn_potongan_pattern:{gang_code}:{year}-{str(month).zfill(2)}"
+            cached = Cache.instance().get(cache_key)
+            if cached is not None:
+                print(f"Cache hit for POTONGAN pattern: {cache_key}")
+                return cached
 
             db = Database.instance()
             q = Queries()
@@ -304,6 +316,7 @@ class SimplifiedHeaderService:
                             seen.add(h)
                     result = unique_headers[:10]  # Allow more for potongan patterns
 
+                    Cache.instance().set(cache_key, result, ttl=3600)
                     return result
 
             # Fallback
@@ -480,8 +493,24 @@ class SimplifiedHeaderService:
                     ]
                 })
 
-        # Add static potongan columns first
-        potongan_children.extend([
+        # Dynamic POTONGAN PATTERN columns (for "Pot/potongan" patterns)
+        if dyn_potongan_pattern:
+            for i, pot_name in enumerate(dyn_potongan_pattern):
+                field_name = f"pot_pattern_{i+1}"
+                # Map known deduction names to existing fields
+                mapped_field = self._map_potongan_field(pot_name)
+                if mapped_field:
+                    field_name = mapped_field
+
+                potongan_children.append({
+                    "headerName": pot_name.upper(),
+                    "children": [
+                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+                    ]
+                })
+
+        # Add static potongan columns
+        static_potongan = [
             {"headerName": "CARUMAN ASTEK", "children": [
                 {"field": "pot_bpjs_pek", "headerName": "PEKERJA", "width": 90, "type": "numericColumn"},
                 {"field": "pot_bpjs_maj", "headerName": "MAJIKAN", "width": 90, "type": "numericColumn"},
@@ -503,36 +532,14 @@ class SimplifiedHeaderService:
             ]},
             {"headerName": "PPH21", "children": [
                 {"field": "pot_pph21", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
-            ]}
-        ])
+            ]},
+            {"headerName": "POTONGAN LAINNYA", "children": [
+                {"field": "pot_koreksi", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+            ]},
+            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"}
+        ]
 
-        # Dynamic POTONGAN PATTERN columns (for "Pot/potongan" patterns)
-        # These are items that start with "POTONGAN" but are not standard deductions
-        if dyn_potongan_pattern:
-            potongan_lainnya_children = []
-            for i, pot_name in enumerate(dyn_potongan_pattern):
-                field_name = f"pot_pattern_{i+1}"
-                # Map known deduction names to existing fields
-                mapped_field = self._map_potongan_field(pot_name)
-                if mapped_field:
-                    field_name = mapped_field
-
-                potongan_lainnya_children.append({
-                    "headerName": pot_name.upper(),
-                    "children": [
-                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
-                    ]
-                })
-
-            # Add POTONGAN LAINNYA group if we have any potongan pattern items
-            if potongan_lainnya_children:
-                potongan_children.append({
-                    "headerName": "POTONGAN LAINNYA",
-                    "children": potongan_lainnya_children
-                })
-
-        # Add TOTAL POTONGAN at the end
-        potongan_children.append({"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"})
+        potongan_children.extend(static_potongan)
 
         ringkasan_children = [
             {"field": "jumlah_upah_kotor", "headerName": "JUMLAH UPAH KOTOR", "width": 140, "type": "numericColumn"},

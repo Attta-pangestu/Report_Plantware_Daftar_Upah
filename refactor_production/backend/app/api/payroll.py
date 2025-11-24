@@ -1166,6 +1166,7 @@ async def compare_performance(
 @router.get("/report/real", response_model=List[PayrollRow])
 async def report_real_data(
     gang_code: Optional[str] = Query(None),
+    division: Optional[str] = Query(None),
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     skip: Optional[int] = Query(0, ge=0),
@@ -1175,7 +1176,7 @@ async def report_real_data(
     try:
         logger.info(f"payroll_report_real gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} test_mode={is_test_mode()}")
         cache = CacheService.instance()
-        cache_key = f"payroll_real:{gang_code}:{month}:{year}:{skip}:{limit}"
+        cache_key = f"payroll_real:{gang_code}:{division}:{month}:{year}:{skip}:{limit}"
         cached_result = cache.get(cache_key)
         if cached_result:
             logger.info(f"Cache hit for payroll data: {gang_code} ({len(cached_result)} records)")
@@ -1190,7 +1191,7 @@ async def report_real_data(
         for attempt in range(retries + 1):
             try:
                 rows = await asyncio.wait_for(
-                    svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit),
+                    svc.generate_rows(repo, gang_code=gang_code, division=division, month=month, year=year, skip=skip, limit=limit),
                     timeout=timeout_sec
                 )
                 break
@@ -1223,6 +1224,7 @@ async def report_real_data(
 @router.get("/report/simple", response_model=List[PayrollRow])
 async def report_simple_data(
     gang_code: Optional[str] = Query(None),
+    division: Optional[str] = Query(None),
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
     skip: Optional[int] = Query(0, ge=0),
@@ -1232,7 +1234,7 @@ async def report_simple_data(
     try:
         logger.info(f"payroll_report_simple gang_code={gang_code} month={month} year={year} skip={skip} limit={limit} test_mode={is_test_mode()}")
         cache = CacheService.instance()
-        cache_key = f"payroll_simple:{gang_code}:{month}:{year}:{skip}:{limit}"
+        cache_key = f"payroll_simple:{gang_code}:{division}:{month}:{year}:{skip}:{limit}"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -1244,7 +1246,7 @@ async def report_simple_data(
         for attempt in range(retries + 1):
             try:
                 rows = await asyncio.wait_for(
-                    svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=skip, limit=limit),
+                    svc.generate_rows(repo, gang_code=gang_code, division=division, month=month, year=year, skip=skip, limit=limit),
                     timeout=timeout_sec
                 )
                 break
@@ -1273,13 +1275,14 @@ async def report_simple_data(
 @router.get("/report/aggregate")
 async def report_aggregate(
     gang_code: Optional[str] = Query(None),
+    division: Optional[str] = Query(None),
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
 ):
     try:
         logger.info(f"payroll_report_aggregate gang_code={gang_code} month={month} year={year}")
         cache = CacheService.instance()
-        cache_key = f"payroll_aggregate:{gang_code}:{month}:{year}"
+        cache_key = f"payroll_aggregate:{gang_code}:{division}:{month}:{year}"
         cached = cache.get(cache_key)
         if cached:
             return cached
@@ -1305,7 +1308,7 @@ async def report_aggregate(
         }
         while True:
             rows = await asyncio.wait_for(
-                svc.generate_rows(repo, gang_code=gang_code, month=month, year=year, skip=offset, limit=page_size),
+                svc.generate_rows(repo, gang_code=gang_code, division=division, month=month, year=year, skip=offset, limit=page_size),
                 timeout=timeout_sec
             )
             if not rows:
@@ -1337,18 +1340,54 @@ async def report_aggregate(
 @router.get("/report/count")
 async def report_count(
     gang_code: Optional[str] = Query(None),
+    division: Optional[str] = Query(None),
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
 ):
     try:
         from database.services.database import Database
         db = Database.instance()
-        sql = """
-            SELECT COUNT(DISTINCT g.GangMember)
-            FROM HR_GANGLN g
-            WHERE g.GangCode = ? OR ? = 'ALL'
-        """
-        row = db.query_one(sql, (gang_code, str(gang_code).upper()))
+        gc = str(gang_code or '').strip().upper()
+        if gc == 'ALL':
+            # Count across all gangs; restrict to division if provided
+            division_prefix_map = {
+                'PG1A': ['A'],
+                'PG1B': ['B'],
+                'PG2A': ['C'],
+                'PG2B': ['D'],
+                'DME': ['E'],
+                'ARA': ['F'],
+                'ARB1': ['G'],
+                'ARB2': ['H'],
+                'INFRA': ['I'],
+                'AREC': ['J'],
+                'IJL': ['IJL'],
+                'STF-OFFICE': ['STF'],
+                'SECURITY': ['SEC']
+            }
+            if division and division in division_prefix_map:
+                prefixes = division_prefix_map.get(division, [])
+                conds = ' OR '.join(['UPPER(g.GangCode) LIKE UPPER(?)' for _ in prefixes])
+                sql = f"""
+                    SELECT COUNT(DISTINCT g.GangMember)
+                    FROM HR_GANGLN g
+                    WHERE {conds}
+                """
+                params = tuple([p + '%' for p in prefixes])
+                row = db.query_one(sql, params)
+            else:
+                sql = """
+                    SELECT COUNT(DISTINCT g.GangMember)
+                    FROM HR_GANGLN g
+                """
+                row = db.query_one(sql)
+        else:
+            sql = """
+                SELECT COUNT(DISTINCT g.GangMember)
+                FROM HR_GANGLN g
+                WHERE UPPER(g.GangCode) = UPPER(?)
+            """
+            row = db.query_one(sql, (gang_code,))
         count = int(row[0]) if row and row[0] is not None else 0
         return {"count": count}
     except Exception as e:

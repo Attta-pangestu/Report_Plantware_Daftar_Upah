@@ -86,14 +86,61 @@ class EmployeeRepositoryDB:
         cfg = self.db_config
         return f'DRIVER={{{cfg["driver"]}}};SERVER={cfg["server"]},{cfg["port"]};DATABASE={cfg["database_name"]};UID={cfg["username"]};PWD={cfg["password"]}'
 
-    def list(self, skip: int = 0, limit: int = 100, gang_code: Optional[str] = None, loc_code: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list(self, skip: int = 0, limit: int = 100, gang_code: Optional[str] = None, loc_code: Optional[str] = None, division: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get employees using the database service for connection pooling"""
         try:
-            print(f"[EmployeeRepo] Querying employees for gang: {gang_code}")
+            print(f"[EmployeeRepo] Querying employees for gang: {gang_code} division: {division}")
             print(f"[EmployeeRepo] Skip: {skip}, Limit: {limit}")
 
-            # Use database service with connection pooling
-            rows = self.db.query_all(self.query, (gang_code.strip().upper() if gang_code else None,))
+            # Resolve ALL selection with optional division filter
+            gc = (str(gang_code).strip().upper() if gang_code else None)
+            rows: List[Any] = []
+            if gc == 'ALL':
+                # When ALL, fetch employees across gangs; restrict to division prefixes if provided
+                # Division mapping consistent with GangService
+                division_prefix_map = {
+                    'PG1A': ['A'],
+                    'PG1B': ['B'],
+                    'PG2A': ['C'],
+                    'PG2B': ['D'],
+                    'DME': ['E'],
+                    'ARA': ['F'],
+                    'ARB1': ['G'],
+                    'ARB2': ['H'],
+                    'INFRA': ['I'],
+                    'AREC': ['J'],
+                    'IJL': ['IJL'],
+                    'STF-OFFICE': ['STF'],
+                    'SECURITY': ['SEC']
+                }
+                params: List[str] = []
+                where_clause = ''
+                if division and division in division_prefix_map:
+                    prefixes = division_prefix_map.get(division, [])
+                    conds = []
+                    for p in prefixes:
+                        conds.append('UPPER(g."GangCode") LIKE UPPER(?)')
+                        params.append(p + '%')
+                    where_clause = 'WHERE ' + ' OR '.join(conds)
+                else:
+                    where_clause = ''
+
+                sql_all = (
+                    'SELECT DISTINCT '
+                    'e."EmpCode" AS nik, '
+                    'e."EmpName" AS nama, '
+                    'CASE WHEN e."Gender" = 1 THEN \"L\" WHEN e."Gender" = 2 THEN \"P\" ELSE \"L\" END AS jenis_kelamin, '
+                    'e."LocCode" AS loc_code, '
+                    'g."GangCode" AS gang_code '
+                    'FROM "HR_EMPLOYEE" e '
+                    'JOIN "HR_GANGLN" g ON g."GangMember" = e."EmpCode" '
+                    f'{where_clause} '
+                    'ORDER BY e."EmpName"'
+                )
+                rows = self.db.query_all(sql_all, tuple(params))
+            else:
+                # Use parameterized query from file for specific gang
+                rows = self.db.query_all(self.query, (gc if gc else None,))
             print(f"[EmployeeRepo] Found {len(rows)} employee records")
 
             
@@ -106,7 +153,7 @@ class EmployeeRepositoryDB:
                     'nama': str(row[1]).strip() if row[1] else '',
                     'jenis_kelamin': str(row[2]).strip() if row[2] else 'L',
                     'loc_code': str(row[3]).strip() if row[3] else '',
-                    'gang_code': str(row[4]).strip() if row[4] else (gang_code or ''),
+                    'gang_code': str(row[4]).strip() if row[4] else (gc or ''),
                     'gaji_pokok': 0.0,
                     'phone': '-'
                 }

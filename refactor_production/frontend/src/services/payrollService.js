@@ -36,12 +36,13 @@ async function requestWithRetry(url, config, retries = 2, delayMs = 300, timeout
   throw lastErr
 }
 
-export async function fetchReportRows(token, { month, year, gang_code, fields, skip, limit, benchmark = false, monitor = false }) {
+export async function fetchReportRows(token, { month, year, gang_code, division, fields, skip, limit, benchmark = false, monitor = false }) {
   const params = {}
   const norm = normalizeMonthYear(month, year)
   if (norm.month) params.month = norm.month
   if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
+  if (division) params.division = division
   if (Array.isArray(fields) && fields.length > 0) params.fields = fields.join(',')
   if (typeof skip === 'number') params.skip = skip
   if (typeof limit === 'number') params.limit = limit
@@ -57,12 +58,13 @@ export async function fetchReportRows(token, { month, year, gang_code, fields, s
  * Optimized fetch function that uses the real data endpoint for best performance
  * Uses the same query as the reference engine - returns actual employee data
  */
-export async function fetchReportRowsSimple(token, { month, year, gang_code, skip = 0, limit = 50 }) {
+export async function fetchReportRowsSimple(token, { month, year, gang_code, division, skip = 0, limit = 50 }) {
   const params = {}
   const norm = normalizeMonthYear(month, year)
   if (norm.month) params.month = norm.month
   if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
+  if (division) params.division = division
   if (typeof skip === 'number') params.skip = skip
   if (typeof limit === 'number') params.limit = limit
 
@@ -86,12 +88,13 @@ export async function fetchReportRowsSimple(token, { month, year, gang_code, ski
   }
 }
 
-export async function fetchReportAggregate(token, { month, year, gang_code }) {
+export async function fetchReportAggregate(token, { month, year, gang_code, division }) {
   const params = {}
   const norm = normalizeMonthYear(month, year)
   if (norm.month) params.month = norm.month
   if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
+  if (division) params.division = division
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
   const key = `${token || 'guest'}:${gang_code || 'all'}:${year || 'curr'}:${month || 'curr'}`
@@ -110,12 +113,13 @@ export async function fetchReportAggregate(token, { month, year, gang_code }) {
   }
 }
 
-export async function fetchReportCount(token, { month, year, gang_code }) {
+export async function fetchReportCount(token, { month, year, gang_code, division }) {
   const params = {}
   const norm = normalizeMonthYear(month, year)
   if (norm.month) params.month = norm.month
   if (norm.year) params.year = norm.year
   if (gang_code) params.gang_code = gang_code
+  if (division) params.division = division
   const config = { params }
   if (token) config.headers = { Authorization: `Bearer ${token}` }
   const key = `${token || 'guest'}:${gang_code || 'all'}:${year || 'curr'}:${month || 'curr'}`
@@ -138,10 +142,10 @@ export async function fetchReportCount(token, { month, year, gang_code }) {
  * Smart batching for large field requests to prevent connection pool exhaustion
  * Splits requests with many fields into smaller batches of 15 fields each
  */
-export async function fetchReportRowsBatched(token, { month, year, gang_code, fields, skip, limit, benchmark = false, monitor = false }) {
+export async function fetchReportRowsBatched(token, { month, year, gang_code, division, fields, skip, limit, benchmark = false, monitor = false }) {
   // If no fields or small field count, use regular request
   if (!fields || fields.length <= 15) {
-    return await fetchReportRows(token, { month, year, gang_code, fields, skip, limit, benchmark, monitor })
+    return await fetchReportRows(token, { month, year, gang_code, division, fields, skip, limit, benchmark, monitor })
   }
 
   console.log(`[PayrollService] Using smart batching for ${fields.length} fields`)
@@ -166,6 +170,7 @@ export async function fetchReportRowsBatched(token, { month, year, gang_code, fi
         month,
         year,
         gang_code,
+        division,
         fields: batchFields,
         skip: 0,
         limit: 1000, // Get all rows for each batch

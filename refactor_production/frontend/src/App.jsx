@@ -334,6 +334,9 @@ function AppInner() {
           style={{ width: '100%', padding: 4 }}
         >
           <option value="">-- Select Gang --</option>
+          {division && (
+            <option value="ALL">-- All Gangs in Division --</option>
+          )}
           {gangs.map(g => (
             <option key={g} value={(g || '').trim()}>{(g || '').trim()}</option>
           ))}
@@ -395,7 +398,7 @@ function AppInner() {
           ]}
         />
       )}
-      {ready ? <Report token={token} user={user} month={month} year={year} gang_code={gang_code} onLoad={() => setApplyLoading(false)} /> : null}
+      {ready ? <Report token={token} user={user} month={month} year={year} gang_code={gang_code} division={division} onLoad={() => setApplyLoading(false)} /> : null}
     </>
   )
 }

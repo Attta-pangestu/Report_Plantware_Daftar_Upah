@@ -70,6 +70,14 @@ class PayrollRow(BaseModel):
     # Koreksi field from reference code
     premi_koreksi: float = 0.0
     pot_koreksi: float = 0.0
+    # Dynamic potongan fields
+    pot_dynamic_1: float = 0.0
+    pot_dynamic_2: float = 0.0
+    pot_dynamic_3: float = 0.0
+    pot_dynamic_4: float = 0.0
+    pot_dynamic_5: float = 0.0
+    pot_dynamic_6: float = 0.0
+    pot_dynamic_7: float = 0.0
     upah_bersih: float
     tidak_hadir_cth: int = 0
     tidak_hadir_alpa: int = 0
