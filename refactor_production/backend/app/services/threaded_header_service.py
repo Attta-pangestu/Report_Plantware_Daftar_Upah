@@ -237,6 +237,7 @@ class ThreadedHeaderService:
             'spsi', 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
             'tunjangan beras'
         }
+        allowed_tokens = self._allowed_premi_keywords(table_structure)
         filtered = []
         for h in dynamic_premi_headers:
             if not h:
@@ -248,6 +249,8 @@ class ThreadedHeaderService:
             if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
                 continue
             if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                continue
+            if not any(tok in hu for tok in allowed_tokens):
                 continue
             filtered.append(h)
         dynamic_premi_headers = filtered

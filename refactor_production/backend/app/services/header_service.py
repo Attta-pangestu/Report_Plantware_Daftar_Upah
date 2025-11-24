@@ -153,6 +153,7 @@ class HeaderService:
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
                 'tunjangan beras'
             }
+            allowed_tokens = self._allowed_premi_keywords()
 
             # Handle case where db.query_all returns None
             if rows is None:
@@ -171,6 +172,8 @@ class HeaderService:
                 if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
                     continue
                 if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                    continue
+                if not any(tok in hu for tok in allowed_tokens):
                     continue
                 headers.append(h)
 
@@ -240,6 +243,7 @@ class HeaderService:
             'BRONDOL',
             'TUNJANGAN BERAS'
         }
+        allowed_tokens = self._allowed_premi_keywords()
 
         headers = []
         for r in rows:
@@ -254,6 +258,8 @@ class HeaderService:
             if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
                 continue
             if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                continue
+            if not any(tok in hu for tok in allowed_tokens):
                 continue
             headers.append(h)
 

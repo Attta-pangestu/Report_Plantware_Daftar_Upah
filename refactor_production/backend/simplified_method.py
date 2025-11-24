@@ -137,6 +137,7 @@ class SimplifiedHeaderService:
                         'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
                         'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21'
                     }
+                    allowed_tokens = self._allowed_premi_keywords()
 
                     headers = []
                     for r in rows:
@@ -150,6 +151,8 @@ class SimplifiedHeaderService:
                         if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
                             continue
                         if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                            continue
+                        if not any(tok in hu for tok in allowed_tokens):
                             continue
                         headers.append(h)
 
