@@ -105,19 +105,19 @@ class SimplifiedHeaderService:
             return self._get_error_response(str(e))
 
     def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
-        """Compute dynamic PREMI headers based on database transactions"""
+        """Compute dynamic PREMI headers based on database transactions with optimized filtering"""
         try:
             from database.services.database import Database
             from database.services.queries import Queries
-            
+
             # NO CACHE - Always query fresh data
             print(f"[CACHE DISABLED] Querying fresh PREMI data for {gang_code}, {month}/{year}")
 
             db = Database.instance()
             q = Queries()
-            
-            # Use optimized query for PREMI
-            sql_entry = q.get('premi', 'dynamic_headers_by_gang_month_optimized')
+
+            # Use new filtered query for PREMI (exclude POT%, PPH21, SPSI, BERAS, JABATAN, MASA)
+            sql_entry = q.get('premi', 'dynamic_premi_headers_filtered')
             if sql_entry and 'sql' in sql_entry:
                 start_date = f"{year}-{str(month).zfill(2)}-01"
                 if month == 12:
@@ -126,30 +126,15 @@ class SimplifiedHeaderService:
                     end_date = f"{year}-{str(month+1).zfill(2)}-01"
 
                 rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
-                
-                if rows is not None:
-                    excluded_lower = {
-                        'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
-                        'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21'
-                    }
-                    allowed_tokens = self._allowed_premi_keywords()
 
+                if rows is not None:
                     headers = []
                     for r in rows:
                         if not r or not r[0]:
                             continue
                         h = str(r[0]).strip()
-                        hu = h.upper()
-                        hl = h.lower()
-                        if hl in excluded_lower:
-                            continue
-                        if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
-                            continue
-                        if any(x in hu for x in ['BRONDOL', 'PRUNING']):
-                            continue
-                        if not any(tok in hu for tok in allowed_tokens):
-                            continue
-                        headers.append(h)
+                        if h:  # Only add non-empty headers
+                            headers.append(h)
 
                     seen = set()
                     unique_headers = []
@@ -157,13 +142,14 @@ class SimplifiedHeaderService:
                         if h not in seen:
                             unique_headers.append(h)
                             seen.add(h)
-                    result = unique_headers[:7]
+                    result = unique_headers[:7]  # Limit to first 7 items
 
+                    print(f"PREMI: Found {len(unique_headers)} headers, returning {len(result)}")
                     return result
 
             # Fallback
             return []
-            
+
         except Exception as e:
             print(f"Error computing PREMI headers: {e}")
             return []

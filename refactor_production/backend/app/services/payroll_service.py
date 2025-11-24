@@ -315,35 +315,22 @@ class PayrollService:
                 'pupuk': self._premi_map(db, emp_codes, s, e, '%PUPUK%'),
             }
 
-            # Dynamic premi headers (exclude-only, use optimized query to align with columns)
+            # Dynamic premi headers (use filtered query to align with columns)
             try:
                 from database.services.queries import Queries
-                q = Queries().get('premi', 'dynamic_headers_by_gang_month_optimized')
+                q = Queries().get('premi', 'dynamic_premi_headers_filtered')
                 dyn_headers: List[str] = []
                 if q and 'sql' in q and gang_code:
                     start_date = f"{year}-{str(month).zfill(2)}-01"
                     end_date = f"{year+1}-01-01" if int(month) == 12 else f"{year}-{str(int(month)+1).zfill(2)}-01"
                     rows_dyn = db.query_all(q['sql'], [gang_code, start_date, end_date])
-                    excluded_lower = {
-                        'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
-                        'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21', 'spsi',
-                        'koreksi panen', 'potongan koreksi', 'potongan koreksi panen', 'tunjangan beras'
-                    }
+
                     for r in rows_dyn or []:
                         if not r or r[0] is None:
                             continue
                         htxt = str(r[0]).strip()
-                        hu = htxt.upper()
-                        hl = htxt.lower()
-                        if not htxt:
-                            continue
-                        if hl in excluded_lower:
-                            continue
-                        if any(x in hu for x in ['POTONGAN','SPSI','PPH']):
-                            continue
-                        if any(x in hu for x in ['BRONDOL','PRUNING']):
-                            continue
-                        dyn_headers.append(htxt)
+                        if htxt:  # Only add non-empty headers
+                            dyn_headers.append(htxt)
                     # Keep up to 7 dynamic items
                     dyn_headers = dyn_headers[:7]
                 else:
