@@ -25,6 +25,24 @@ class HeaderService:
             print(f"ERROR: Failed to load header structure: {e}")
             raise Exception(f"Header structure file not found or invalid: {header_file}")
 
+    def _allowed_premi_keywords(self) -> set:
+        try:
+            table_structure = self.header_structure.get('table_structure', {})
+            hierarchy = table_structure.get('hierarchy', {})
+            level2 = hierarchy.get('level_2', {}).get('columns', [])
+            tokens = set()
+            for c in level2:
+                if (c.get('parent') or '').strip().lower() == 'premi':
+                    t = (c.get('text') or '').strip().upper()
+                    t = t.replace('PREMI ', '')
+                    for w in t.split():
+                        if w and w not in {'PREMI'}:
+                            tokens.add(w)
+            base = {'PANEN','CUCI','UNIT','BLOWER','TABUR','KERANI','MANDOR','HARVEST'}
+            return tokens | base
+        except Exception:
+            return {'PANEN','CUCI','UNIT','BLOWER','TABUR','ANGKUT','TBS','HARVEST','INCENTIVE','PUPUK','KERANI','MANDOR'}
+
     def _get_fallback_structure(self) -> Dict[str, Any]:
         """Fallback structure if JSON file cannot be loaded"""
         return {
@@ -68,7 +86,8 @@ class HeaderService:
             table_structure = self.header_structure.get('table_structure', {})
 
             tq0 = time.perf_counter()
-            dyn = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_premi = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_potongan = self._compute_dynamic_potongan_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
             tq1 = time.perf_counter()
 
             hierarchy = table_structure.get('hierarchy', {})
@@ -91,7 +110,8 @@ class HeaderService:
                     "generated_headers": headers,
                     "total_columns": len(headers.get('level_3', {}).get('columns', [])),
                     "data_source": "real_database",
-                    "dynamic_docdesc": dyn
+                    "dynamic_docdesc_premi": dyn_premi,
+                    "dynamic_docdesc_potongan": dyn_potongan
                 }
             }
 
@@ -99,6 +119,80 @@ class HeaderService:
             print(f"Error generating dynamic headers: {e}")
             return self._get_error_response(str(e))
 
+    def _compute_dynamic_potongan_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """
+        Get dynamic potongan headers based on actual data in database
+        """
+        start = time.perf_counter()
+        
+        # Enhanced cache key with potongan identification
+        cache_key = f"dyn_pot_headers:{gang_code}:{year}-{str(month).zfill(2)}"
+        cached = Cache.instance().get(cache_key)
+        if cached is not None:
+            print(f"Cache hit for {cache_key}")
+            return cached
+
+        db = Database.instance()
+        q = Queries()
+        
+        # Try potongan query
+        sql_entry = q.get('potongan', 'potongan_headers_by_month')
+        if sql_entry and 'sql' in sql_entry:
+            start_date = f"{year}-{str(month).zfill(2)}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+            # Execute potongan query
+            rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+            mid = time.perf_counter()
+
+            # Handle case where db.query_all returns None
+            if rows is None:
+                rows = []
+
+            # Extract potongan headers
+            headers = []
+            for r in rows:
+                if not r or not r[0]:
+                    continue
+                h = str(r[0]).strip()
+                hu = h.upper()
+                # Only include items that are clearly potongan
+                # Include: PPH21, POTONGAN (including variants like POTONGAN BRONDOL, POTONGAN PREMI, etc), SPPI, etc
+                # Exclude: ASTEK, PREMI (unless it's POTONGAN PREMI), BPJS, TUNJANGAN, INSENTIF (unless it's potongan)
+                if (any(keyword in hu for keyword in ['POTONGAN', 'POT', 'DEDUCT', 'CUTI', 'DENDA', 'IZIN', 'PPH21']) or
+                    'POTONGAN SPSI' == hu):
+                    if ('ASTEK' not in hu and 
+                        'BPJS' not in hu and 
+                        ('TUNJANGAN' not in hu or 'POTONGAN' in hu) and
+                        ('INSENTIF' not in hu or 'POTONGAN' in hu)):
+                        headers.append(h)
+
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_headers = []
+            for h in headers:
+                if h not in seen:
+                    seen.add(h)
+                    unique_headers.append(h)
+
+            # Limit to 7 items for consistency
+            result = unique_headers[:7]
+
+            # Extended cache TTL for better performance (1 hour)
+            Cache.instance().set(cache_key, result, ttl=3600)
+
+            query_time = (mid - start) * 1000
+            total_time = (time.perf_counter() - start) * 1000
+            print(f"Potongan query time: {query_time:.2f}ms, Total time: {total_time:.2f}ms")
+
+            return result
+
+        # Fallback if query not available
+        return []
+        
     def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
         """
         Optimized version with better caching and query performance.
@@ -129,24 +223,35 @@ class HeaderService:
             rows = db.query_all(sql_entry_opt['sql'], [gang_code, start_date, end_date])
             mid = time.perf_counter()
 
-            # Pre-defined excluded items for better performance
             excluded_lower = {
                 'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
                 'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21',
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
-                'tunjangan premi', 'tunjangan beras'
+                'tunjangan beras'
             }
+            allowed_tokens = self._allowed_premi_keywords()
 
             # Handle case where db.query_all returns None
             if rows is None:
                 rows = []
 
-            # Optimized filtering with list comprehension
-            headers = [
-                str(r[0]).strip()
-                for r in rows
-                if r and r[0] and str(r[0]).strip().lower() not in excluded_lower
-            ]
+            # Optimized filtering: exclude unwanted and require allowed keywords
+            headers = []
+            for r in rows:
+                if not r or not r[0]:
+                    continue
+                h = str(r[0]).strip()
+                hu = h.upper()
+                hl = h.lower()
+                if hl in excluded_lower:
+                    continue
+                if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                    continue
+                if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                    continue
+                if not any(tok in hu for tok in allowed_tokens):
+                    continue
+                headers.append(h)
 
             # Remove duplicates while preserving order
             seen = set()
@@ -212,19 +317,27 @@ class HeaderService:
             'TUNJANGAN MASA KERJA',
             'PRUNING',
             'BRONDOL',
-            'TUNJANGAN PREMI',
-            'TUNJANGAN BERAS',
-            'INCENTIVE PANEN',
-            'INCENTIVE'
+            'TUNJANGAN BERAS'
         }
+        allowed_tokens = self._allowed_premi_keywords()
 
         headers = []
         for r in rows:
             if not r:
                 continue
             h = str(r[0]).strip()
-            if h and h.upper() not in excluded:
-                headers.append(h)
+            if not h:
+                continue
+            hu = h.upper()
+            if hu in excluded:
+                continue
+            if any(x in hu for x in ['POTONGAN', 'SPSI', 'PPH']):
+                continue
+            if any(x in hu for x in ['BRONDOL', 'PRUNING']):
+                continue
+            if not any(tok in hu for tok in allowed_tokens):
+                continue
+            headers.append(h)
 
         seen = set()
         unique = []
@@ -515,7 +628,7 @@ class HeaderService:
                             'width': self._get_column_width(field),
                             'type': self._get_column_type(field),
                             'cellStyle': self._get_cell_style(field),
-                            'pinned': 'left' if field in ['nik','nama','phone'] else None
+                            'pinned': 'left' if field in ['nik','nama'] else None
                         }
                         if compute:
                             col['compute'] = compute
@@ -589,68 +702,22 @@ class HeaderService:
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                     continue
                 else:
-                    c1_text = (c1.get('text') or '').strip().upper()
-                    c1_id = (c1.get('id') or '').strip().lower()
-                    if c1_text == 'PREMI' or c1_id == 'premi':
-                        dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
-                        group2_defs = []
-                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
-                            group2_defs.append({
-                                'headerName': t,
-                                'children': [{
-                                    'headerName': 'JUMLAH',
-                                    'field': f,
-                                    'width': self._get_column_width(f),
-                                    'type': self._get_column_type(f),
-                                    'cellStyle': self._get_cell_style(f)
-                                }]
+                    group2_defs = []
+                    for c2 in level2_cols:
+                        c2_id = c2.get('id')
+                        level3_cols = l3_by_parent.get(c2_id, [])
+                        leaf_defs = []
+                        for c3 in level3_cols:
+                            field = self._map_to_data_field(c3.get('id'))
+                            leaf_defs.append({
+                                'field': field,
+                                'headerName': c3.get('text'),
+                                'width': self._get_column_width(field),
+                                'type': self._get_column_type(field),
+                                'cellStyle': self._get_cell_style(field)
                             })
-                        for i, name in enumerate(dyn[:7]):
-                            nm = (name if isinstance(name, str) else '').strip()
-                            up = nm.upper()
-                            if 'POTONGAN' in up:
-                                pf = f"pot_dynamic_{i+1}"
-                                pot_dynamic_children.append({
-                                    'headerName': (nm or f"POTONGAN {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': pf,
-                                        'width': self._get_column_width(pf),
-                                        'type': self._get_column_type(pf),
-                                        'cellStyle': self._get_cell_style(pf)
-                                    }]
-                                })
-                            else:
-                                field = f"premi_dynamic_{i+1}"
-                                group2_defs.append({
-                                    'headerName': (nm or f"PREMI {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': field,
-                                        'width': self._get_column_width(field),
-                                        'type': self._get_column_type(field),
-                                        'cellStyle': self._get_cell_style(field)
-                                    }]
-                                })
-                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
-                        continue
-                    else:
-                        group2_defs = []
-                        for c2 in level2_cols:
-                            c2_id = c2.get('id')
-                            level3_cols = l3_by_parent.get(c2_id, [])
-                            leaf_defs = []
-                            for c3 in level3_cols:
-                                field = self._map_to_data_field(c3.get('id'))
-                                leaf_defs.append({
-                                    'field': field,
-                                    'headerName': c3.get('text'),
-                                    'width': self._get_column_width(field),
-                                    'type': self._get_column_type(field),
-                                    'cellStyle': self._get_cell_style(field)
-                                })
-                            group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
-                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                        group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                    col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
             group_idx = None
             for idx, c in enumerate(col_defs):
@@ -677,11 +744,16 @@ class HeaderService:
                 ]
 
             try:
-                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                dyn_premi = headers.get('table_structure', {}).get('dynamic_docdesc_premi', [])
+                dyn_potongan = headers.get('table_structure', {}).get('dynamic_docdesc_potongan', [])
+                
                 # Add test data for both premi and potongan if no dynamic data available
-                if not dyn:
-                    dyn = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'PREMI TRANSPORT', 'POTONGAN SIM PANJANG']
+                if not dyn_premi:
+                    dyn_premi = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'PREMI TRANSPORT']
+                if not dyn_potongan:
+                    dyn_potongan = ['POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'POTONGAN SIM PANJANG']
 
+                # Process PREMI group
                 for c in col_defs:
                     if (c.get('headerName') or '').strip().upper() == 'PREMI':
                         new_children = []
@@ -697,43 +769,91 @@ class HeaderService:
                                 }]
                             })
 
-                        # Process all dynamic items, not just first 7
-                        for i, name in enumerate(dyn):
+                        # Process dynamic premi items
+                        for i, name in enumerate(dyn_premi[:7], 1):  # Limit to 7 items
                             nm = (name if isinstance(name, str) else '').strip()
-                            up = nm.upper()
-                            if any(keyword in up for keyword in ['POTONGAN', 'POT', 'DEDUCTION', 'CUTI', 'DENDA', 'SIM']):
-                                pf = f"pot_dynamic_{i+1}"
-                                pot_dynamic_children.append({
-                                    'headerName': (nm or f"POTONGAN {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': pf,
-                                        'width': self._get_column_width(pf),
-                                        'type': self._get_column_type(pf),
-                                        'cellStyle': {
-                                            'textAlign': 'right',
-                                            'backgroundColor': '#ffebee',  # Light red background for deductions
-                                            'color': '#c62828'  # Dark red text
-                                        }
-                                    }]
-                                })
-                            else:
-                                field = f"premi_dynamic_{i+1}"
-                                new_children.append({
-                                    'headerName': (nm or f"PREMI {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': field,
-                                        'width': self._get_column_width(field),
-                                        'type': self._get_column_type(field),
-                                        'cellStyle': {
-                                            'textAlign': 'right',
-                                            'backgroundColor': '#e8f5e8',  # Light green background for income
-                                            'color': '#2e7d32'  # Dark green text
-                                        }
-                                    }]
-                                })
+                            field = f"premi_dynamic_{i}"
+                            new_children.append({
+                                'headerName': (nm or f"PREMI {i}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': {
+                                        'textAlign': 'right',
+                                        'backgroundColor': '#e8f5e8',  # Light green background for income
+                                        'color': '#2e7d32'  # Dark green text
+                                    }
+                                }]
+                            })
                         c['children'] = new_children
+                        break
+
+                # Process POTONGAN LAINNYA group with dynamic potongan data
+                for i, name in enumerate(dyn_potongan[:7], 1):  # Limit to 7 items
+                    nm = (name if isinstance(name, str) else '').strip()
+                    pf = f"pot_dynamic_{i}"
+                    pot_dynamic_children.append({
+                        'headerName': (nm or f"POTONGAN {i}"),
+                        'children': [{
+                            'headerName': 'JUMLAH',
+                            'field': pf,
+                            'width': self._get_column_width(pf),
+                            'type': self._get_column_type(pf),
+                            'cellStyle': {
+                                'textAlign': 'right',
+                                'backgroundColor': '#ffebee',  # Light red background for deductions
+                                'color': '#c62828'  # Dark red text
+                            }
+                        }]
+                    })
+
+            # Add POTONGAN LAINNYA group if we have dynamic potongan data
+            if pot_dynamic_children:
+                potongan_lainnya_group = {
+                    'headerName': 'POTONGAN LAINNYA',
+                    'children': pot_dynamic_children,
+                    'cellStyle': {
+                        'backgroundColor': '#ffcdd2',  # Header background for deduction group
+                        'color': '#b71c1c',
+                        'fontWeight': 'bold'
+                    }
+                }
+                
+                # Find POTONGAN group and add POTONGAN LAINNYA
+                for idx, c in enumerate(col_defs):
+                    if (c.get('headerName') or '').strip().upper() == 'POTONGAN':
+                        if isinstance(c.get('children'), list):
+                            # Insert before TOTAL POTONGAN
+                            children = c.get('children', [])
+                            # Find the position of TOTAL POTONGAN
+                            total_idx = None
+                            for child_idx, child in enumerate(children):
+                                if isinstance(child, dict) and 'TOTAL POTONGAN' in str(child.get('headerName', '')).upper():
+                                    total_idx = child_idx
+                                    break
+                            
+                            if total_idx is not None:
+                                children.insert(total_idx, potongan_lainnya_group)
+                            else:
+                                # Add to the end
+                                children.append(potongan_lainnya_group)
+                            
+                            # Update total_potongan compute to include dynamic fields
+                            for child in children:
+                                if isinstance(child, dict) and child.get('field') == 'total_potongan':
+                                    compute = child.get('compute', {})
+                                    fields = compute.get('fields', [])
+                                    if isinstance(fields, list):
+                                        # Add pot_dynamic fields to the computation
+                                        for i in range(1, len(pot_dynamic_children) + 1):
+                                            field_name = f"pot_dynamic_{i}"
+                                            if field_name not in fields:
+                                                fields.append(field_name)
+                                        compute['fields'] = fields
+                                        child['compute'] = compute
+                                    break
                         break
             except Exception:
                 pass
@@ -1150,36 +1270,30 @@ class HeaderService:
             rest = []
             for c in filtered_col_defs:
                 f = c.get('field')
-                if f in ['nik', 'nama', 'phone']:
+                if f in ['nik', 'nama']:
                     lead.append(c)
                 else:
                     rest.append(c)
             lead_sorted = []
             nik_col = next((c for c in lead if c.get('field') == 'nik'), None)
             nama_col = next((c for c in lead if c.get('field') == 'nama'), None)
-            phone_col = next((c for c in lead if c.get('field') == 'phone'), None)
             if nik_col:
                 lead_sorted.append(nik_col)
             if nama_col:
                 lead_sorted.append(nama_col)
-            if phone_col:
-                lead_sorted.append(phone_col)
             # Ensure NIK and PHONE exist
             if not nik_col:
                 lead_sorted.insert(0, {
                     'field': 'nik', 'headerName': 'NIK', 'width': self._get_column_width('nik'),
                     'type': self._get_column_type('nik'), 'cellStyle': self._get_cell_style('nik'), 'pinned': 'left'
                 })
-            if not phone_col:
-                lead_sorted.append({
-                    'field': 'phone', 'headerName': 'PHONE', 'width': self._get_column_width('phone'),
-                    'type': self._get_column_type('phone'), 'cellStyle': self._get_cell_style('phone'), 'pinned': 'left'
-                })
             def _order_idx(c):
                 h = str((c.get('headerName') or '')).strip().upper()
                 f = str((c.get('field') or '')).strip().lower()
+                if h == 'ABSENSI':
+                    return 5
                 if f == 'upah_dasar':
-                    return 10
+                    return 20
                 if f == 'hari_kerja':
                     return 20
                 if f == 'upah_pokok':
@@ -1203,38 +1317,6 @@ class HeaderService:
             final_defs = lead_sorted + rest_sorted
             if not final_defs:
                 return self._get_fallback_column_defs()
-            try:
-                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
-                for c in final_defs:
-                    if (c.get('headerName') or '').strip().upper() == 'PREMI':
-                        new_children = []
-                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
-                            new_children.append({
-                                'headerName': t,
-                                'children': [{
-                                    'headerName': 'JUMLAH',
-                                    'field': f,
-                                    'width': self._get_column_width(f),
-                                    'type': self._get_column_type(f),
-                                    'cellStyle': self._get_cell_style(f)
-                                }]
-                            })
-                        for i, name in enumerate(dyn[:7]):
-                            field = f"premi_dynamic_{i+1}"
-                            new_children.append({
-                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
-                                'children': [{
-                                    'headerName': 'JUMLAH',
-                                    'field': field,
-                                    'width': self._get_column_width(field),
-                                    'type': self._get_column_type(field),
-                                    'cellStyle': self._get_cell_style(field)
-                                }]
-                            })
-                        c['children'] = new_children
-                        break
-            except Exception:
-                pass
             return final_defs
 
         except Exception as e:
@@ -1285,9 +1367,25 @@ class HeaderService:
     def _get_fallback_hierarchical_defs(self) -> List[Dict[str, Any]]:
         identitas_children = [
             {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
-            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
-            {"field": "phone", "headerName": "PHONE", "width": 120, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
+            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
+
+        absensi_children = [
+            {"headerName": "KEHADIRAN", "children": [
+                {"field": "hari_kerja", "headerName": "H", "width": 80, "type": "numericColumn"},
+                {"field": "jumlah_hk", "headerName": "JML HK", "width": 80, "type": "numericColumn"}
+            ]},
+            {"headerName": "KETIDAKHADIRAN", "children": [
+                {"field": "cuti_tahunan_hari", "headerName": "TAHUNAN (H)", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT/HAID (H)", "width": 110, "type": "numericColumn"},
+                {"field": "cuti_minggu_hari", "headerName": "MINGGU (H)", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_nasional_hari", "headerName": "NASIONAL (H)", "width": 100, "type": "numericColumn"},
+                {"field": "cuti_izin_hari", "headerName": "IZIN (H)", "width": 90, "type": "numericColumn"},
+                {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
+                {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
+            ]}
+        ]
+
         tunjangan_children = [
             {"headerName": "BERAS", "children": [
                 {"field": "beras_rate", "headerName": "RATE", "width": 100, "type": "numericColumn"},
@@ -1306,18 +1404,48 @@ class HeaderService:
                 {"field": "lembur_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
             ]}
         ]
+
         premi_children = [
             {"headerName": "BRONDOL", "children": [{"field": "premi_brondol", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]},
             {"headerName": "PRUNING", "children": [{"field": "premi_pruning", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]}
         ]
+
+        potongan_children = [
+            {"headerName": "CARUMAN ASTEK", "children": [
+                {"field": "pot_bpjs_pek", "headerName": "PEKERJA", "width": 90, "type": "numericColumn"},
+                {"field": "pot_bpjs_maj", "headerName": "MAJIKAN", "width": 90, "type": "numericColumn"},
+                {"field": "pot_bpjs_jumlah", "headerName": "JUMLAH", "width": 90, "type": "numericColumn"}
+            ]},
+            {"headerName": "POTONGAN BPJS", "children": [
+                {"headerName": "KESEHATAN", "children": [
+                    {"field": "pot_bpjs_kesehatan_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
+                    {"field": "pot_bpjs_kesehatan_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
+                ]},
+                {"headerName": "PENSIUN", "children": [
+                    {"field": "pot_bpjs_pensiun_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
+                    {"field": "pot_bpjs_pensiun_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
+                ]},
+                {"field": "pot_bpjs_pekerja_total", "headerName": "TOTAL", "width": 110, "type": "numericColumn"}
+            ]},
+            {"headerName": "IURAN SPSI", "children": [
+                {"field": "pot_spsi", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "PPH21", "children": [
+                {"field": "pot_pph21", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"}
+        ]
+
         ringkasan_children = [
             {"field": "jumlah_upah_kotor", "headerName": "JUMLAH UPAH KOTOR", "width": 140, "type": "numericColumn"},
-            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"},
             {"field": "upah_bersih", "headerName": "UPAH BERSIH", "width": 120, "type": "numericColumn"}
         ]
+
         return [
             {"headerName": "IDENTITAS", "children": identitas_children},
+            {"headerName": "ABSENSI", "children": absensi_children},
             {"headerName": "TUNJANGAN", "children": tunjangan_children},
             {"headerName": "PREMI", "children": premi_children},
+            {"headerName": "POTONGAN", "children": potongan_children},
             {"headerName": "RINGKASAN", "children": ringkasan_children}
         ]

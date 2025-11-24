@@ -86,7 +86,8 @@ class HeaderService:
             table_structure = self.header_structure.get('table_structure', {})
 
             tq0 = time.perf_counter()
-            dyn = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_premi = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_potongan = self._compute_dynamic_potongan_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
             tq1 = time.perf_counter()
 
             hierarchy = table_structure.get('hierarchy', {})
@@ -109,7 +110,8 @@ class HeaderService:
                     "generated_headers": headers,
                     "total_columns": len(headers.get('level_3', {}).get('columns', [])),
                     "data_source": "real_database",
-                    "dynamic_docdesc": dyn
+                    "dynamic_docdesc_premi": dyn_premi,
+                    "dynamic_docdesc_potongan": dyn_potongan
                 }
             }
 
@@ -117,6 +119,80 @@ class HeaderService:
             print(f"Error generating dynamic headers: {e}")
             return self._get_error_response(str(e))
 
+    def _compute_dynamic_potongan_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """
+        Get dynamic potongan headers based on actual data in database
+        """
+        start = time.perf_counter()
+        
+        # Enhanced cache key with potongan identification
+        cache_key = f"dyn_pot_headers:{gang_code}:{year}-{str(month).zfill(2)}"
+        cached = Cache.instance().get(cache_key)
+        if cached is not None:
+            print(f"Cache hit for {cache_key}")
+            return cached
+
+        db = Database.instance()
+        q = Queries()
+        
+        # Try potongan query
+        sql_entry = q.get('potongan', 'potongan_headers_by_month')
+        if sql_entry and 'sql' in sql_entry:
+            start_date = f"{year}-{str(month).zfill(2)}-01"
+            if month == 12:
+                end_date = f"{year+1}-01-01"
+            else:
+                end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+            # Execute potongan query
+            rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+            mid = time.perf_counter()
+
+            # Handle case where db.query_all returns None
+            if rows is None:
+                rows = []
+
+            # Extract potongan headers
+            headers = []
+            for r in rows:
+                if not r or not r[0]:
+                    continue
+                h = str(r[0]).strip()
+                hu = h.upper()
+                # Only include items that are clearly potongan
+                # Include: PPH21, POTONGAN (including variants like POTONGAN BRONDOL, POTONGAN PREMI, etc), SPPI, etc
+                # Exclude: ASTEK, PREMI (unless it's POTONGAN PREMI), BPJS, TUNJANGAN, INSENTIF (unless it's potongan)
+                if (any(keyword in hu for keyword in ['POTONGAN', 'POT', 'DEDUCT', 'CUTI', 'DENDA', 'IZIN', 'PPH21']) or
+                    'POTONGAN SPSI' == hu):
+                    if ('ASTEK' not in hu and 
+                        'BPJS' not in hu and 
+                        ('TUNJANGAN' not in hu or 'POTONGAN' in hu) and
+                        ('INSENTIF' not in hu or 'POTONGAN' in hu)):
+                        headers.append(h)
+
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_headers = []
+            for h in headers:
+                if h not in seen:
+                    seen.add(h)
+                    unique_headers.append(h)
+
+            # Limit to 7 items for consistency
+            result = unique_headers[:7]
+
+            # Extended cache TTL for better performance (1 hour)
+            Cache.instance().set(cache_key, result, ttl=3600)
+
+            query_time = (mid - start) * 1000
+            total_time = (time.perf_counter() - start) * 1000
+            print(f"Potongan query time: {query_time:.2f}ms, Total time: {total_time:.2f}ms")
+
+            return result
+
+        # Fallback if query not available
+        return []
+        
     def _compute_dynamic_premi_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
         """
         Optimized version with better caching and query performance.
@@ -668,11 +744,16 @@ class HeaderService:
                 ]
 
             try:
-                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                dyn_premi = headers.get('table_structure', {}).get('dynamic_docdesc_premi', [])
+                dyn_potongan = headers.get('table_structure', {}).get('dynamic_docdesc_potongan', [])
+                
                 # Add test data for both premi and potongan if no dynamic data available
-                if not dyn:
-                    dyn = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'PREMI TRANSPORT', 'POTONGAN SIM PANJANG']
+                if not dyn_premi:
+                    dyn_premi = ['PREMI BONUS', 'PREMI INSENTIF', 'PREMI LEBUR KHUSUS', 'PREMI TRANSPORT']
+                if not dyn_potongan:
+                    dyn_potongan = ['POTONGAN KETERLAMBATAN', 'POTONGAN DENDA', 'POTONGAN SIM PANJANG']
 
+                # Process PREMI group
                 for c in col_defs:
                     if (c.get('headerName') or '').strip().upper() == 'PREMI':
                         new_children = []
@@ -688,46 +769,94 @@ class HeaderService:
                                 }]
                             })
 
-                        # Process all dynamic items, not just first 7
-                        for i, name in enumerate(dyn):
+                        # Process dynamic premi items
+                        for i, name in enumerate(dyn_premi[:7], 1):  # Limit to 7 items
                             nm = (name if isinstance(name, str) else '').strip()
-                            up = nm.upper()
-                            if any(keyword in up for keyword in ['POTONGAN', 'POT', 'DEDUCTION', 'CUTI', 'DENDA', 'SIM']):
-                                pf = f"pot_dynamic_{i+1}"
-                                pot_dynamic_children.append({
-                                    'headerName': (nm or f"POTONGAN {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': pf,
-                                        'width': self._get_column_width(pf),
-                                        'type': self._get_column_type(pf),
-                                        'cellStyle': {
-                                            'textAlign': 'right',
-                                            'backgroundColor': '#ffebee',  # Light red background for deductions
-                                            'color': '#c62828'  # Dark red text
-                                        }
-                                    }]
-                                })
-                            else:
-                                field = f"premi_dynamic_{i+1}"
-                                new_children.append({
-                                    'headerName': (nm or f"PREMI {i+1}"),
-                                    'children': [{
-                                        'headerName': 'JUMLAH',
-                                        'field': field,
-                                        'width': self._get_column_width(field),
-                                        'type': self._get_column_type(field),
-                                        'cellStyle': {
-                                            'textAlign': 'right',
-                                            'backgroundColor': '#e8f5e8',  # Light green background for income
-                                            'color': '#2e7d32'  # Dark green text
-                                        }
-                                    }]
-                                })
+                            field = f"premi_dynamic_{i}"
+                            new_children.append({
+                                'headerName': (nm or f"PREMI {i}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': {
+                                        'textAlign': 'right',
+                                        'backgroundColor': '#e8f5e8',  # Light green background for income
+                                        'color': '#2e7d32'  # Dark green text
+                                    }
+                                }]
+                            })
                         c['children'] = new_children
                         break
+
+                # Process POTONGAN LAINNYA group with dynamic potongan data
+                for i, name in enumerate(dyn_potongan[:7], 1):  # Limit to 7 items
+                    nm = (name if isinstance(name, str) else '').strip()
+                    pf = f"pot_dynamic_{i}"
+                    pot_dynamic_children.append({
+                        'headerName': (nm or f"POTONGAN {i}"),
+                        'children': [{
+                            'headerName': 'JUMLAH',
+                            'field': pf,
+                            'width': 100,  # Fixed width for consistency
+                            'type': 'numericColumn',
+                            'cellStyle': {
+                                'textAlign': 'right',
+                                'backgroundColor': '#ffebee',  # Light red background for deductions
+                                'color': '#c62828'  # Dark red text
+                            }
+                        }]
+                    })
             except Exception:
                 pass
+
+            # Add POTONGAN LAINNYA group if we have dynamic potongan data
+            if pot_dynamic_children:
+                potongan_lainnya_group = {
+                    'headerName': 'POTONGAN LAINNYA',
+                    'children': pot_dynamic_children,
+                    'cellStyle': {
+                        'backgroundColor': '#ffcdd2',  # Header background for deduction group
+                        'color': '#b71c1c',
+                        'fontWeight': 'bold'
+                    }
+                }
+                
+                # Find POTONGAN group and add POTONGAN LAINNYA
+                for idx, c in enumerate(col_defs):
+                    if (c.get('headerName') or '').strip().upper() == 'POTONGAN':
+                        if isinstance(c.get('children'), list):
+                            # Insert before TOTAL POTONGAN
+                            children = c.get('children', [])
+                            # Find the position of TOTAL POTONGAN
+                            total_idx = None
+                            for child_idx, child in enumerate(children):
+                                if isinstance(child, dict) and 'TOTAL POTONGAN' in str(child.get('headerName', '')).upper():
+                                    total_idx = child_idx
+                                    break
+                            
+                            if total_idx is not None:
+                                children.insert(total_idx, potongan_lainnya_group)
+                            else:
+                                # Add to the end
+                                children.append(potongan_lainnya_group)
+                            
+                            # Update total_potongan compute to include dynamic fields
+                            for child in children:
+                                if isinstance(child, dict) and child.get('field') == 'total_potongan':
+                                    compute = child.get('compute', {})
+                                    fields = compute.get('fields', [])
+                                    if isinstance(fields, list):
+                                        # Add pot_dynamic fields to the computation
+                                        for i in range(1, len(pot_dynamic_children) + 1):
+                                            field_name = f"pot_dynamic_{i}"
+                                            if field_name not in fields:
+                                                fields.append(field_name)
+                                        compute['fields'] = fields
+                                        child['compute'] = compute
+                                    break
+                        break
 
             found_premi = False
             for idx, c in enumerate(col_defs):
