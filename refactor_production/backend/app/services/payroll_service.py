@@ -307,7 +307,7 @@ class PayrollService:
         premi_maps: Dict[str, Dict[str, float]] = {}
         if want_all or any([want('premi_brondol'), want('premi_pruning'), want('premi_angkut_material'), want('premi_angkut_tbs'), want('premi_harvesting'), want('premi_harvesting_incentive'), want('premi_pupuk'), want('total_premi'), want('jumlah_upah_kotor'), want('upah_bersih')]):
             premi_maps = {
-                'pruning': self._premi_map(db, emp_codes, s, e, '%PRUNING%'),
+                'pruning': self._premi_map(db, emp_codes, s, e, '%PRUN%'),
                 'angkut_material': self._premi_map(db, emp_codes, s, e, '%ANGKUT%MATERIAL%'),
                 'angkut_tbs': self._premi_map(db, emp_codes, s, e, '%ANGKUT%TBS%'),
                 'harvesting': self._premi_map(db, emp_codes, s, e, '%HARVESTING%'),

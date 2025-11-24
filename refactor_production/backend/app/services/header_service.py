@@ -211,7 +211,7 @@ class HeaderService:
                 'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
                 'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21',
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
-                'tunjangan beras'
+                'tunjangan beras', 'lembur', 'prun'  # Added prun to filter out individual pruning items
             }
             allowed_tokens = self._allowed_premi_keywords()
 
@@ -294,7 +294,9 @@ class HeaderService:
             'TUNJANGAN MASA KERJA',
             'PRUNING',
             'BRONDOL',
-            'TUNJANGAN BERAS'
+            'TUNJANGAN BERAS',
+            'LEMBUR',
+            'PRUN'  # Added to filter out individual pruning items
         }
         allowed_tokens = self._allowed_premi_keywords()
 

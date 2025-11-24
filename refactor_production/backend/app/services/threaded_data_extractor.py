@@ -383,8 +383,9 @@ class ThreadedDataExtractor:
                 doc_desc_upper = doc_desc.upper()
                 if 'BRONDOL' in doc_desc_upper:
                     employee_data[emp_code]['premi_brondol'] = amount or 0
-                elif 'PRUNING' in doc_desc_upper:
-                    employee_data[emp_code]['premi_pruning'] = amount or 0
+                elif 'PRUN' in doc_desc_upper:
+                    # Aggregate all PRUN-related items (PRUNING, TUNJANGAN PRUNING, etc.) into single premi_pruning field
+                    employee_data[emp_code]['premi_pruning'] = (employee_data[emp_code]['premi_pruning'] or 0) + (amount or 0)
                 elif 'ANGKUT MATERIAL' in doc_desc_upper:
                     employee_data[emp_code]['premi_angkut_material'] = amount or 0
                 elif 'ANGKUT TBS' in doc_desc_upper:

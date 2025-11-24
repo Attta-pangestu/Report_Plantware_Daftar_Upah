@@ -6,7 +6,8 @@
       "Bash(python:*)",
       "Bash(cd:*)",
       "Bash(set:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

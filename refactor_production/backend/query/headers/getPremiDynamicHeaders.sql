@@ -15,6 +15,8 @@ AND UPPER(t.DocDesc) NOT LIKE '%SPSI%'
 AND UPPER(t.DocDesc) NOT LIKE '%BERAS%'
 AND UPPER(t.DocDesc) NOT LIKE '%JABATAN%'
 AND UPPER(t.DocDesc) NOT LIKE '%MASA%'
+AND UPPER(t.DocDesc) NOT LIKE '%LEMBUR%'
 AND UPPER(t.DocDesc) NOT LIKE '%PRUN%'
+-- PRUN items are filtered to prevent duplicate headers since they're aggregated into static PRUNING column
 AND t.DocDesc IS NOT NULL
 ORDER BY t.DocDesc;
