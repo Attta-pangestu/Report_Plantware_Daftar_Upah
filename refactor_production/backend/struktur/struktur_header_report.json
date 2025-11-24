@@ -7,7 +7,7 @@
     "description": "Struktur header tabel report daftar upah dengan hirarki parent-child"
   },
   "table_structure": {
-    "total_columns": 47,
+    "total_columns": 35,
     "header_rows": 3,
     "data_rows": "employee_data",
     "hierarchy": {
@@ -48,20 +48,20 @@
             "children": []
           },
           {
+            "id": "absensi",
+            "text": "ABSENSI",
+            "rowspan": 1,
+            "colspan": 9,
+            "class": "header-cell section-header",
+            "children": ["kehadiran", "jumlah_hk", "cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cuti_izin", "cth", "alpa"]
+          },
+          {
             "id": "upah_dasar",
             "text": "UPAH DASAR",
             "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-upah-dasar main-header",
             "children": []
-          },
-          {
-            "id": "absensi",
-            "text": "ABSENSI",
-            "rowspan": 1,
-            "colspan": 3,
-            "class": "header-cell section-header",
-            "children": ["kehadiran", "ketidakhadiran", "total_hk"]
           },
           {
             "id": "upah_pokok",
@@ -129,23 +129,73 @@
             "id": "kehadiran",
             "text": "KEHADIRAN",
             "parent": "absensi",
+            "colspan": 1,
             "class": "header-cell col-hadir",
             "children": ["hari_kerja"]
           },
           {
-            "id": "ketidakhadiran",
-            "text": "KETIDAKHADIRAN",
+            "id": "jumlah_hk",
+            "text": "JUMLAH HK",
             "parent": "absensi",
-            "colspan": 7,
-            "class": "header-cell sub-header-absensi",
-            "children": ["cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cth", "alpa", "total_ketidakhadiran"]
-          },
-          {
-            "id": "total_hk",
-            "text": "TOTAL HK",
-            "parent": "absensi",
+            "colspan": 1,
             "class": "header-cell col-total-hk",
             "children": ["jml_hk"]
+          },
+          {
+            "id": "cuti_tahunan",
+            "text": "CUTI TAHUNAN",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cuti-tahunan",
+            "children": ["cuti_tahunan_unit"]
+          },
+          {
+            "id": "cuti_sakit_haid",
+            "text": "SAKIT + HAID",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cuti-sakit-haid",
+            "children": ["cuti_sakit_haid_unit"]
+          },
+          {
+            "id": "cuti_minggu",
+            "text": "MINGGU",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cuti-minggu",
+            "children": ["cuti_minggu_unit"]
+          },
+          {
+            "id": "cuti_nasional",
+            "text": "NASIONAL",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cuti-nasional",
+            "children": ["cuti_nasional_unit"]
+          },
+          {
+            "id": "cuti_izin",
+            "text": "IZIN",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cuti-izin",
+            "children": ["cuti_izin_unit"]
+          },
+          {
+            "id": "cth",
+            "text": "CTH",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-cth",
+            "children": ["cth"]
+          },
+          {
+            "id": "alpa",
+            "text": "ALPA",
+            "parent": "absensi",
+            "colspan": 1,
+            "class": "header-cell col-alpa",
+            "children": ["alpa"]
           },
           {
             "id": "beras",
@@ -279,52 +329,52 @@
             "class": "header-cell col-hadir"
           },
           {
+            "id": "jml_hk",
+            "text": "Jumlah",
+            "parent": "jumlah_hk",
+            "class": "header-cell col-total-hk"
+          },
+          {
             "id": "cuti_tahunan_unit",
-            "text": "H",
+            "text": "TAHUNAN (H)",
             "parent": "cuti_tahunan",
-            "class": "header-cell col-cuti"
+            "class": "header-cell col-cuti-tahunan"
           },
           {
             "id": "cuti_sakit_haid_unit",
-            "text": "H",
+            "text": "SAKIT/HAID (H)",
             "parent": "cuti_sakit_haid",
-            "class": "header-cell col-cuti"
+            "class": "header-cell col-cuti-sakit-haid"
           },
           {
             "id": "cuti_minggu_unit",
-            "text": "H",
+            "text": "MINGGU (H)",
             "parent": "cuti_minggu",
-            "class": "header-cell col-cuti"
+            "class": "header-cell col-cuti-minggu"
           },
           {
             "id": "cuti_nasional_unit",
-            "text": "H",
+            "text": "NASIONAL (H)",
             "parent": "cuti_nasional",
-            "class": "header-cell col-cuti"
+            "class": "header-cell col-cuti-nasional"
+          },
+          {
+            "id": "cuti_izin_unit",
+            "text": "IZIN (H)",
+            "parent": "cuti_izin",
+            "class": "header-cell col-cuti-izin"
           },
           {
             "id": "cth",
             "text": "CTH",
-            "parent": "ketidakhadiran",
-            "class": "header-cell col-cuti"
+            "parent": "cth",
+            "class": "header-cell col-cth"
           },
           {
             "id": "alpa",
             "text": "ALPA",
-            "parent": "ketidakhadiran",
-            "class": "header-cell col-cuti"
-          },
-          {
-            "id": "total_ketidakhadiran",
-            "text": "TOTAL",
-            "parent": "ketidakhadiran",
-            "class": "header-cell col-cuti"
-          },
-          {
-            "id": "jml_hk",
-            "text": "Jumlah",
-            "parent": "total_hk",
-            "class": "header-cell col-total-hk"
+            "parent": "alpa",
+            "class": "header-cell col-alpa"
           },
           {
             "id": "beras_rate",

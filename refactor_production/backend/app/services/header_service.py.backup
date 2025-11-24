@@ -515,7 +515,7 @@ class HeaderService:
                             'width': self._get_column_width(field),
                             'type': self._get_column_type(field),
                             'cellStyle': self._get_cell_style(field),
-                            'pinned': 'left' if field in ['nik','nama'] else None
+                            'pinned': 'left' if field in ['nik','nama','phone'] else None
                         }
                         if compute:
                             col['compute'] = compute
@@ -589,22 +589,68 @@ class HeaderService:
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                     continue
                 else:
-                    group2_defs = []
-                    for c2 in level2_cols:
-                        c2_id = c2.get('id')
-                        level3_cols = l3_by_parent.get(c2_id, [])
-                        leaf_defs = []
-                        for c3 in level3_cols:
-                            field = self._map_to_data_field(c3.get('id'))
-                            leaf_defs.append({
-                                'field': field,
-                                'headerName': c3.get('text'),
-                                'width': self._get_column_width(field),
-                                'type': self._get_column_type(field),
-                                'cellStyle': self._get_cell_style(field)
+                    c1_text = (c1.get('text') or '').strip().upper()
+                    c1_id = (c1.get('id') or '').strip().lower()
+                    if c1_text == 'PREMI' or c1_id == 'premi':
+                        dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                        group2_defs = []
+                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
+                            group2_defs.append({
+                                'headerName': t,
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': f,
+                                    'width': self._get_column_width(f),
+                                    'type': self._get_column_type(f),
+                                    'cellStyle': self._get_cell_style(f)
+                                }]
                             })
-                        group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
-                    col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                        for i, name in enumerate(dyn[:7]):
+                            nm = (name if isinstance(name, str) else '').strip()
+                            up = nm.upper()
+                            if 'POTONGAN' in up:
+                                pf = f"pot_dynamic_{i+1}"
+                                pot_dynamic_children.append({
+                                    'headerName': (nm or f"POTONGAN {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': pf,
+                                        'width': self._get_column_width(pf),
+                                        'type': self._get_column_type(pf),
+                                        'cellStyle': self._get_cell_style(pf)
+                                    }]
+                                })
+                            else:
+                                field = f"premi_dynamic_{i+1}"
+                                group2_defs.append({
+                                    'headerName': (nm or f"PREMI {i+1}"),
+                                    'children': [{
+                                        'headerName': 'JUMLAH',
+                                        'field': field,
+                                        'width': self._get_column_width(field),
+                                        'type': self._get_column_type(field),
+                                        'cellStyle': self._get_cell_style(field)
+                                    }]
+                                })
+                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
+                        continue
+                    else:
+                        group2_defs = []
+                        for c2 in level2_cols:
+                            c2_id = c2.get('id')
+                            level3_cols = l3_by_parent.get(c2_id, [])
+                            leaf_defs = []
+                            for c3 in level3_cols:
+                                field = self._map_to_data_field(c3.get('id'))
+                                leaf_defs.append({
+                                    'field': field,
+                                    'headerName': c3.get('text'),
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                })
+                            group2_defs.append({ 'headerName': c2.get('text'), 'children': leaf_defs })
+                        col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
 
             group_idx = None
             for idx, c in enumerate(col_defs):
@@ -1104,30 +1150,36 @@ class HeaderService:
             rest = []
             for c in filtered_col_defs:
                 f = c.get('field')
-                if f in ['nik', 'nama']:
+                if f in ['nik', 'nama', 'phone']:
                     lead.append(c)
                 else:
                     rest.append(c)
             lead_sorted = []
             nik_col = next((c for c in lead if c.get('field') == 'nik'), None)
             nama_col = next((c for c in lead if c.get('field') == 'nama'), None)
+            phone_col = next((c for c in lead if c.get('field') == 'phone'), None)
             if nik_col:
                 lead_sorted.append(nik_col)
             if nama_col:
                 lead_sorted.append(nama_col)
+            if phone_col:
+                lead_sorted.append(phone_col)
             # Ensure NIK and PHONE exist
             if not nik_col:
                 lead_sorted.insert(0, {
                     'field': 'nik', 'headerName': 'NIK', 'width': self._get_column_width('nik'),
                     'type': self._get_column_type('nik'), 'cellStyle': self._get_cell_style('nik'), 'pinned': 'left'
                 })
+            if not phone_col:
+                lead_sorted.append({
+                    'field': 'phone', 'headerName': 'PHONE', 'width': self._get_column_width('phone'),
+                    'type': self._get_column_type('phone'), 'cellStyle': self._get_cell_style('phone'), 'pinned': 'left'
+                })
             def _order_idx(c):
                 h = str((c.get('headerName') or '')).strip().upper()
                 f = str((c.get('field') or '')).strip().lower()
-                if h == 'ABSENSI':
-                    return 5
                 if f == 'upah_dasar':
-                    return 20
+                    return 10
                 if f == 'hari_kerja':
                     return 20
                 if f == 'upah_pokok':
@@ -1151,6 +1203,38 @@ class HeaderService:
             final_defs = lead_sorted + rest_sorted
             if not final_defs:
                 return self._get_fallback_column_defs()
+            try:
+                dyn = headers.get('table_structure', {}).get('dynamic_docdesc', [])
+                for c in final_defs:
+                    if (c.get('headerName') or '').strip().upper() == 'PREMI':
+                        new_children = []
+                        for t, f in [('BRONDOL','premi_brondol'), ('PRUNING','premi_pruning')]:
+                            new_children.append({
+                                'headerName': t,
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': f,
+                                    'width': self._get_column_width(f),
+                                    'type': self._get_column_type(f),
+                                    'cellStyle': self._get_cell_style(f)
+                                }]
+                            })
+                        for i, name in enumerate(dyn[:7]):
+                            field = f"premi_dynamic_{i+1}"
+                            new_children.append({
+                                'headerName': (name if isinstance(name, str) and len(name) > 0 else f"PREMI {i+1}"),
+                                'children': [{
+                                    'headerName': 'JUMLAH',
+                                    'field': field,
+                                    'width': self._get_column_width(field),
+                                    'type': self._get_column_type(field),
+                                    'cellStyle': self._get_cell_style(field)
+                                }]
+                            })
+                        c['children'] = new_children
+                        break
+            except Exception:
+                pass
             return final_defs
 
         except Exception as e:
@@ -1201,25 +1285,9 @@ class HeaderService:
     def _get_fallback_hierarchical_defs(self) -> List[Dict[str, Any]]:
         identitas_children = [
             {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
-            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
+            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
+            {"field": "phone", "headerName": "PHONE", "width": 120, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
-
-        absensi_children = [
-            {"headerName": "KEHADIRAN", "children": [
-                {"field": "hari_kerja", "headerName": "H", "width": 80, "type": "numericColumn"},
-                {"field": "jumlah_hk", "headerName": "JML HK", "width": 80, "type": "numericColumn"}
-            ]},
-            {"headerName": "KETIDAKHADIRAN", "children": [
-                {"field": "cuti_tahunan_hari", "headerName": "TAHUNAN (H)", "width": 90, "type": "numericColumn"},
-                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT/HAID (H)", "width": 110, "type": "numericColumn"},
-                {"field": "cuti_minggu_hari", "headerName": "MINGGU (H)", "width": 90, "type": "numericColumn"},
-                {"field": "cuti_nasional_hari", "headerName": "NASIONAL (H)", "width": 100, "type": "numericColumn"},
-                {"field": "cuti_izin_hari", "headerName": "IZIN (H)", "width": 90, "type": "numericColumn"},
-                {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
-                {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
-            ]}
-        ]
-
         tunjangan_children = [
             {"headerName": "BERAS", "children": [
                 {"field": "beras_rate", "headerName": "RATE", "width": 100, "type": "numericColumn"},
@@ -1238,48 +1306,18 @@ class HeaderService:
                 {"field": "lembur_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
             ]}
         ]
-
         premi_children = [
             {"headerName": "BRONDOL", "children": [{"field": "premi_brondol", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]},
             {"headerName": "PRUNING", "children": [{"field": "premi_pruning", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}]}
         ]
-
-        potongan_children = [
-            {"headerName": "CARUMAN ASTEK", "children": [
-                {"field": "pot_bpjs_pek", "headerName": "PEKERJA", "width": 90, "type": "numericColumn"},
-                {"field": "pot_bpjs_maj", "headerName": "MAJIKAN", "width": 90, "type": "numericColumn"},
-                {"field": "pot_bpjs_jumlah", "headerName": "JUMLAH", "width": 90, "type": "numericColumn"}
-            ]},
-            {"headerName": "POTONGAN BPJS", "children": [
-                {"headerName": "KESEHATAN", "children": [
-                    {"field": "pot_bpjs_kesehatan_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
-                    {"field": "pot_bpjs_kesehatan_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
-                ]},
-                {"headerName": "PENSIUN", "children": [
-                    {"field": "pot_bpjs_pensiun_pekerja", "headerName": "PEKERJA", "width": 100, "type": "numericColumn"},
-                    {"field": "pot_bpjs_pensiun_majikan", "headerName": "MAJIKAN", "width": 100, "type": "numericColumn"}
-                ]},
-                {"field": "pot_bpjs_pekerja_total", "headerName": "TOTAL", "width": 110, "type": "numericColumn"}
-            ]},
-            {"headerName": "IURAN SPSI", "children": [
-                {"field": "pot_spsi", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
-            ]},
-            {"headerName": "PPH21", "children": [
-                {"field": "pot_pph21", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
-            ]},
-            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"}
-        ]
-
         ringkasan_children = [
             {"field": "jumlah_upah_kotor", "headerName": "JUMLAH UPAH KOTOR", "width": 140, "type": "numericColumn"},
+            {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"},
             {"field": "upah_bersih", "headerName": "UPAH BERSIH", "width": 120, "type": "numericColumn"}
         ]
-
         return [
             {"headerName": "IDENTITAS", "children": identitas_children},
-            {"headerName": "ABSENSI", "children": absensi_children},
             {"headerName": "TUNJANGAN", "children": tunjangan_children},
             {"headerName": "PREMI", "children": premi_children},
-            {"headerName": "POTONGAN", "children": potongan_children},
             {"headerName": "RINGKASAN", "children": ringkasan_children}
         ]

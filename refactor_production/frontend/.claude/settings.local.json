@@ -3,7 +3,8 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(npm run dev:test:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []

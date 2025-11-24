@@ -10,6 +10,8 @@ from app.services.gang_service import GangService
 from app.services.header_service import HeaderService
 from app.services.threaded_header_service import ThreadedHeaderService
 from app.services.threaded_data_extractor import ThreadedDataExtractor
+# Import optimized SimplifiedHeaderService
+from simplified_method import SimplifiedHeaderService
 from app.services.cache_service import CacheService
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.employee_repository_db import EmployeeRepositoryDB
@@ -272,17 +274,18 @@ async def get_dynamic_headers(
                 raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Header generation timed out")
             processing_type = "threaded"
         else:
-            # Use original service
+            # Use optimized SimplifiedHeaderService with new ABSANSI structure
             try:
+                simplified_service = SimplifiedHeaderService()
                 headers = await asyncio.wait_for(asyncio.to_thread(
-                    header_service.generate_dynamic_headers,
+                    simplified_service.generate_dynamic_headers,
                     month=month,
                     year=year,
                     gang_code=gang_code
                 ), timeout=int(os.getenv('REQUEST_TIMEOUT_SEC','30')))
             except asyncio.TimeoutError:
                 raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail="Header generation timed out")
-            processing_type = "sequential"
+            processing_type = "simplified"
 
         execution_time = time.perf_counter() - start_time
 
@@ -340,20 +343,28 @@ async def get_column_definitions(
             if response is not None:
                 response.headers["X-Test-Mode"] = "true"
         if bool(fallback):
-            column_defs = header_service._get_fallback_hierarchical_defs()
+            # Use optimized SimplifiedHeaderService instead of old fallback
+            simplified_service = SimplifiedHeaderService()
+            column_defs = simplified_service._get_fallback_column_defs()
         else:
             column_defs = None
             try:
+                # Use optimized SimplifiedHeaderService with new ABSANSI structure
+                simplified_service = SimplifiedHeaderService()
                 column_defs = await asyncio.wait_for(asyncio.to_thread(
-                    header_service.get_column_definitions,
+                    simplified_service.get_column_definitions,
                     month=month,
                     year=year,
                     gang_code=gang_code
                 ), timeout=int(os.getenv('REQUEST_TIMEOUT_SEC','30')))
             except asyncio.TimeoutError:
-                column_defs = header_service._get_fallback_hierarchical_defs()
+                # Fallback to simplified defs
+                simplified_service = SimplifiedHeaderService()
+                column_defs = simplified_service._get_fallback_column_defs()
             except Exception:
-                column_defs = header_service._get_fallback_hierarchical_defs()
+                # Fallback to simplified defs
+                simplified_service = SimplifiedHeaderService()
+                column_defs = simplified_service._get_fallback_column_defs()
         def _is_group(x):
             return isinstance(x, dict) and isinstance(x.get('children'), list) and isinstance(x.get('headerName'), str)
         def _is_leaf(x):
@@ -1343,3 +1354,9 @@ async def report_count(
     except Exception as e:
         logger.error(f"Count endpoint failed: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+# Initialize service instances (moved from module level to avoid circular imports)
+threaded_data_extractor = ThreadedDataExtractor()
+header_service = HeaderService()
+threaded_header_service = ThreadedHeaderService()
+simplified_header_service = SimplifiedHeaderService()  # New optimized service

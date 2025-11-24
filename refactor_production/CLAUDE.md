@@ -186,6 +186,30 @@ The system has two distinct but related endpoints:
 - Headers endpoint provides raw data structure with performance metrics
 - Columns endpoint provides grid-ready configuration with field mapping and styling
 
+### Dynamic Header Structure Configuration
+The system uses JSON-based header configuration stored in `backend/struktur/struktur_header_report.json`:
+
+- **Three-level hierarchy**: Level 1 (main categories), Level 2 (sub-categories), Level 3 (unit columns)
+- **Dynamic column generation**: Based on database queries and business rules
+- **Field mapping**: Converts JSON structure IDs to database field names via `_map_to_data_field()`
+- **Data path extraction**: Critical to use `hierarchy` path, not `generated_headers` path in `get_column_definitions()`
+
+### Attendance/Absensi Group Structure
+The ABSENSI group follows this hierarchy:
+```
+Level 1: ABSENSI (colspan: 3)
+  └── Level 2: KEHADIRAN → hari_kerja
+  └── Level 2: KETIDAKHADIRAN (colspan: 7)
+      ├── cuti_tahunan → cuti_tahunan_hari
+      ├── cuti_sakit_haid → cuti_sakit_haid_hari
+      ├── cuti_minggu → cuti_minggu_hari
+      ├── cuti_nasional → cuti_nasional_hari
+      ├── cth → tidak_hadir_cth
+      ├── alpa → tidak_hadir_alpa
+      └── total_ketidakhadiran → total_ketidakhadiran
+  └── Level 2: TOTAL HK → jumlah_hk
+```
+
 ### Authentication Flow
 - JWT-based authentication with role-based access control (ADMIN, USER, MANAGER)
 - Token management via `js-cookie` in frontend with React Context state
@@ -271,6 +295,14 @@ curl -H "Authorization: Bearer <token>" http://localhost:8002/payroll/gangs
 # Monitor database connections
 python -c "from database.services.database import Database; print(Database.instance().pool_status())"
 ```
+
+### Header Generation Debugging
+When modifying attendance/absensi fields:
+1. **Update JSON structure**: Modify `backend/struktur/struktur_header_report.json`
+2. **Add field mappings**: Update `_map_to_data_field()` in `backend/app/services/header_service.py`
+3. **Test headers API**: `GET /payroll/headers` returns hierarchical structure
+4. **Test columns API**: `GET /payroll/columns` returns flat AG-Grid definitions
+5. **Data path critical**: Ensure `get_column_definitions()` uses `hierarchy` not `generated_headers`
 
 ## Database Module
 
