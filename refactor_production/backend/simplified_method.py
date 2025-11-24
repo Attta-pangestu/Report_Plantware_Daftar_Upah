@@ -180,8 +180,8 @@ class SimplifiedHeaderService:
             db = Database.instance()
             q = Queries()
             
-            # Use potongan query
-            sql_entry = q.get('potongan', 'dynamic_headers_by_gang_month_optimized')
+            # Use filtered potongan query (POT% only, exclude PPH21/koreksi/spsi)
+            sql_entry = q.get('potongan', 'dynamic_potongan_headers_filtered')
             if sql_entry and 'sql' in sql_entry:
                 start_date = f"{year}-{str(month).zfill(2)}-01"
                 if month == 12:
@@ -210,10 +210,10 @@ class SimplifiedHeaderService:
                         # More precise exclude logic
                         should_exclude = False
                         
-                        # Exclude items starting with 'POTONGAN' (not containing)
+                        # Include items starting with 'POTONGAN' (we want these!)
                         if header_upper.startswith('POTONGAN'):
-                            should_exclude = True
-                            print(f"    PRODUCTION FILTER: {header} -> EXCLUDED (starts with POTONGAN)")
+                            should_exclude = False  # Keep these items
+                            print(f"    PRODUCTION FILTER: {header} -> INCLUDED (starts with POTONGAN)")
                         
                         # Exclude items containing specific keywords
                         for keyword in excluded_keywords:
@@ -463,22 +463,9 @@ class SimplifiedHeaderService:
                 ]
             })
 
-        # Dynamic POTONGAN columns
+        # Dynamic POTONGAN columns - REMOVED to avoid duplication
+        # Dynamic POTONGAN items are now only shown in POTONGAN LAINNYA section
         potongan_children = []
-        if dyn_potongan:
-            for i, pot_name in enumerate(dyn_potongan):
-                field_name = f"pot_{i+1}"
-                # Map known deduction names to existing fields
-                mapped_field = self._map_potongan_field(pot_name)
-                if mapped_field:
-                    field_name = mapped_field
-
-                potongan_children.append({
-                    "headerName": pot_name.upper(),
-                    "children": [
-                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
-                    ]
-                })
 
         # Add static potongan columns first
         potongan_children.extend([
@@ -508,9 +495,10 @@ class SimplifiedHeaderService:
 
         # Dynamic POTONGAN PATTERN columns (for "Pot/potongan" patterns)
         # These are items that start with "POTONGAN" but are not standard deductions
-        if dyn_potongan_pattern:
+        # Use dyn_potongan instead of dyn_potongan_pattern to get all filtered items
+        if dyn_potongan:
             potongan_lainnya_children = []
-            for i, pot_name in enumerate(dyn_potongan_pattern):
+            for i, pot_name in enumerate(dyn_potongan):
                 field_name = f"pot_pattern_{i+1}"
                 # Map known deduction names to existing fields
                 mapped_field = self._map_potongan_field(pot_name)

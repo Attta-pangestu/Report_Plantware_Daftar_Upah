@@ -4,7 +4,9 @@
       "Bash(curl:*)",
       "Bash(npm run dev:test:*)",
       "Bash(python:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(set:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

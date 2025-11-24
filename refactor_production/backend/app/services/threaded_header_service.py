@@ -54,6 +54,7 @@ class ThreadedHeaderService:
         tasks = {
             'static_structure': self._load_static_structure_task(),
             'dynamic_premi': self._get_dynamic_premi_task(gang_code, start_date, end_date),
+            'dynamic_potongan': self._get_dynamic_potongan_task(gang_code, start_date, end_date),
             'employee_count': self._get_employee_count_task(gang_code),
             'report_metadata': self._get_report_metadata_task(month, year, gang_code)
         }
@@ -158,6 +159,32 @@ class ThreadedHeaderService:
             'ttl': 1800  # 30 minutes cache
         }
 
+    def _get_dynamic_potongan_task(self, gang_code: str, start_date: str, end_date: str):
+        """Get dynamic potongan headers with filtered query (POT% only, exclude PPH21/koreksi/spsi)"""
+        return {
+            'cache_key': f"potongan_headers:{gang_code}:{start_date}_{end_date}",
+            'sql': """
+                SELECT DISTINCT t.DocDesc
+                FROM "PR_ADTRANS_ARC" AS t
+                JOIN "PR_ADTRANSLN_ARC" AS ln ON t.ID = ln.MasterID
+                WHERE t.EmpCode IN (
+                    SELECT "HR_EMPLOYEE"."EmpCode"
+                    FROM "HR_EMPLOYEE"
+                    JOIN "HR_GANGLN" ON "HR_GANGLN"."GangMember" = "HR_EMPLOYEE"."EmpCode"
+                    WHERE "HR_GANGLN"."GangCode" = ?
+                )
+                AND t.DocDate >= ?
+                AND t.DocDate < ?
+                AND t.DocDesc LIKE 'POT%'
+                AND t.DocDesc NOT LIKE '%PPH21%'
+                AND t.DocDesc NOT LIKE '%koreksi%'
+                AND t.DocDesc NOT LIKE '%spsi%'
+                ORDER BY t.DocDesc
+            """,
+            'params': [gang_code, start_date, end_date],
+            'ttl': 1800  # 30 minutes cache
+        }
+
     def _get_employee_count_task(self, gang_code: str):
         """Get employee count for the gang"""
         return {
@@ -231,6 +258,13 @@ class ThreadedHeaderService:
         if dynamic_premi_results is None:
             dynamic_premi_results = []
         dynamic_premi_headers = [str(row[0]).strip() for row in dynamic_premi_results if row and row[0]]
+
+        # Get dynamic potongan headers
+        dynamic_potongan_results = results.get('dynamic_potongan', [])
+        # Handle case where dynamic_potongan_results is None
+        if dynamic_potongan_results is None:
+            dynamic_potongan_results = []
+        dynamic_potongan_headers = [str(row[0]).strip() for row in dynamic_potongan_results if row and row[0]]
         excluded_lower = {
             'koreksi', 'potongan pph21', 'potongan spsi', 'tunjangan jabatan',
             'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21', 'pph21',
@@ -323,7 +357,9 @@ class ThreadedHeaderService:
                 "data_source": "real_database",
                 "employee_count": employee_count,
                 "dynamic_premi_count": len(dynamic_premi_headers),
-                "dynamic_docdesc": dynamic_premi_headers
+                "dynamic_potongan_count": len(dynamic_potongan_headers),
+                "dynamic_docdesc": dynamic_premi_headers,
+                "dynamic_docdesc_potongan": dynamic_potongan_headers
             }
         }
 

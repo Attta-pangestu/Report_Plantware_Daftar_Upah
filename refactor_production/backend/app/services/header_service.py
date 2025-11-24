@@ -130,8 +130,8 @@ class HeaderService:
         db = Database.instance()
         q = Queries()
 
-        # Try potongan query
-        sql_entry = q.get('potongan', 'potongan_headers_by_month')
+        # Try potongan query with filtered results
+        sql_entry = q.get('potongan', 'dynamic_potongan_headers_filtered')
         if sql_entry and 'sql' in sql_entry:
             start_date = f"{year}-{str(month).zfill(2)}-01"
             if month == 12:
@@ -139,7 +139,7 @@ class HeaderService:
             else:
                 end_date = f"{year}-{str(month+1).zfill(2)}-01"
 
-            print(f"[HEADER DEBUG] Executing potongan query from {start_date} to {end_date}")
+            print(f"[HEADER DEBUG] Executing filtered potongan query (POT% only, exclude PPH21/koreksi/spsi) from {start_date} to {end_date}")
             # Execute potongan query
             rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
             mid = time.perf_counter()
@@ -150,57 +150,19 @@ class HeaderService:
 
             print(f"[HEADER DEBUG] Found {len(rows)} raw potongan records")
 
-            # Extract potongan headers
+            # Extract potongan headers - query already filtered for POT% and excluded items
             headers = []
             all_raw_items = []
-            included_items = []
-            excluded_items = []
 
             for r in rows:
                 if not r or not r[0]:
                     continue
                 h = str(r[0]).strip()
-                hu = h.upper()
                 all_raw_items.append(h)
+                headers.append(h)
+                print(f"[HEADER DEBUG] FOUND: '{h}' (already filtered by query)")
 
-                # Debug: Check each filter condition
-                starts_with_pot = hu.startswith('POT')
-                has_pph21 = 'PPH21' in hu
-                has_spsi = 'SPSI' in hu
-                has_astek = 'ASTEK' in hu
-                has_bpjs = 'BPJS' in hu
-                has_Premi = 'PREMI' in hu
-                has_tunjangan = 'TUNJANGAN' in hu
-                has_insentif = 'INSENTIF' in hu
-
-                print(f"[HEADER DEBUG] '{h}' -> starts_with_pot: {starts_with_pot}, pph21: {has_pph21}, spsi: {has_spsi}, astek: {has_astek}, bpjs: {has_bpjs}, premi: {has_Premi}, tunjangan: {has_tunjangan}, insentif: {has_insentif}")
-
-                # Logic: Untuk potongan, HARUS ada awalan "POT" (beda dengan premi yang exclude POT)
-                # Include: Hanya items yang dimulai dengan "POT" (POTONGAN, POT, dll)
-                # Exclude: PPH21, SPSI, ASTEK, BPJS, PREMI, TUNJANGAN, INSENTIF
-                if (starts_with_pot and
-                    not has_pph21 and not has_spsi and not has_astek and not has_bpjs and not has_Premi and
-                    'TUNJANGAN' not in hu and
-                    'INSENTIF' not in hu):
-                    headers.append(h)
-                    included_items.append(h)
-                    print(f"[HEADER DEBUG] INCLUDED: '{h}'")
-                else:
-                    excluded_items.append(h)
-                    reason = []
-                    if not starts_with_pot: reason.append("not starts_with_pot")
-                    if has_pph21: reason.append("has_pph21")
-                    if has_spsi: reason.append("has_spsi")
-                    if has_astek: reason.append("has_astek")
-                    if has_bpjs: reason.append("has_bpjs")
-                    if has_Premi: reason.append("has_Premi")
-                    if has_tunjangan: reason.append("has_tunjangan")
-                    if has_insentif: reason.append("has_insentif")
-                    print(f"[HEADER DEBUG] EXCLUDED: '{h}' ({', '.join(reason)})")
-
-            print(f"[HEADER DEBUG] Raw potongan items: {all_raw_items}")
-            print(f"[HEADER DEBUG] Included items: {included_items}")
-            print(f"[HEADER DEBUG] Excluded items: {excluded_items}")
+            print(f"[HEADER DEBUG] Raw potongan items found: {all_raw_items}")
 
             # Remove duplicates while preserving order
             seen = set()
