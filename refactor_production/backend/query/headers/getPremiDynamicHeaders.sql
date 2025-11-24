@@ -5,9 +5,8 @@ WHERE t.EmpCode IN (
     SELECT "HR_EMPLOYEE"."EmpCode"
     FROM "HR_EMPLOYEE"
     JOIN "HR_GANGLN" ON "HR_GANGLN"."GangMember" = "HR_EMPLOYEE"."EmpCode"
-    WHERE "HR_GANGLN"."GangCode" = 'E3H'
+    WHERE "HR_GANGLN"."GangCode" = 'C1H'
 )
-AND t.DocDate >= '2025-08-01'
-AND t.DocDate < '2025-09-01'
-AND t.DocDesc = 'TUNJANGAN PREMI KERANI PANEN'
-ORDER BY t.EmpCode;
+AND t.DocDate >= '2025-05-01'
+AND t.DocDate < '2025-06-01'
+ORDER BY t.DocDesc;

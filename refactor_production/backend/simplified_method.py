@@ -75,6 +75,7 @@ class SimplifiedHeaderService:
             tq0 = time.perf_counter()
             dyn_premi = self._compute_dynamic_premi_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
             dyn_potongan = self._compute_dynamic_potongan_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
+            dyn_potongan_pattern = self._compute_dynamic_potongan_pattern_headers_db(month or datetime.now().month, year or datetime.now().year, gang_code or 'H1H')
             tq1 = time.perf_counter()
 
             return {
@@ -93,7 +94,8 @@ class SimplifiedHeaderService:
                     "data_source": "real_database",
                     "dynamic_docdesc": {
                         "premi": dyn_premi,
-                        "potongan": dyn_potongan
+                        "potongan": dyn_potongan,
+                        "potongan_pattern": dyn_potongan_pattern
                     }
                 }
             }
@@ -256,6 +258,81 @@ class SimplifiedHeaderService:
             print(f"Error computing POTONGAN headers: {e}")
             return []
 
+    def _compute_dynamic_potongan_pattern_headers_db(self, month: int, year: int, gang_code: str) -> List[str]:
+        """Compute dynamic POTONGAN headers based on 'Pot/potongan' pattern detection"""
+        try:
+            from database.services.database import Database
+            from database.services.queries import Queries
+            from database.services.cache import Cache
+
+            # Enhanced cache key for pattern-based potongan
+            cache_key = f"dyn_potongan_pattern:{gang_code}:{year}-{str(month).zfill(2)}"
+            cached = Cache.instance().get(cache_key)
+            if cached is not None:
+                print(f"Cache hit for POTONGAN pattern: {cache_key}")
+                return cached
+
+            db = Database.instance()
+            q = Queries()
+
+            # Use potongan pattern query
+            sql_entry = q.get('potongan', 'potongan_pattern_headers')
+            if sql_entry and 'sql' in sql_entry:
+                start_date = f"{year}-{str(month).zfill(2)}-01"
+                if month == 12:
+                    end_date = f"{year+1}-01-01"
+                else:
+                    end_date = f"{year}-{str(month+1).zfill(2)}-01"
+
+                rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
+
+                # Handle case where db.query_all returns None
+                if rows is not None:
+                    # Get all potongan pattern items from database
+                    pattern_headers = [
+                        str(r[0]).strip()
+                        for r in rows
+                        if r and r[0]
+                    ]
+
+                    # Additional filtering to ensure quality
+                    excluded_keywords = ['ASTEK', 'BPJS', 'PPH', 'SPSI']
+                    filtered_headers = []
+
+                    for header in pattern_headers:
+                        header_upper = header.upper()
+
+                        # Exclude items containing specific keywords
+                        should_exclude = False
+                        for keyword in excluded_keywords:
+                            if keyword in header_upper:
+                                should_exclude = True
+                                print(f"    POTONGAN PATTERN FILTER: {header} -> EXCLUDED (contains {keyword})")
+                                break
+
+                        if not should_exclude:
+                            filtered_headers.append(header)
+                            print(f"    POTONGAN PATTERN FILTER: {header} -> INCLUDED")
+
+                    # Remove duplicates and limit to reasonable number
+                    seen = set()
+                    unique_headers = []
+                    for h in filtered_headers:
+                        if h not in seen:
+                            unique_headers.append(h)
+                            seen.add(h)
+                    result = unique_headers[:10]  # Allow more for potongan patterns
+
+                    Cache.instance().set(cache_key, result, ttl=3600)
+                    return result
+
+            # Fallback
+            return []
+
+        except Exception as e:
+            print(f"Error computing POTONGAN pattern headers: {e}")
+            return []
+
     def _get_error_response(self, error_msg: str) -> Dict[str, Any]:
         """Standard error response for header generation"""
         return {
@@ -297,18 +374,20 @@ class SimplifiedHeaderService:
             dynamic_docdesc = headers.get('table_structure', {}).get('dynamic_docdesc', {})
             dyn_premi = dynamic_docdesc.get('premi', [])
             dyn_potongan = dynamic_docdesc.get('potongan', [])
+            dyn_potongan_pattern = dynamic_docdesc.get('potongan_pattern', [])
 
             # Generate fallback columns with dynamic PREMI and POTONGAN
-            return self._get_dynamic_column_defs(dyn_premi, dyn_potongan)
+            return self._get_dynamic_column_defs(dyn_premi, dyn_potongan, dyn_potongan_pattern)
 
         except Exception as e:
             print(f"Error in get_column_definitions: {e}")
             return self._get_fallback_column_defs()
 
-    def _get_dynamic_column_defs(self, dyn_premi: List[str] = None, dyn_potongan: List[str] = None) -> List[Dict[str, Any]]:
+    def _get_dynamic_column_defs(self, dyn_premi: List[str] = None, dyn_potongan: List[str] = None, dyn_potongan_pattern: List[str] = None) -> List[Dict[str, Any]]:
         """Generate column definitions with dynamic PREMI and POTONGAN"""
         dyn_premi = dyn_premi or []
         dyn_potongan = dyn_potongan or []
+        dyn_potongan_pattern = dyn_potongan_pattern or []
 
         identitas_children = [
             {"field": "no", "headerName": "NO", "width": 60, "type": "numericColumn", "cellStyle": {"textAlign": "center"}},
@@ -395,11 +474,36 @@ class SimplifiedHeaderService:
                     ]
                 })
 
+        # Add TOTAL PREMI column if there are any premium columns
+        if premi_children:
+            premi_children.append({
+                "headerName": "TOTAL PREMI",
+                "children": [
+                    {"field": "total_premi", "headerName": "JUMLAH", "width": 120, "type": "numericColumn", "cellStyle": {"backgroundColor": "#f0f8ff", "fontWeight": "bold"}}
+                ]
+            })
+
         # Dynamic POTONGAN columns
         potongan_children = []
         if dyn_potongan:
             for i, pot_name in enumerate(dyn_potongan):
                 field_name = f"pot_{i+1}"
+                # Map known deduction names to existing fields
+                mapped_field = self._map_potongan_field(pot_name)
+                if mapped_field:
+                    field_name = mapped_field
+
+                potongan_children.append({
+                    "headerName": pot_name.upper(),
+                    "children": [
+                        {"field": field_name, "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+                    ]
+                })
+
+        # Dynamic POTONGAN PATTERN columns (for "Pot/potongan" patterns)
+        if dyn_potongan_pattern:
+            for i, pot_name in enumerate(dyn_potongan_pattern):
+                field_name = f"pot_pattern_{i+1}"
                 # Map known deduction names to existing fields
                 mapped_field = self._map_potongan_field(pot_name)
                 if mapped_field:
@@ -435,6 +539,9 @@ class SimplifiedHeaderService:
             ]},
             {"headerName": "PPH21", "children": [
                 {"field": "pot_pph21", "headerName": "JUMLAH", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "POTONGAN LAINNYA", "children": [
+                {"field": "pot_koreksi", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
             ]},
             {"field": "total_potongan", "headerName": "TOTAL POTONGAN", "width": 120, "type": "numericColumn"}
         ]
