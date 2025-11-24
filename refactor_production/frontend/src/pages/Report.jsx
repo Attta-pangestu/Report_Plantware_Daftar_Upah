@@ -97,7 +97,8 @@ export default function Report({ token, user, month, year, gang_code, onLoad }) 
         try {
           const cols = await fetchColumnDefinitions(activeToken, monthValue, yearValue, finalGangCode)
           const normalized = Array.isArray(cols) ? cols : (Array.isArray(cols?.columns) ? cols.columns : [])
-          const transformed = removePlaceholderPotonganHeaders(relocateDynamicPotonganHeaders(insertAttendanceGroupIfMissing(normalized)))
+          // Gunakan headers dari backend langsung tanpa modification
+          const transformed = removePlaceholderPotonganHeaders(relocateDynamicPotonganHeaders(normalized))
           ensureHierarchicalOrThrow(transformed)
           const enhanced = enhanceColumnsRecursive(transformed, 0)
           console.log('[Report] 📋 Column definitions diterima:', {

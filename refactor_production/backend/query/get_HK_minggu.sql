@@ -1,6 +1,6 @@
-SELECT TOP 100 * 
+SELECT COUNT(*) as total_hk
 FROM "PR_EMP_ATTN_ARC"
-WHERE EmpCode = 'H0517'
-  AND AttnDate >= '2025-05-01'
-  AND AttnDate < '2025-06-01'
-AND "TodayIsRestDay" = 'true'
+WHERE EmpCode = ?
+  AND AttnDate >= ?
+  AND AttnDate < ?
+  AND "TodayIsRestDay" = 'true'

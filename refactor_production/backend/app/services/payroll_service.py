@@ -268,7 +268,9 @@ class PayrollService:
         want_all = fields is None or len(fields) == 0
         want = (lambda name: True) if want_all else (lambda name: name in set(fields))
         from pathlib import Path
-        base = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query"
+        base = Path(__file__).resolve().parents[2] / "query"
+        if not base.exists():
+            base = Path(__file__).resolve().parents[4] / "Engine_HTML_Templating" / "template_report" / "query"
         with (base / "Tunjangan" / "Payrate_Beras.sql").open('r', encoding='utf-8') as f:
             beras_q_raw = f.read()
         with (base / "Tunjangan" / "Gett_Amount_Tunjangan_Jabatan.sql").open('r', encoding='utf-8') as f:
@@ -293,6 +295,8 @@ class PayrollService:
             hk_minggu_raw = f.read()
         with (base / "get_HK_national_holiday.sql").open('r', encoding='utf-8') as f:
             hk_nas_raw = f.read()
+        with (base / "get_total_HK_each_Emp.sql").open('r', encoding='utf-8') as f:
+            hk_total_raw = f.read()
         with (base / "Tunjangan" / "get_koreksi_emp.sql").open('r', encoding='utf-8') as f:
             koreksi_raw = f.read()
 
@@ -357,10 +361,9 @@ class PayrollService:
 
         for i, emp in enumerate(employees, start=1):
             nik = (emp.get("nik") or "").strip()
-            import calendar
-            month_i = int((month or datetime.now().month))
-            year_i = int((year or datetime.now().year))
-            hk_count = calendar.monthrange(year_i, month_i)[1]
+            hk_q, hk_params = self._paramify(hk_total_raw, nik, s, e)
+            hk_res = db.query_one(hk_q, hk_params)
+            hk_count = int(self._scalar(hk_res, 0))
             payrate = float(payrate_map.get(nik, 0.0))
             beras_rate = 0.0
             jabatan_jumlah = 0.0
