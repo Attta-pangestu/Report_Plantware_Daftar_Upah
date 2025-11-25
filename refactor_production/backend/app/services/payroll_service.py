@@ -296,6 +296,8 @@ class PayrollService:
             spsi_raw = f.read()
         with (base / "potongan" / "potong_pph21.sql").open('r', encoding='utf-8') as f:
             pph_raw = f.read()
+        with (base / "potongan" / "potong_koreksi.sql").open('r', encoding='utf-8') as f:
+            koreksi_raw = f.read()
         with (base / "get_cuti_tahunan.sql").open('r', encoding='utf-8') as f:
             cuti_tah_raw = f.read()
         with (base / "get_cuti_sakit.sql").open('r', encoding='utf-8') as f:
@@ -555,10 +557,9 @@ class PayrollService:
 
             # Get koreksi amount from database
             koreksi_amount = 0.0
-            if want_all or want('premi_koreksi'):
+            if want_all or want('pot_koreksi'):
                 koreksi_q, koreksi_params = self._paramify(koreksi_raw, nik, s, e)
-                koreksi_q = koreksi_q.replace("AND DocDesc LIKE '%KOREKSI%'", "AND DocDesc LIKE ?")
-                koreksi_res = db.query_one(koreksi_q, koreksi_params + ('%KOREKSI%',))
+                koreksi_res = db.query_one(koreksi_q, koreksi_params)
                 if koreksi_res and len(koreksi_res) > 0:
                     total_koreksi = 0
                     for col_idx in [len(koreksi_res)-1, len(koreksi_res)-2, 7, 8]:

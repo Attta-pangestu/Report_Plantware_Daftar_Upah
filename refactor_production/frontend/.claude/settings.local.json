@@ -11,7 +11,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(DEV_MODE=true python:*)"
+      "Bash(DEV_MODE=true python:*)",
+      "Bash(DEV_MODE=true uvicorn:*)"
     ],
     "deny": [],
     "ask": []

@@ -46,7 +46,7 @@ class HeaderService:
         """Fallback structure if JSON file cannot be loaded"""
         return {
             "table_structure": {
-                "header_rows": 3,
+                "header_rows": 2,
                 "hierarchy": {
                     "level_1": {"columns": []},
                     "level_2": {"columns": []},
@@ -459,11 +459,11 @@ class HeaderService:
             "gaji_pokok": "gaji_pokok",
 
             # Cuti columns
-            "cuti_tahunan_unit": "cuti_tahunan_hari",
-            "cuti_sakit_haid_unit": "cuti_sakit_haid_hari",
-            "cuti_minggu_unit": "cuti_minggu_hari",
-            "cuti_nasional_unit": "cuti_nasional_hari",
-            "cuti_izin_unit": "cuti_izin_hari",
+            "cuti_tahunan": "cuti_tahunan_hari",
+            "cuti_sakit_haid": "cuti_sakit_haid_hari",
+            "cuti_minggu": "cuti_minggu_hari",
+            "cuti_nasional": "cuti_nasional_hari",
+            "cuti_izin": "cuti_izin_hari",
 
             # Tunjangan columns
             "beras_rate": "beras_rate",
@@ -490,6 +490,7 @@ class HeaderService:
 
             # Potongan columns
             "pph21": "pot_pph21",
+            "koreksi": "pot_koreksi",
             "potongan_kontan": "pot_kontan",
             "thr": "pot_thr",
             "pinjam": "pot_pinjam",
@@ -676,6 +677,19 @@ class HeaderService:
                             })
                     col_defs.append({ 'headerName': c1.get('text'), 'children': group2_defs })
                     continue
+                elif 'ABSENSI' in c1_text_upper:
+                    # Special handling for ABSENSI - 2 level hierarchy (direct columns)
+                    absensi_children = []
+                    for c2 in level2_cols:
+                        field = self._map_to_data_field(c2.get('id'))
+                        absensi_children.append({
+                            'field': field,
+                            'headerName': c2.get('text'),
+                            'width': self._get_column_width(field),
+                            'type': self._get_column_type(field),
+                            'cellStyle': self._get_cell_style(field)
+                        })
+                    col_defs.append({ 'headerName': c1.get('text'), 'children': absensi_children })
                 else:
                     group2_defs = []
                     for c2 in level2_cols:
@@ -865,8 +879,9 @@ class HeaderService:
                     break
 
             if upah_kotor_idx is not None:
-                # Check if PPH21 and SPSI are in dynamic data to avoid duplication
+                # Check if PPH21, KOREKSI, and SPSI are in dynamic data to avoid duplication
                 has_dynamic_pph21 = 'PPH21' in dyn_potongan
+                has_dynamic_koreksi = any('KORE' in item for item in dyn_potongan)
                 has_dynamic_spsi = 'POTONGAN SPSI' in dyn_potongan
                 
                 deduction_groups = [
@@ -989,13 +1004,32 @@ class HeaderService:
                             }
                         ]
                     })
+
+                # Only add static KOREKSI if it's not in dynamic data
+                if not has_dynamic_koreksi:
+                    deduction_groups.append({
+                        'headerName': 'KOREKSI',
+                        'children': [
+                            {
+                                'headerName': 'JUMLAH',
+                                'field': 'pot_koreksi',
+                                'width': 100,
+                                'type': 'numericColumn',
+                                'cellStyle': {'textAlign': 'right', 'backgroundColor': '#fff3e0', 'color': '#e65100'}
+                            }
+                        ]
+                    })
                 
                 # Total potongan computation - include dynamic fields
-                total_fields = ['pot_bpjs_pekerja_total', 'pot_koreksi']
+                total_fields = ['pot_bpjs_pekerja_total']
                 if has_dynamic_spsi:
                     total_fields.append('pot_spsi')
                 if has_dynamic_pph21:
                     total_fields.append('pot_pph21')
+                if has_dynamic_koreksi:
+                    total_fields.append('pot_koreksi')
+                else:
+                    total_fields.append('pot_koreksi')  # Always include koreksi
                 
                 deduction_groups.append({
                     'field': 'total_potongan',
@@ -1210,6 +1244,7 @@ class HeaderService:
                             },
                             { 'headerName': 'IURAN SPSI', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_spsi', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
                             { 'headerName': 'PPH21', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_pph21', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
+                            { 'headerName': 'KOREKSI', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_koreksi', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
                             {
                                 'headerName': 'TOTAL POTONGAN',
                                 'children': [ {'headerName': 'JUMLAH', 'field': 'total_potongan', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}, 'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] } } ]
@@ -1397,19 +1432,15 @@ class HeaderService:
         ]
 
         absensi_children = [
-            {"headerName": "KEHADIRAN", "children": [
-                {"field": "hari_kerja", "headerName": "H", "width": 80, "type": "numericColumn"},
-                {"field": "jumlah_hk", "headerName": "JML HK", "width": 80, "type": "numericColumn"}
-            ]},
-            {"headerName": "KETIDAKHADIRAN", "children": [
-                {"field": "cuti_tahunan_hari", "headerName": "TAHUNAN (H)", "width": 90, "type": "numericColumn"},
-                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT/HAID (H)", "width": 110, "type": "numericColumn"},
-                {"field": "cuti_minggu_hari", "headerName": "MINGGU (H)", "width": 90, "type": "numericColumn"},
-                {"field": "cuti_nasional_hari", "headerName": "NASIONAL (H)", "width": 100, "type": "numericColumn"},
-                {"field": "cuti_izin_hari", "headerName": "IZIN (H)", "width": 90, "type": "numericColumn"},
-                {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
-                {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
-            ]}
+            {"field": "hari_kerja", "headerName": "Hadir", "width": 80, "type": "numericColumn"},
+            {"field": "jumlah_hk", "headerName": "JUMLAH HK", "width": 80, "type": "numericColumn"},
+            {"field": "cuti_tahunan_hari", "headerName": "CUTI TAHUNAN", "width": 90, "type": "numericColumn"},
+            {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT + HAID", "width": 110, "type": "numericColumn"},
+            {"field": "cuti_minggu_hari", "headerName": "MINGGU", "width": 90, "type": "numericColumn"},
+            {"field": "cuti_nasional_hari", "headerName": "NASIONAL", "width": 100, "type": "numericColumn"},
+            {"field": "cuti_izin_hari", "headerName": "IZIN", "width": 90, "type": "numericColumn"},
+            {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
+            {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
         ]
 
         tunjangan_children = [
