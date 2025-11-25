@@ -548,10 +548,10 @@ class PayrollService:
 
             hari_kerja = max(0, int(hk_count) - (cuti_tah_count + cuti_sakit_count + cuti_minggu_hari + cuti_nasional_hari))
 
-            # Correct calculation from reference code:
-            # gaji_pokok_jmlhk = hk_count * payrate (use total HK count, not working days after deductions)
-            # upah_pokok column displays hari_kerja * payrate for display purposes
-            gaji_pokok_jmlhk = hk_count * payrate if payrate else 0
+            # Correct calculation sesuai business rule:
+            # Upah Pokok = hari_kerja x upah_pokok (working days setelah cuti)
+            # Gaji Pokok = jumlah_hk x upah_dasar (total HK days)
+            gaji_pokok = hk_count * payrate if payrate else 0
             upah_pokok = payrate * hari_kerja if (want_all or want('upah_pokok')) else 0
 
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
@@ -597,8 +597,8 @@ class PayrollService:
                     dyn_pot_vals.append(float(dyn_pot_maps[i].get(nik, 0.0)))
 
             # Correct calculation from reference code:
-            # jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
-            jumlah_upah_kotor = gaji_pokok_jmlhk + total_tunjangan + total_premi
+            # jumlah_upah_kotor = gaji_pokok + total_tunjangan + total_premi
+            jumlah_upah_kotor = gaji_pokok + total_tunjangan + total_premi
 
             # Load constants from config
             config = self.config
@@ -669,7 +669,7 @@ class PayrollService:
                 cuti_nasional_hari=int(cuti_nasional_hari),
                 cuti_izin_hari=int(cuti_izin_hari),
                 jumlah_hk=int(hk_count),
-                gaji_pokok=gaji_pokok_jmlhk,
+                gaji_pokok=gaji_pokok,
                 beras_rate=beras_rate,
                 beras_jumlah=beras_jumlah,
                 jabatan_rate=jabatan_rate,

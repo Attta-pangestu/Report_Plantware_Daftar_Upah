@@ -1552,10 +1552,10 @@ export default function Report({ token, user, month, year, gang_code, division, 
       cuti_total: { type: 'sum', fields: ['cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari'] },
       total_ketidakhadiran: { type: 'sum', fields: ['cuti_tahunan_hari','cuti_sakit_haid_hari','cuti_minggu_hari','cuti_nasional_hari','tidak_hadir_cth','tidak_hadir_alpa'] },
       hari_kerja: { type: 'sub', a: 'jumlah_hk', b: 'cuti_total' },
-      gaji_pokok: { type: 'mul', a: 'hari_kerja', b: 'upah_dasar' },
+      gaji_pokok: { type: 'mul', a: 'jumlah_hk', b: 'upah_dasar' },
       upah_pokok: { type: 'mul', a: 'hari_kerja', b: 'upah_dasar' },
       total_tunjangan: { type: 'sum', fields: ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','masa_kerja_amount','lembur_jumlah'] },
-      total_premi: { type: 'sum', fields: ['premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting','premi_harvesting_incentive','premi_pupuk'], match_prefix: 'premi_dynamic_' },
+      total_premi: { type: 'sum', fields: ['premi_brondol','premi_pruning'], match_prefix: 'premi_dynamic_' },
       jumlah_upah_kotor: { type: 'sum', fields: ['gaji_pokok','total_tunjangan','total_premi'] },
       // total_potongan: Computed in backend only - remove frontend calculation
       upah_bersih: { type: 'sub', a: 'jumlah_upah_kotor', b: 'total_potongan' }
