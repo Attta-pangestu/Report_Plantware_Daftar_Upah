@@ -7,7 +7,7 @@
     "description": "Struktur header tabel report daftar upah dengan hirarki parent-child"
   },
   "table_structure": {
-    "total_columns": 36,
+    "total_columns": 37,
     "header_rows": 3,
     "data_rows": "employee_data",
     "hierarchy": {
@@ -83,9 +83,9 @@
             "id": "tunjangan",
             "text": "TUNJANGAN",
             "rowspan": 1,
-            "colspan": 8,
+            "colspan": 9,
             "class": "header-cell section-header",
-            "children": ["beras_rate", "beras_jumlah", "jabatan_rate", "jabatan_jumlah", "masa_kerja_lama", "masa_kerja_jumlah", "lembur_jam", "lembur_jumlah"]
+            "children": ["beras_rate", "beras_jumlah", "jabatan_rate", "jabatan_jumlah", "masa_kerja_lama", "masa_kerja_jumlah", "masa_kerja_amount", "lembur_jam", "lembur_jumlah"]
           },
           {
             "id": "premi",
@@ -172,9 +172,9 @@
             "id": "masa_kerja",
             "text": "MASA KERJA",
             "parent": "tunjangan",
-            "colspan": 2,
+            "colspan": 3,
             "class": "header-cell sub-header-tunjangan",
-            "children": ["masa_kerja_lama", "masa_kerja_jumlah"]
+            "children": ["masa_kerja_lama", "masa_kerja_jumlah", "masa_kerja_amount"]
           },
           {
             "id": "lembur",
@@ -353,6 +353,12 @@
           {
             "id": "masa_kerja_jumlah",
             "text": "Jumlah (Rp)",
+            "parent": "masa_kerja",
+            "class": "header-cell col-tunjangan"
+          },
+          {
+            "id": "masa_kerja_amount",
+            "text": "Amount (Rp)",
             "parent": "masa_kerja",
             "class": "header-cell col-tunjangan"
           },

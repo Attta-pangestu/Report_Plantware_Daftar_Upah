@@ -478,6 +478,7 @@ class HeaderService:
             "jabatan_jumlah": "jabatan_jumlah",
             "masa_kerja_lama": "masa_kerja_tahun",
             "masa_kerja_jumlah": "masa_kerja_jumlah",
+            "masa_kerja_amount": "masa_kerja_amount",
             "lembur_jam": "lembur_jam",
             "lembur_jumlah": "lembur_jumlah",
 
@@ -1121,7 +1122,7 @@ class HeaderService:
                     }
                 t_children.append({'headerName': 'BERAS', 'children': [leaf('beras_rate','RATE'), leaf('beras_jumlah','JUMLAH')]})
                 t_children.append({'headerName': 'JABATAN', 'children': [leaf('jabatan_rate','RATE'), leaf('jabatan_jumlah','JUMLAH')]})
-                t_children.append({'headerName': 'MASA KERJA', 'children': [leaf('masa_kerja_tahun','LAMA'), leaf('masa_kerja_jumlah','JUMLAH')]})
+                t_children.append({'headerName': 'MASA KERJA', 'children': [leaf('masa_kerja_tahun','LAMA'), leaf('masa_kerja_jumlah','JUMLAH'), leaf('masa_kerja_amount','AMOUNT')]})
                 t_children.append({'headerName': 'LEMBUR', 'children': [leaf('lembur_jam','JAM'), leaf('lembur_jumlah','JUMLAH')]})
                 t_children.append({'headerName': 'TOTAL TUNJANGAN', 'children': [
                     {
@@ -1130,7 +1131,7 @@ class HeaderService:
                         'width': self._get_column_width('total_tunjangan'),
                         'type': self._get_column_type('total_tunjangan'),
                         'cellStyle': self._get_cell_style('total_tunjangan'),
-                        'compute': { 'type': 'sum', 'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah'] }
+                        'compute': { 'type': 'sum', 'fields': ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','masa_kerja_amount','lembur_jumlah'] }
                     }
                 ]})
                 tunjangan_group = { 'headerName': 'TUNJANGAN', 'children': t_children }
@@ -1460,7 +1461,8 @@ class HeaderService:
             ]},
             {"headerName": "MASA KERJA", "children": [
                 {"field": "masa_kerja_tahun", "headerName": "LAMA", "width": 100, "type": "numericColumn"},
-                {"field": "masa_kerja_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"}
+                {"field": "masa_kerja_jumlah", "headerName": "JUMLAH", "width": 120, "type": "numericColumn"},
+                {"field": "masa_kerja_amount", "headerName": "AMOUNT", "width": 120, "type": "numericColumn"}
             ]},
             {"headerName": "LEMBUR", "children": [
                 {"field": "lembur_jam", "headerName": "JAM", "width": 80, "type": "numericColumn"},

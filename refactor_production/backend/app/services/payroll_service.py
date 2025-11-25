@@ -452,9 +452,10 @@ class PayrollService:
             jabatan_rate = 0.0
             masa_kerja_tahun = 0
             masa_kerja_jumlah = 0.0
+            masa_kerja_amount = 0.0
             lembur_jumlah = 0.0
             lembur_jam = 0
-            if want_all or any([want('beras_rate'), want('beras_jumlah'), want('jabatan_rate'), want('jabatan_jumlah'), want('masa_kerja_tahun'), want('masa_kerja_jumlah'), want('lembur_jam'), want('lembur_jumlah'), want('total_tunjangan')]):
+            if want_all or any([want('beras_rate'), want('beras_jumlah'), want('jabatan_rate'), want('jabatan_jumlah'), want('masa_kerja_tahun'), want('masa_kerja_jumlah'), want('masa_kerja_amount'), want('lembur_jam'), want('lembur_jumlah'), want('total_tunjangan')]):
                 beras_q, beras_params = self._paramify(beras_q_raw, nik)
                 beras_rate = self._scalar(db.query_one(beras_q, beras_params))
                 jab_q, jab_params = self._paramify(jab_q_raw, nik, s, e)
@@ -467,6 +468,7 @@ class PayrollService:
                 mk_amt_q, mk_amt_params = self._paramify(mk_amt_raw, nik, s, e)
                 mk_amt_res = db.query_one(mk_amt_q, mk_amt_params)
                 masa_kerja_jumlah = self._scalar(mk_amt_res, -1)
+                masa_kerja_amount = masa_kerja_jumlah  # For now, same as jumlah
                 lembur_q, lembur_params = self._paramify(lembur_raw, nik, s, e)
                 lembur_res = db.query_one(lembur_q, lembur_params)
                 lembur_jumlah = self._scalar(lembur_res, 0)
@@ -553,7 +555,7 @@ class PayrollService:
             upah_pokok = payrate * hari_kerja if (want_all or want('upah_pokok')) else 0
 
             beras_jumlah = hk_count * beras_rate if beras_rate > 0 else 0
-            total_tunjangan = beras_jumlah + jabatan_jumlah + masa_kerja_jumlah + lembur_jumlah
+            total_tunjangan = beras_jumlah + jabatan_jumlah + masa_kerja_jumlah + masa_kerja_amount + lembur_jumlah
 
             # Get koreksi amount from database
             koreksi_amount = 0.0
@@ -672,6 +674,7 @@ class PayrollService:
                 jabatan_jumlah=jabatan_jumlah,
                 masa_kerja_tahun=int(masa_kerja_tahun),
                 masa_kerja_jumlah=masa_kerja_jumlah,
+                masa_kerja_amount=masa_kerja_amount,
                 lembur_jam=int(lembur_jam),
                 lembur_jumlah=lembur_jumlah,
                 total_tunjangan=total_tunjangan,
@@ -729,7 +732,7 @@ class PayrollService:
             logger = logging.getLogger(__name__)
             fields = [
                 'upah_dasar','hari_kerja','upah_pokok','beras_rate','beras_jumlah','jabatan_jumlah',
-                'masa_kerja_tahun','masa_kerja_jumlah','lembur_jam','lembur_jumlah','total_tunjangan',
+                'masa_kerja_tahun','masa_kerja_jumlah','masa_kerja_amount','lembur_jam','lembur_jumlah','total_tunjangan',
                 'premi_brondol','premi_pruning','premi_angkut_material','premi_angkut_tbs','premi_harvesting',
                 'premi_harvesting_incentive','premi_pupuk','total_premi','jumlah_upah_kotor','pot_pph21',
                 'pot_bpjs_kes','pot_bpjs_pek','pot_bpjs_maj','total_potongan','upah_bersih'
