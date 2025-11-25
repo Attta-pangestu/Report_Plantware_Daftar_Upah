@@ -637,9 +637,9 @@ class PayrollService:
             pot_kl = 0.0
 
             # Total potongan calculation based on reference code (line 1418 in reference engine):
-            # Total Potongan = BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21 + Dynamic Potongan
+            # Total Potongan = CARUMAN ASTEK PEKERJA + BPJS Kesehatan Pekerja + BPJS Pensiun Pekerja + Iuran SPSI + PPH21 + Dynamic Potongan
             # Note: Only employee portions are counted in total potongan (from reference engine)
-            total_potongan = (pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
+            total_potongan = (pot_bpjs_pek + pot_bpjs_kesehatan_pekerja + pot_bpjs_pensiun_pekerja + pot_spsi + pot_pph21 +
                              pot_kontan + pot_thr + pot_pinjam + pot_kl + pot_koreksi + sum(dyn_pot_vals))
 
             # Simplified for the predefined fields

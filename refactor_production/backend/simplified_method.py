@@ -363,8 +363,8 @@ class SimplifiedHeaderService:
         identitas_children = [
             {"field": "no", "headerName": "NO", "width": 60, "type": "numericColumn", "cellStyle": {"textAlign": "center"}},
             {"field": "jenis_kelamin", "headerName": "L/P", "width": 50, "type": "textColumn", "cellStyle": {"textAlign": "center"}},
-            {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
-            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
+            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
+            {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
 
         # UPDATED ABSENSI with 3-level structure
@@ -640,8 +640,8 @@ class SimplifiedHeaderService:
         identitas_children = [
             {"field": "no", "headerName": "NO", "width": 60, "type": "numericColumn", "cellStyle": {"textAlign": "center"}},
             {"field": "jenis_kelamin", "headerName": "L/P", "width": 50, "type": "textColumn", "cellStyle": {"textAlign": "center"}},
-            {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
-            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
+            {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}},
+            {"field": "nik", "headerName": "NIK", "width": 100, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
 
         # UPDATED ABSENSI with 3-level structure

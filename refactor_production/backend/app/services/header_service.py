@@ -1027,7 +1027,7 @@ class HeaderService:
                     })
                 
                 # Total potongan computation - include dynamic fields
-                total_fields = ['pot_bpjs_pekerja_total']
+                total_fields = ['pot_bpjs_pekerja_total', 'pot_bpjs_pek']  # Include CARUMAN ASTEK PEKERJA
                 if has_dynamic_spsi:
                     total_fields.append('pot_spsi')
                 if has_dynamic_pph21:
@@ -1092,7 +1092,7 @@ class HeaderService:
                         if isinstance(g, dict):
                             for ch in (g.get('children') or []):
                                 if isinstance(ch, dict) and ch.get('field') == 'total_potongan':
-                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
+                                    ch['compute'] = { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_bpjs_pek','pot_spsi','pot_pph21','pot_koreksi'], 'match_prefix': 'pot_dynamic_' }
                                     break
                 except Exception:
                     pass
@@ -1253,7 +1253,7 @@ class HeaderService:
                             { 'headerName': 'KOREKSI', 'children': [ {'headerName': 'JUMLAH', 'field': 'pot_koreksi', 'width': 100, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right'} } ] },
                             {
                                 'headerName': 'TOTAL POTONGAN',
-                                'children': [ {'headerName': 'JUMLAH', 'field': 'total_potongan', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}, 'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'] } } ]
+                                'children': [ {'headerName': 'JUMLAH', 'field': 'total_potongan', 'width': 120, 'type': 'numericColumn', 'cellStyle': {'textAlign': 'right', 'backgroundColor': '#e1f5fe', 'color': '#0277bd', 'fontWeight': 'bold'}, 'compute': { 'type': 'sum', 'fields': ['pot_bpjs_pekerja_total','pot_bpjs_pek','pot_spsi','pot_pph21','pot_koreksi'] } } ]
                             }
                         ]
                         try:

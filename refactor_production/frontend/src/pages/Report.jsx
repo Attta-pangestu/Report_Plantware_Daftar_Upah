@@ -115,9 +115,18 @@ export default function Report({ token, user, month, year, gang_code, division, 
           const transformed = removePlaceholderPotonganHeaders(relocateDynamicPotonganHeaders(normalized))
           ensureHierarchicalOrThrow(transformed)
           const enhanced = enhanceColumnsRecursive(transformed, 0)
+
+          // Add pinned property to NAMA and NIK columns
+          const enhancedWithPinned = enhanced.map(col => {
+            if (col.field === 'nama' || col.field === 'nik') {
+              return { ...col, pinned: 'left' }
+            }
+            return col
+          })
+
           console.log('[Report] 📋 Column definitions diterima:', {
-            total_columns: enhanced.length,
-            sample_columns: enhanced.slice(0, 3).map(c => ({ field: c.field, header: c.headerName }))
+            total_columns: enhancedWithPinned.length,
+            sample_columns: enhancedWithPinned.slice(0, 3).map(c => ({ field: c.field, header: c.headerName, pinned: c.pinned }))
           })
 
           const seqCol = {
@@ -134,10 +143,10 @@ export default function Report({ token, user, month, year, gang_code, division, 
               }
             }
           }
-          setColumnDefs([seqCol, ...enhanced])
+          setColumnDefs([seqCol, ...enhancedWithPinned])
           computeRulesRef.current = createFallbackComputeRules()
 
-          console.log('[Report] ✅ Column definitions siap, total:', enhanced.length, 'kolom')
+          console.log('[Report] ✅ Column definitions siap, total:', enhancedWithPinned.length, 'kolom')
           console.log('[Report] 🔄 Menunggu trigger data loading...')
         } catch (colErr) {
           console.error('[Report] Column definitions fetch failed:', colErr)
@@ -517,7 +526,10 @@ export default function Report({ token, user, month, year, gang_code, division, 
     filter: true,
     floatingFilter: true,
     flex: 1,
-    minWidth: 100
+    minWidth: 100,
+    enableCellTextSelection: true,
+    enableRangeSelection: true,
+    enableCharts: false
   }
   const collectLeafFieldsFromColumns = cols => {
     const out = new Set()
@@ -1189,7 +1201,49 @@ export default function Report({ token, user, month, year, gang_code, division, 
         gap: '12px'
       }}>
         {/* Left Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Search Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 12px', backgroundColor: '#f8f9fa', borderRadius: '6px', border: '1px solid #ddd' }}>
+            <span style={{ fontSize: '14px', marginRight: '8px' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Cari nama, NIK, atau data lainnya..."
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+                width: '250px',
+                outline: 'none'
+              }}
+              onChange={(e) => {
+                const searchValue = e.target.value.toLowerCase()
+                if (gridRef.current?.api) {
+                  gridRef.current.api.setQuickFilter(searchValue)
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                if (gridRef.current?.api) {
+                  gridRef.current.api.setQuickFilter('')
+                  e.target.previousElementSibling.value = ''
+                }
+              }}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: '1px solid #5a6268',
+                borderRadius: '4px',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              ❌
+            </button>
+          </div>
+
           <button
             onClick={autoSizeAll}
             style={{
@@ -1499,7 +1553,7 @@ export default function Report({ token, user, month, year, gang_code, division, 
       total_tunjangan: { type: 'sum', fields: ['beras_jumlah','jabatan_jumlah','masa_kerja_jumlah','lembur_jumlah'] },
       total_premi: { type: 'sum', fields: ['premi_pruning','premi_brondol'], match_prefix: 'premi_dynamic_' },
       jumlah_upah_kotor: { type: 'sum', fields: ['gaji_pokok','total_tunjangan','total_premi'] },
-      total_potongan: { type: 'sum', fields: ['pot_bpjs_pek','pot_bpjs_maj','pot_bpjs_jumlah','pot_bpjs_kesehatan_pekerja','pot_bpjs_kesehatan_majikan','pot_bpjs_pensiun_pekerja','pot_bpjs_pensiun_majikan','pot_bpjs_pekerja_total','pot_spsi','pot_pph21','pot_koreksi'], match_prefix: 'pot_dynamic_' },
+      // total_potongan: Computed in backend only - remove frontend calculation
       upah_bersih: { type: 'sub', a: 'jumlah_upah_kotor', b: 'total_potongan' }
     }
   }
