@@ -139,7 +139,7 @@ class HeaderService:
             else:
                 end_date = f"{year}-{str(month+1).zfill(2)}-01"
 
-            print(f"[HEADER DEBUG] Executing filtered potongan query (POT% only, exclude PPH21/koreksi/spsi) from {start_date} to {end_date}")
+            print(f"[HEADER DEBUG] Executing filtered potongan query (POT% only, exclude koreksi/spsi, include PPH21) from {start_date} to {end_date}")
             # Execute potongan query
             rows = db.query_all(sql_entry['sql'], [gang_code, start_date, end_date])
             mid = time.perf_counter()
@@ -208,8 +208,8 @@ class HeaderService:
             mid = time.perf_counter()
 
             excluded_lower = {
-                'koreksi', 'potongan pph21', 'potongan spsi', 'pph21', 'spsi',
-                'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol', 'pph 21',
+                'koreksi', 'potongan spsi', 'spsi',
+                'tunjangan jabatan', 'tunjangan masa kerja', 'pruning', 'brondol',
                 'koreksi panen', 'potongan koreksi', 'potongan koreksi panen',
                 'tunjangan beras', 'lembur', 'prun'  # Added prun to filter out individual pruning items
             }
@@ -285,10 +285,7 @@ class HeaderService:
             'KOREKSI PANEN',
             'POTONGAN KOREKSI',
             'POTONGAN KOREKSI PANEN',
-            'POTONGAN PPH21',
             'POTONGAN SPSI',
-            'PPH21',
-            'PPH 21',
             'SPSI',
             'TUNJANGAN JABATAN',
             'TUNJANGAN MASA KERJA',
