@@ -8,16 +8,19 @@ class SimplifiedHeaderService:
     """
     Optimized header service with clean structure and minimal redundancy.
     
-    NEW ABSENSI STRUCTURE:
+    NEW ABSENSI STRUCTURE (3-LEVEL):
     ┌─────────────────────────────────────────────────────────┐
-    │ ABSENSI (colspan: 9)                                    │
-    ├──────────┬─────────┬──────────────┬───────────┬───────┤
-    │ KEHADIRAN│ JUMLAH HK│ CUTI TAHUNAN │ SAKIT+HAID│ ...  │
-    │ (Hari)   │ (Jumlah) │   (H)       │   (H)     │       │
-    └──────────┴─────────┴──────────────┴───────────┴───────┘
-    
-    KEHADIRAN = hari_kerja (moved inside absensi)
-    KETIDAKHADIRAN diperinci: TAHUNAN + IZIN, SAKIT + HAID, MINGGU, NASIONAL
+    │ ABSENSI (colspan: 6)                                    │
+    ├──────────┬───────────────────────────────────┬─────────┤
+    │KEHADIRAN│        KETIDAKHADIRAN             │JUMLAH HK│
+    │(rowspan=2)├──────────┬─────────┬─────────┬───┤(rowspan=2)│
+    │          │TAHUNAN  │SAKIT+HAID│MINGGU   │NAS│         │
+    │          │(Hari)   │(Hari)   │(Hari)   │(H)│         │
+    └──────────┴──────────┴─────────┴─────────┴───┴─────────┘
+
+    KEHADIRAN = hari_kerja (Level 2 + Level 3)
+    KETIDAKHADIRAN = parent untuk cuti details (Level 2 + Level 3)
+    JUMLAH HK = jumlah_hk (Level 2 + Level 3)
     """
     
     def __init__(self):
@@ -364,17 +367,20 @@ class SimplifiedHeaderService:
             {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
 
-        # UPDATED ABSENSI with 2-level structure (direct columns without sub-groups)
+        # UPDATED ABSENSI with 3-level structure
         absensi_children = [
-            {"field": "hari_kerja", "headerName": "Hadir", "width": 80, "type": "numericColumn"},
-            {"field": "jumlah_hk", "headerName": "JUMLAH HK", "width": 80, "type": "numericColumn"},
-            {"field": "cuti_tahunan_hari", "headerName": "CUTI TAHUNAN", "width": 90, "type": "numericColumn"},
-            {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT + HAID", "width": 110, "type": "numericColumn"},
-            {"field": "cuti_minggu_hari", "headerName": "MINGGU", "width": 90, "type": "numericColumn"},
-            {"field": "cuti_nasional_hari", "headerName": "NASIONAL", "width": 100, "type": "numericColumn"},
-            {"field": "cuti_izin_hari", "headerName": "IZIN", "width": 90, "type": "numericColumn"},
-            {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
-            {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
+            {"headerName": "KEHADIRAN", "children": [
+                {"field": "hari_kerja", "headerName": "Hari", "width": 80, "type": "numericColumn"}
+            ]},
+            {"headerName": "KETIDAKHADIRAN", "children": [
+                {"field": "cuti_tahunan_hari", "headerName": "CUTI TAHUNAN", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT + HAID", "width": 110, "type": "numericColumn"},
+                {"field": "cuti_minggu_hari", "headerName": "MINGGU", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_nasional_hari", "headerName": "NASIONAL", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "JUMLAH HK", "children": [
+                {"field": "jumlah_hk", "headerName": "Jumlah", "width": 80, "type": "numericColumn"}
+            ]}
         ]
 
         upah_dasar_children = [
@@ -638,17 +644,20 @@ class SimplifiedHeaderService:
             {"field": "nama", "headerName": "NAMA", "width": 200, "type": "textColumn", "cellStyle": {"textAlign": "left"}}
         ]
 
-        # UPDATED ABSENSI with 2-level structure (direct columns without sub-groups)
+        # UPDATED ABSENSI with 3-level structure
         absensi_children = [
-            {"field": "hari_kerja", "headerName": "Hadir", "width": 80, "type": "numericColumn"},
-            {"field": "jumlah_hk", "headerName": "JUMLAH HK", "width": 80, "type": "numericColumn"},
-            {"field": "cuti_tahunan_hari", "headerName": "CUTI TAHUNAN", "width": 90, "type": "numericColumn"},
-            {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT + HAID", "width": 110, "type": "numericColumn"},
-            {"field": "cuti_minggu_hari", "headerName": "MINGGU", "width": 90, "type": "numericColumn"},
-            {"field": "cuti_nasional_hari", "headerName": "NASIONAL", "width": 100, "type": "numericColumn"},
-            {"field": "cuti_izin_hari", "headerName": "IZIN", "width": 90, "type": "numericColumn"},
-            {"field": "tidak_hadir_cth", "headerName": "CTH", "width": 80, "type": "numericColumn"},
-            {"field": "tidak_hadir_alpa", "headerName": "ALPA", "width": 80, "type": "numericColumn"}
+            {"headerName": "KEHADIRAN", "children": [
+                {"field": "hari_kerja", "headerName": "Hari", "width": 80, "type": "numericColumn"}
+            ]},
+            {"headerName": "KETIDAKHADIRAN", "children": [
+                {"field": "cuti_tahunan_hari", "headerName": "CUTI TAHUNAN", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_sakit_haid_hari", "headerName": "SAKIT + HAID", "width": 110, "type": "numericColumn"},
+                {"field": "cuti_minggu_hari", "headerName": "MINGGU", "width": 90, "type": "numericColumn"},
+                {"field": "cuti_nasional_hari", "headerName": "NASIONAL", "width": 100, "type": "numericColumn"}
+            ]},
+            {"headerName": "JUMLAH HK", "children": [
+                {"field": "jumlah_hk", "headerName": "Jumlah", "width": 80, "type": "numericColumn"}
+            ]}
         ]
 
         upah_dasar_children = [

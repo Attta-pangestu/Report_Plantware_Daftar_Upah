@@ -12,7 +12,8 @@
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
       "Bash(DEV_MODE=true python:*)",
-      "Bash(DEV_MODE=true uvicorn:*)"
+      "Bash(DEV_MODE=true uvicorn:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

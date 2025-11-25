@@ -458,12 +458,18 @@ class HeaderService:
             "jml_hk": "jumlah_hk",
             "gaji_pokok": "gaji_pokok",
 
-            # Cuti columns
+            # Cuti columns - original fields (level_2)
             "cuti_tahunan": "cuti_tahunan_hari",
             "cuti_sakit_haid": "cuti_sakit_haid_hari",
             "cuti_minggu": "cuti_minggu_hari",
             "cuti_nasional": "cuti_nasional_hari",
             "cuti_izin": "cuti_izin_hari",
+
+            # Cuti columns - new unit fields (level_3)
+            "cuti_tahunan_unit": "cuti_tahunan_hari",
+            "cuti_sakit_haid_unit": "cuti_sakit_haid_hari",
+            "cuti_minggu_unit": "cuti_minggu_hari",
+            "cuti_nasional_unit": "cuti_nasional_hari",
 
             # Tunjangan columns
             "beras_rate": "beras_rate",

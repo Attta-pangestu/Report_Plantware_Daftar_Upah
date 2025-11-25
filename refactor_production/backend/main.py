@@ -32,6 +32,11 @@ def _allowed_origins():
                 return items
         except Exception as e:
             logger.error(f"Failed to parse CORS_ALLOW_ORIGINS: {e}")
+
+    # For multi-computer access, allow all origins in development mode
+    if DEV_MODE:
+        return ["*"]  # Allow all origins in development mode
+
     return [
         "http://localhost:5173",
         "http://localhost:5174",

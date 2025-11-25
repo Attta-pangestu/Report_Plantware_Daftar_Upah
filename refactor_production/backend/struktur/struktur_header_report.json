@@ -8,7 +8,7 @@
   },
   "table_structure": {
     "total_columns": 36,
-    "header_rows": 2,
+    "header_rows": 3,
     "data_rows": "employee_data",
     "hierarchy": {
       "level_1": {
@@ -18,7 +18,7 @@
           {
             "id": "no",
             "text": "NO",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-no main-header",
             "children": []
@@ -26,7 +26,7 @@
           {
             "id": "gender",
             "text": "L/P",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-gender main-header",
             "children": []
@@ -34,7 +34,7 @@
           {
             "id": "nik",
             "text": "NIK",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-nik main-header",
             "children": []
@@ -42,7 +42,7 @@
           {
             "id": "name",
             "text": "NAMA",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-name main-header text-left",
             "children": []
@@ -51,14 +51,14 @@
             "id": "absensi",
             "text": "ABSENSI",
             "rowspan": 1,
-            "colspan": 9,
+            "colspan": 3,
             "class": "header-cell section-header",
-            "children": ["hari_kerja", "jml_hk", "cuti_tahunan", "cuti_sakit_haid", "cuti_minggu", "cuti_nasional", "cuti_izin", "cth", "alpa"]
+            "children": ["kehadiran", "ketidakhadiran", "jml_hk"]
           },
           {
             "id": "upah_dasar",
             "text": "UPAH DASAR",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-upah-dasar main-header",
             "children": []
@@ -66,7 +66,7 @@
           {
             "id": "upah_pokok",
             "text": "UPAH POKOK",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-upah-pokok main-header",
             "children": []
@@ -74,7 +74,7 @@
           {
             "id": "gaji_pokok",
             "text": "GAJI POKOK",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-gaji-pokok main-header",
             "children": []
@@ -98,7 +98,7 @@
           {
             "id": "total_tunjangan",
             "text": "TOTAL TUNJANGAN",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-total-tunjangan main-header",
             "children": []
@@ -114,7 +114,7 @@
           {
             "id": "upah_bersih",
             "text": "UPAH BERSIH",
-            "rowspan": 2,
+            "rowspan": 3,
             "colspan": 1,
             "class": "header-cell col-upah main-header",
             "children": []
@@ -126,67 +126,31 @@
         "description": "Sub-header detail types",
         "columns": [
           {
-            "id": "hari_kerja",
-            "text": "Hadir",
+            "id": "kehadiran",
+            "text": "KEHADIRAN",
             "parent": "absensi",
+            "rowspan": 2,
             "colspan": 1,
-            "class": "header-cell col-hadir"
+            "class": "header-cell col-hadir",
+            "children": ["hari_kerja"]
+          },
+          {
+            "id": "ketidakhadiran",
+            "text": "KETIDAKHADIRAN",
+            "parent": "absensi",
+            "rowspan": 1,
+            "colspan": 4,
+            "class": "header-cell sub-header-absensi",
+            "children": ["cuti_tahunan_unit", "cuti_sakit_haid_unit", "cuti_minggu_unit", "cuti_nasional_unit"]
           },
           {
             "id": "jml_hk",
             "text": "JUMLAH HK",
             "parent": "absensi",
+            "rowspan": 2,
             "colspan": 1,
-            "class": "header-cell col-total-hk"
-          },
-          {
-            "id": "cuti_tahunan",
-            "text": "CUTI TAHUNAN",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cuti-tahunan"
-          },
-          {
-            "id": "cuti_sakit_haid",
-            "text": "SAKIT + HAID",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cuti-sakit-haid"
-          },
-          {
-            "id": "cuti_minggu",
-            "text": "MINGGU",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cuti-minggu"
-          },
-          {
-            "id": "cuti_nasional",
-            "text": "NASIONAL",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cuti-nasional"
-          },
-          {
-            "id": "cuti_izin",
-            "text": "IZIN",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cuti-izin"
-          },
-          {
-            "id": "cth",
-            "text": "CTH",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-cth"
-          },
-          {
-            "id": "alpa",
-            "text": "ALPA",
-            "parent": "absensi",
-            "colspan": 1,
-            "class": "header-cell col-alpa"
+            "class": "header-cell col-total-hk",
+            "children": ["jumlah_hk"]
           },
           {
             "id": "beras",
@@ -320,6 +284,42 @@
         "row": 3,
         "description": "Unit columns (Rate, Jumlah, Lama, Jam, etc)",
         "columns": [
+          {
+            "id": "hari_kerja",
+            "text": "Hari",
+            "parent": "kehadiran",
+            "class": "header-cell col-absensi"
+          },
+          {
+            "id": "cuti_tahunan_unit",
+            "text": "Hari",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-absensi"
+          },
+          {
+            "id": "cuti_sakit_haid_unit",
+            "text": "Hari",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-absensi"
+          },
+          {
+            "id": "cuti_minggu_unit",
+            "text": "Hari",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-absensi"
+          },
+          {
+            "id": "cuti_nasional_unit",
+            "text": "Hari",
+            "parent": "ketidakhadiran",
+            "class": "header-cell col-absensi"
+          },
+          {
+            "id": "jumlah_hk",
+            "text": "Jumlah",
+            "parent": "jml_hk",
+            "class": "header-cell col-absensi"
+          },
           {
             "id": "beras_rate",
             "text": "Rate (Rp)",
