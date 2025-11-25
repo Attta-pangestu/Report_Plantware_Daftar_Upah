@@ -238,6 +238,9 @@ class PayrollService:
         out: Dict[str, Dict[str, int]] = { c: { 'tahunan':0, 'sakit':0, 'minggu':0, 'nasional':0 } for c in emp_codes }
         if not emp_codes:
             return out
+
+        print(f"[DEBUG] Processing cuti_maps for {len(emp_codes)} employees from {start_date} to {end_date}")
+
         for chunk in self._chunks(emp_codes, 100):
             with db.transaction() as cur:
                 for nik in chunk:
@@ -253,11 +256,17 @@ class PayrollService:
                     m_rows = cur.fetchall()
                     cur.execute(hn_q, *hn_p)
                     n_rows = cur.fetchall()
-                    out[nik]['tahunan'] = len(t_rows)
-                    out[nik]['sakit'] = len(s_rows)
-                    out[nik]['minggu'] = len(m_rows)
-                    out[nik]['nasional'] = len(n_rows)
+                    out[nik]['tahunan'] = t_rows[0][0] if t_rows and len(t_rows) > 0 else 0
+                    out[nik]['sakit'] = s_rows[0][0] if s_rows and len(s_rows) > 0 else 0
+                    out[nik]['minggu'] = m_rows[0][0] if m_rows and len(m_rows) > 0 else 0
+                    out[nik]['nasional'] = n_rows[0][0] if n_rows and len(n_rows) > 0 else 0
+
+                    # Debug output for each employee
+                    if out[nik]['tahunan'] > 0 or out[nik]['sakit'] > 0 or out[nik]['minggu'] > 0 or out[nik]['nasional'] > 0:
+                        print(f"[DEBUG] Employee {nik}: tahunan={out[nik]['tahunan']}, sakit={out[nik]['sakit']}, minggu={out[nik]['minggu']}, nasional={out[nik]['nasional']}")
+
         self._cache_set(key, out)
+        print(f"[DEBUG] Completed cuti_maps processing. Sample results: {dict(list(out.items())[:3])}")
         return out
 
     async def generate_rows(self, repo: EmployeeRepository, gang_code: str = None, division: str = None, month: int = None, year: int = None, skip: int = 0, limit: int = 1000, fields: List[str] = None) -> List[PayrollRow]:

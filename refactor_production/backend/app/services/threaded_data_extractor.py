@@ -42,6 +42,7 @@ class ThreadedDataExtractor:
             'tunjangan_data': self._get_tunjangan_query(gang_code, start_date, end_date),
             'potongan_data': self._get_potongan_query(gang_code, start_date, end_date),
             'cuti_data': self._get_cuti_query(gang_code, start_date, end_date),
+            'hk_data': self._get_hk_query(gang_code, start_date, end_date),
             'upah_pokok_data': self._get_upah_pokok_query(gang_code, start_date, end_date)
         }
 
@@ -232,25 +233,113 @@ class ThreadedDataExtractor:
 
     def _get_cuti_query(self, gang_code: str, start_date: str, end_date: str) -> Dict[str, Any]:
         """
-        Get cuti data with a simpler approach that matches reference code behavior
-        Since CutiDataManager is not available, use basic attendance data with DocDesc classification
+        Get real cuti data from database using TaskCode classification with ARC tables
+        Based on reference queries get_cuti_tahunan.sql and get_cuti_sakit.sql
         """
         return {
             'sql': """
+                WITH cuti_tahunan AS (
+                    SELECT
+                        tr.EmpCode,
+                        COUNT(*) as cuti_tahunan_hari
+                    FROM PR_TASKREGLN_ARC tr
+                    WHERE tr.TaskCode = 'GA9129AB2'
+                      AND tr.CreatedDate >= ?
+                      AND tr.CreatedDate < ?
+                      AND tr.EmpCode IN (
+                          SELECT g.GangMember
+                          FROM HR_GANGLN g
+                          WHERE g.GangCode = ? OR ? = 'ALL'
+                      )
+                    GROUP BY tr.EmpCode
+                ),
+                cuti_sakit AS (
+                    SELECT
+                        tr.EmpCode,
+                        COUNT(*) as cuti_sakit_haid_hari
+                    FROM PR_TASKREGLN_ARC tr
+                    WHERE tr.TaskCode = 'GA9126AB2'
+                      AND tr.CreatedDate >= ?
+                      AND tr.CreatedDate < ?
+                      AND tr.EmpCode IN (
+                          SELECT g.GangMember
+                          FROM HR_GANGLN g
+                          WHERE g.GangCode = ? OR ? = 'ALL'
+                      )
+                    GROUP BY tr.EmpCode
+                ),
+                hk_minggu AS (
+                    SELECT
+                        e.EmpCode,
+                        0 as cuti_minggu_hari
+                    FROM HR_EMPLOYEE e
+                    JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
+                    WHERE (g.GangCode = ? OR ? = 'ALL')
+                ),
+                hk_nasional AS (
+                    SELECT
+                        e.EmpCode,
+                        0 as cuti_nasional_hari
+                    FROM HR_EMPLOYEE e
+                    JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
+                    WHERE (g.GangCode = ? OR ? = 'ALL')
+                ),
+                cuti_izin AS (
+                    SELECT
+                        e.EmpCode,
+                        0 as cuti_izin_hari
+                    FROM HR_EMPLOYEE e
+                    JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
+                    WHERE (g.GangCode = ? OR ? = 'ALL')
+                )
                 SELECT DISTINCT
                     e.EmpCode,
-                    0 as cuti_tahunan_hari,
-                    0 as cuti_sakit_haid_hari,
+                    COALESCE(ct.cuti_tahunan_hari, 0) as cuti_tahunan_hari,
+                    COALESCE(cs.cuti_sakit_haid_hari, 0) as cuti_sakit_haid_hari,
                     0 as cuti_haid_hari,
-                    0 as cuti_minggu_hari,
-                    0 as cuti_nasional_hari,
-                    0 as cuti_izin_hari
+                    COALESCE(hm.cuti_minggu_hari, 0) as cuti_minggu_hari,
+                    COALESCE(hn.cuti_nasional_hari, 0) as cuti_nasional_hari,
+                    COALESCE(ci.cuti_izin_hari, 0) as cuti_izin_hari
                 FROM HR_EMPLOYEE e
                 JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
+                LEFT JOIN cuti_tahunan ct ON ct.EmpCode = e.EmpCode
+                LEFT JOIN cuti_sakit cs ON cs.EmpCode = e.EmpCode
+                LEFT JOIN hk_minggu hm ON hm.EmpCode = e.EmpCode
+                LEFT JOIN hk_nasional hn ON hn.EmpCode = e.EmpCode
+                LEFT JOIN cuti_izin ci ON ci.EmpCode = e.EmpCode
                 WHERE (g.GangCode = ? OR ? = 'ALL')
                 ORDER BY e.EmpCode
             """,
-            'params': [gang_code, gang_code.upper()]
+            'params': [start_date, end_date, gang_code, gang_code.upper(),
+                      start_date, end_date, gang_code, gang_code.upper(),
+                      gang_code, gang_code.upper(),
+                      gang_code, gang_code.upper(),
+                      gang_code, gang_code.upper(),
+                      gang_code, gang_code.upper()]
+        }
+
+    def _get_hk_query(self, gang_code: str, start_date: str, end_date: str) -> Dict[str, Any]:
+        """
+        Get real HK (Hari Kerja) data from PR_EMP_ATTN_ARC table
+        Based on reference code get_monthly_hk_count method
+        """
+        return {
+            'sql': """
+                SELECT
+                    e.EmpCode,
+                    COUNT(CASE WHEN a.IsPresent = 'true' THEN 1 END) as hari_kerja,
+                    0 as tidak_hadir_cth,
+                    0 as tidak_hadir_alpa
+                FROM HR_EMPLOYEE e
+                JOIN HR_GANGLN g ON g.GangMember = e.EmpCode
+                LEFT JOIN PR_EMP_ATTN_ARC a ON a.EmpCode = e.EmpCode
+                    AND a.AttnDate >= ?
+                    AND a.AttnDate < ?
+                WHERE (g.GangCode = ? OR ? = 'ALL')
+                GROUP BY e.EmpCode
+                ORDER BY e.EmpCode
+            """,
+            'params': [start_date, end_date, gang_code, gang_code.upper()]
         }
 
     def _get_upah_pokok_query(self, gang_code: str, start_date: str, end_date: str) -> Dict[str, Any]:
@@ -353,17 +442,44 @@ class ThreadedDataExtractor:
                     'hari_kerja': hk_count or 0  # Same as hk_count in reference code
                 })
 
+        # Merge HK data (real attendance data)
+        for hk_row in results.get('hk_data', []):
+            emp_code, hari_kerja, cth, alpa = hk_row
+            if emp_code in employee_data:
+                employee_data[emp_code].update({
+                    'hari_kerja': hari_kerja or 0,
+                    'tidak_hadir_cth': cth or 0,
+                    'tidak_hadir_alpa': alpa or 0
+                })
+
         # Merge cuti data
         for cuti_row in results.get('cuti_data', []):
-            emp_code, tahunan, sakit, haid, nasional, izin = cuti_row
+            emp_code, tahunan, sakit_haid, haid, minggu, nasional, izin = cuti_row
             if emp_code in employee_data:
                 employee_data[emp_code].update({
                     'cuti_tahunan_hari': tahunan or 0,
-                    'cuti_sakit_haid_hari': sakit or 0,
+                    'cuti_sakit_haid_hari': sakit_haid or 0,
                     'cuti_haid_hari': haid or 0,
+                    'cuti_minggu_hari': minggu or 0,
                     'cuti_nasional_hari': nasional or 0,
                     'cuti_izin_hari': izin or 0
                 })
+
+        # Calculate hari kerja (HK - Total Cuti) for all employees
+        # Based on reference code: hari_kerja = hk_count - (cuti_tahunan + cuti_sakit + hk_minggu + hk_nasional)
+        for emp_code, emp_data in employee_data.items():
+            hk_count = emp_data.get('jumlah_hk', 0)
+            total_cuti = (
+                (emp_data.get('cuti_tahunan_hari') or 0) +
+                (emp_data.get('cuti_sakit_haid_hari') or 0) +
+                (emp_data.get('cuti_minggu_hari') or 0) +
+                (emp_data.get('cuti_nasional_hari') or 0)
+            )
+            calculated_hari_kerja = max(0, hk_count - total_cuti)
+
+            # Use HK data if available, otherwise use calculated hari kerja
+            if emp_data.get('hari_kerja', 0) == 0:
+                emp_data['hari_kerja'] = calculated_hari_kerja
 
         # Calculate total ketidakhadiran for all employees
         for emp_code, emp_data in employee_data.items():
