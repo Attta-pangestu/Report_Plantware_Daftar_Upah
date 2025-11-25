@@ -7,7 +7,7 @@
     "description": "Struktur header tabel report daftar upah dengan hirarki parent-child"
   },
   "table_structure": {
-    "total_columns": 37,
+    "total_columns": 31,
     "header_rows": 3,
     "data_rows": "employee_data",
     "hierarchy": {
@@ -91,9 +91,9 @@
             "id": "premi",
             "text": "PREMI",
             "rowspan": 1,
-            "colspan": 8,
+            "colspan": 2,
             "class": "header-cell section-header",
-            "children": ["brondol", "pruning", "premi_angkut_material", "premi_angkut_tbs", "premi_harvesting", "premi_harvesting_incentive", "premi_koreksi", "premi_pupuk"]
+            "children": ["brondol", "pruning"]
           },
           {
             "id": "total_tunjangan",
@@ -198,42 +198,7 @@
             "class": "header-cell sub-header-premi",
             "children": ["pruning_jumlah"]
           },
-          {
-            "id": "premi_angkut_material",
-            "text": "PREMI ANGKUT MATERIAL",
-            "parent": "premi",
-            "class": "header-cell sub-header-premi",
-            "children": ["premi_angkut_material_jumlah"]
-          },
-          {
-            "id": "premi_angkut_tbs",
-            "text": "PREMI ANGKUT TBS",
-            "parent": "premi",
-            "class": "header-cell sub-header-premi",
-            "children": ["premi_angkut_tbs_jumlah"]
-          },
-          {
-            "id": "premi_harvesting",
-            "text": "PREMI HARVESTING",
-            "parent": "premi",
-            "class": "header-cell sub-header-premi",
-            "children": ["premi_harvesting_jumlah"]
-          },
-          {
-            "id": "premi_harvesting_incentive",
-            "text": "PREMI HARVESTING INCENTIVE",
-            "parent": "premi",
-            "class": "header-cell sub-header-premi",
-            "children": ["premi_harvesting_incentive_jumlah"]
-          },
-          {
-            "id": "premi_pupuk",
-            "text": "PREMI PUPUK",
-            "parent": "premi",
-            "class": "header-cell sub-header-premi",
-            "children": ["premi_pupuk_jumlah"]
-          },
-          {
+            {
             "id": "potongan_astek",
             "text": "CARUMAN ASTEK",
             "parent": "potongan",
@@ -386,37 +351,7 @@
             "parent": "pruning",
             "class": "header-cell col-premi"
           },
-          {
-            "id": "premi_angkut_material_jumlah",
-            "text": "Jumlah",
-            "parent": "premi_angkut_material",
-            "class": "header-cell col-premi"
-          },
-          {
-            "id": "premi_angkut_tbs_jumlah",
-            "text": "Jumlah",
-            "parent": "premi_angkut_tbs",
-            "class": "header-cell col-premi"
-          },
-          {
-            "id": "premi_harvesting_jumlah",
-            "text": "Jumlah",
-            "parent": "premi_harvesting",
-            "class": "header-cell col-premi"
-          },
-          {
-            "id": "premi_harvesting_incentive_jumlah",
-            "text": "Jumlah",
-            "parent": "premi_harvesting_incentive",
-            "class": "header-cell col-premi"
-          },
-          {
-            "id": "premi_pupuk_jumlah",
-            "text": "Jumlah",
-            "parent": "premi_pupuk",
-            "class": "header-cell col-premi"
-          },
-          {
+            {
             "id": "pph21",
             "text": "Jumlah",
             "parent": "potongan_pph21",

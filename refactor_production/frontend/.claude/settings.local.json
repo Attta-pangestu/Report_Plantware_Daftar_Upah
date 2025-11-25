@@ -16,7 +16,8 @@
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(find:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(uvicorn:*)"
     ],
     "deny": [],
     "ask": []

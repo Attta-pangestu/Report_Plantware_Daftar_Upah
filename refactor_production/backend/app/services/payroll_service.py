@@ -584,9 +584,11 @@ class PayrollService:
             if want_all or any([want(f'premi_dynamic_{i+1}') for i in range(7)]) or want('total_premi'):
                 for i in range(min(7, len(dyn_maps))):
                     dyn_vals.append(float(dyn_maps[i].get(nik, 0.0)))
+            # Total premi statis (BRONDOL + PRUNING) + dynamic premi
             total_premi = sum([
-                premi_brondol, premi_pruning
-            ] + dyn_vals)
+                premi_brondol,     # brondol (statis)
+                premi_pruning      # pruning (statis)
+            ] + dyn_vals)        # dynamic premi dari database
 
             # Dynamic potongan amounts
             dyn_pot_vals: List[float] = []
