@@ -227,10 +227,12 @@ export default function Report({ token, user, month, year, gang_code, division, 
         const processingStart = Date.now()
 
         const computed = applyComputeToRows(data, computeRulesRef.current)
+        // Filter out employees with jumlah HK = 0 as double protection
+        const filtered = computed.filter(row => (row.jumlah_hk || 0) > 0)
         const processingTime = Date.now() - processingStart
 
-        setRows(computed)
-        const safe = Array.isArray(computed) ? computed : []
+        setRows(filtered)
+        const safe = Array.isArray(filtered) ? filtered : []
         recomputeAutoHideMap(safe)
         setInitialRowsPreview(safe.slice(0, INFINITE_BATCH_SIZE))
         setFirstBatchAttempted(true)
@@ -317,8 +319,10 @@ export default function Report({ token, user, month, year, gang_code, division, 
               fallbackData = await fetchReportRowsBatched(res.access_token, { month: monthValue, year: yearValue, gang_code: finalGangCode, division: finalDivision, fields: leafFields, benchmark: true, monitor: false })
             }
             const computed = applyComputeToRows(fallbackData, computeRulesRef.current)
-            setRows(computed)
-            const safe = Array.isArray(computed) ? computed : []
+            // Filter out employees with jumlah HK = 0 as double protection
+            const filtered = computed.filter(row => (row.jumlah_hk || 0) > 0)
+            setRows(filtered)
+            const safe = Array.isArray(filtered) ? filtered : []
             recomputeAutoHideMap(safe)
             const agg = (field) => Math.round(safe.reduce((a, b) => a + Number(b[field] || 0), 0))
             if (safe.length > 0) {

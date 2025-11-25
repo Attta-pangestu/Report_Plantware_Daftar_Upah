@@ -71,6 +71,9 @@ async def report_grid(
             rows = extracted_data.get('data_rows', [])
             processing_type = "threaded"
 
+            # Filter out employees with jumlah HK = 0
+            rows = [row for row in rows if getattr(row, 'jumlah_hk', 0) > 0]
+
             # Apply pagination if needed
             if skip or limit:
                 rows = rows[skip:skip + limit]

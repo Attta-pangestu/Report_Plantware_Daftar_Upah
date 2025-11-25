@@ -744,4 +744,6 @@ class PayrollService:
                     pass
         except Exception:
             pass
-        return rows
+        # Filter out employees with jumlah HK = 0
+        filtered_rows = [row for row in rows if getattr(row, 'jumlah_hk', 0) > 0]
+        return filtered_rows
