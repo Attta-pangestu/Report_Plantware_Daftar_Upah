@@ -18,7 +18,10 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "Bash(uvicorn:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(powershell \"Stop-Process -Id 98564 -Force\")",
+      "Bash(ipconfig:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,18 +3,62 @@ import react from '@vitejs/plugin-react'
 
 const isDev = process.env.DEV_MODE === 'true' || process.env.VITE_DEV_MODE === 'true'
 
+// Auto-detect local IP address for network access
+const getLocalIP = () => {
+  try {
+    const { networkInterfaces } = require('os')
+    const nets = networkInterfaces()
+
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        // Skip internal and non-IPv4 addresses
+        if (net.family === 'IPv4' && !net.internal) {
+          // Prefer 10.0.0.x range (your main network)
+          if (net.address.startsWith('10.0.0.')) {
+            return net.address
+          }
+        }
+      }
+    }
+
+    // Fallback to any non-internal IPv4 address
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          return net.address
+        }
+      }
+    }
+
+    return 'localhost'
+  } catch (e) {
+    return 'localhost'
+  }
+}
+
 // Get backend host from environment variables or use default
 const getBackendHost = () => {
   // Check for custom backend host in environment variables
   const customHost = process.env.VITE_BACKEND_HOST || process.env.BACKEND_HOST
   const customPort = process.env.VITE_BACKEND_PORT || process.env.BACKEND_PORT || '8002'
 
-  if (customHost) {
+  if (customHost && customHost !== 'localhost') {
     return `http://${customHost}:${customPort}`
   }
 
-  // For development, try to detect the local IP address for network access
-  // or fallback to localhost for local development
+  // Check if we're running in network mode (host is 0.0.0.0)
+  const isNetworkMode = process.env.npm_config_host === '0.0.0.0' ||
+                        process.env.HOST === '0.0.0.0' ||
+                        process.argv.includes('--host') ||
+                        process.env.NODE_ENV === 'network'
+
+  if (isNetworkMode) {
+    const localIP = getLocalIP()
+    console.log(`🌐 Network mode detected, using IP: ${localIP}`)
+    return `http://${localIP}:${customPort}`
+  }
+
+  // For development, use localhost
   if (isDev) {
     return `http://localhost:${customPort}`
   }

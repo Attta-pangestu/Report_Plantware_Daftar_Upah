@@ -20,10 +20,16 @@ logger = logging.getLogger(__name__)
 # Check if running in development mode
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
+# Global variables for mode and IP
+RUN_MODE = None  # "dev", "prod"
+MODE_IP = None   # IP address based on mode
+
 app = FastAPI()
 
-# Configure CORS with explicit allowed origins
+# Configure CORS with explicit allowed origins based on mode
 def _allowed_origins():
+    global RUN_MODE, MODE_IP
+
     env_origins = os.getenv("CORS_ALLOW_ORIGINS")
     if env_origins:
         try:
@@ -33,9 +39,36 @@ def _allowed_origins():
         except Exception as e:
             logger.error(f"Failed to parse CORS_ALLOW_ORIGINS: {e}")
 
-    # For multi-computer access, allow all origins in development mode
-    if DEV_MODE:
-        return ["*"]  # Allow all origins in development mode
+    # For multi-computer access, return specific origins in development mode or prod mode
+    if DEV_MODE or RUN_MODE in ["dev", "prod"]:
+        # Include localhost, 127.0.0.1, and common network ranges for development
+        origins = [
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:5177",
+            "http://localhost:5178",
+            "http://localhost:5182",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:5175",
+            "http://127.0.0.1:5176",
+            "http://127.0.0.1:5177",
+            "http://127.0.0.1:5178",
+            "http://127.0.0.1:5182",
+            # Add 10.0.0.x range for your local network
+            "http://10.0.0.128:5173",
+            "http://10.0.0.128:5174",
+            "http://10.0.0.128:5175",
+            "http://10.0.0.128:5176",
+            "http://10.0.0.128:5177",
+            "http://10.0.0.128:5178",
+            "http://10.0.0.128:5182",
+            "http://10.0.0.128:5183",
+            "http://10.0.0.128:5184"
+        ]
+        return origins
 
     return [
         "http://localhost:5173",
@@ -50,6 +83,24 @@ def _allowed_origins():
         "http://127.0.0.1:5177",
     ]
 
+def get_mode_ip():
+    """Get IP address based on the current mode"""
+    global RUN_MODE, MODE_IP
+
+    if MODE_IP:
+        return MODE_IP
+
+    # Try to get from global variables if already set
+    try:
+        if RUN_MODE == "prod":
+            return "10.0.0.110"
+        elif RUN_MODE == "dev":
+            return ["localhost", "10.0.0.128"]  # Return list for dev mode
+    except NameError:
+        pass
+
+    return "localhost"  # Default fallback
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
@@ -63,6 +114,8 @@ app.add_middleware(
 async def get_dev_mode():
     return {
         "dev_mode": DEV_MODE,
+        "run_mode": RUN_MODE,
+        "mode_ip": get_mode_ip(),
         "test_mode": is_test_mode(),
         "test_mode_hardcoded": TEST_MODE,
         "default_gang": DEFAULT_GANG,
@@ -109,7 +162,24 @@ async def log_requests(request: Request, call_next):
     return response
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Payroll Backend Server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Mode Examples:
+  python main.py --mode dev     # Development mode (localhost + 10.0.0.128)
+  python main.py --mode prod    # Production mode (10.0.0.110)
+  python main.py --mode dev --custom-ip 192.168.1.100  # Custom IP for dev mode
+        """
+    )
+
+    # Mode arguments
+    parser.add_argument("--mode", choices=["dev", "prod"],
+                       help="Run mode: dev=localhost+10.0.0.128, prod=10.0.0.110")
+    parser.add_argument("--custom-ip",
+                       help="Custom IP address to override mode-based IP")
+
+    # Database arguments
     parser.add_argument("--db-driver")
     parser.add_argument("--db-server")
     parser.add_argument("--db-port", type=int)
@@ -117,9 +187,29 @@ if __name__ == "__main__":
     parser.add_argument("--db-user")
     parser.add_argument("--db-pass")
     parser.add_argument("--db-profile")
+
+    # Server arguments
     parser.add_argument("--uvicorn-workers", type=int)
     parser.add_argument("--port", type=int, help="Backend HTTP port")
+
     args = parser.parse_args()
+
+    # Process mode and custom IP arguments
+    if args.mode:
+        RUN_MODE = args.mode
+    else:
+        RUN_MODE = None
+
+    if args.custom_ip:
+        MODE_IP = args.custom_ip
+        logger.info(f"Using custom IP: {MODE_IP}")
+    elif args.mode:
+        if args.mode == "dev":
+            MODE_IP = ["localhost", "10.0.0.128"]
+            logger.info("Development mode: Using localhost + 10.0.0.128")
+        elif args.mode == "prod":
+            MODE_IP = "10.0.0.110"
+            logger.info("Production mode: Using 10.0.0.110")
 
     # Set environment variables from CLI args (CLI takes precedence)
     if args.db_driver:
@@ -160,5 +250,31 @@ if __name__ == "__main__":
                 port = int(env_port)
         except ValueError:
             logger.warning("Invalid BACKEND_PORT value. Using default.")
+
+    # Log mode and IP information
+    logger.info("="*60)
+    logger.info("PAYROLL BACKEND SERVER CONFIGURATION")
+    logger.info("="*60)
+    logger.info(f"🚀 Run Mode: {RUN_MODE or 'default'}")
+    logger.info(f"🌐 Mode IP: {get_mode_ip()}")
+    logger.info(f"🔗 Host: 0.0.0.0")
+    logger.info(f"📡 Port: {port}")
+    logger.info(f"⚙️  Workers: {workers}")
+    logger.info(f"🔧 Dev Mode: {DEV_MODE}")
+
+    if RUN_MODE:
+        logger.info(f"📋 Access URLs:")
+        if RUN_MODE == "dev":
+            if isinstance(MODE_IP, list):
+                for ip in MODE_IP:
+                    logger.info(f"   • http://{ip}:{port}")
+            else:
+                logger.info(f"   • http://{MODE_IP}:{port}")
+        elif RUN_MODE == "prod":
+            logger.info(f"   • http://{MODE_IP}:{port}")
+    else:
+        logger.info(f"📋 Access URL: http://localhost:{port}")
+
+    logger.info("="*60)
 
     uvicorn.run("main:app", host="0.0.0.0", port=port, workers=workers)
