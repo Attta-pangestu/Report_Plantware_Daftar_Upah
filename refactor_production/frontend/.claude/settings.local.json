@@ -17,7 +17,8 @@
       "Bash(timeout:*)",
       "Bash(find:*)",
       "Bash(cat:*)",
-      "Bash(uvicorn:*)"
+      "Bash(uvicorn:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

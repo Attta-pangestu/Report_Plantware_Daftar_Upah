@@ -9,6 +9,8 @@
     "dev:5175": "cross-env PORT=5175 vite --config ./vite.config.test.js",
     "dev:network": "cross-env VITE_DEV_MODE=true vite --host 0.0.0.0 --port 5175",
     "dev:custom-backend": "cross-env VITE_DEV_MODE=true vite --host 0.0.0.0",
+    "dev:external": "cross-env VITE_DEV_MODE=true VITE_BACKEND_HOST=192.168.1.100 vite --host 0.0.0.0 --port 5175",
+    "dev:lan": "cross-env VITE_DEV_MODE=true vite --host 0.0.0.0 --port 5175",
     "build": "vite build",
     "preview": "vite preview --port 5173",
     "test": "vitest"

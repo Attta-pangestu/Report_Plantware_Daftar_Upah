@@ -7,10 +7,16 @@ const isDev = process.env.DEV_MODE === 'true' || process.env.VITE_DEV_MODE === '
 const getBackendHost = () => {
   // Check for custom backend host in environment variables
   const customHost = process.env.VITE_BACKEND_HOST || process.env.BACKEND_HOST
-  const customPort = process.env.VITE_BACKEND_PORT || process.env.BACKEND_PORT || '8004'
+  const customPort = process.env.VITE_BACKEND_PORT || process.env.BACKEND_PORT || '8002'
 
   if (customHost) {
     return `http://${customHost}:${customPort}`
+  }
+
+  // For development, try to detect the local IP address for network access
+  // or fallback to localhost for local development
+  if (isDev) {
+    return `http://localhost:${customPort}`
   }
 
   // Default to localhost with current backend port
@@ -41,14 +47,19 @@ export default defineConfig({
     'process.env.VITE_DEV_MODE': JSON.stringify('true')
   },
   server: {
-    host: '0.0.0.0',
+    host: '0.0.0.0', // Allow access from any IP
     port: 5174,
     strictPort: false, // Allow other ports if 5174 is occupied
+    cors: true, // Enable CORS for all origins
     headers: {
       // Disable browser caching for development
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
-      'Expires': '0'
+      'Expires': '0',
+      // Enable CORS headers for external access
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     },
     proxy: {
       '/auth': {
