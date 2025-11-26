@@ -11,8 +11,12 @@
     "dev:custom-backend": "cross-env VITE_DEV_MODE=true NODE_ENV=network vite --host 0.0.0.0",
     "dev:external": "cross-env VITE_DEV_MODE=true VITE_BACKEND_HOST=192.168.1.100 NODE_ENV=network vite --host 0.0.0.0 --port 5175",
     "dev:lan": "cross-env VITE_DEV_MODE=true NODE_ENV=network VITE_BACKEND_HOST=10.0.0.128 VITE_BACKEND_PORT=8004 vite --host 0.0.0.0 --port 5175",
+    "prod": "vite --config ./vite.config.prod.js",
+    "prod:frontend": "vite --config ./vite.config.prod.js --host 0.0.0.0 --port 5176",
     "build": "vite build",
+    "build:prod": "vite build --config ./vite.config.prod.js",
     "preview": "vite preview --port 5173",
+    "preview:prod": "vite preview --port 5176 --host 0.0.0.0",
     "test": "vitest"
   },
   "dependencies": {
